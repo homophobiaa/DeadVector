@@ -21,6 +21,16 @@
   box-sizing: border-box;
 }
 
+.brand-bar,
+.hud-panel,
+.overlay-card,
+.solid-button,
+.ghost-button,
+#game-canvas {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 html,
 body {
   margin: 0;
