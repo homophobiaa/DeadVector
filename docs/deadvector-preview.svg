@@ -1,0 +1,100 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="640" y1="40" x2="640" y2="720" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#241813"/>
+      <stop offset="1" stop-color="#090707"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(640 360) rotate(90) scale(300 520)">
+      <stop stop-color="#3A221B"/>
+      <stop offset="1" stop-color="#120D0C"/>
+    </radialGradient>
+    <style>
+      .hud { fill: rgba(24, 20, 18, 0.88); stroke: rgba(255, 182, 115, 0.18); stroke-width: 2; }
+      .soft { fill: #d8c2b2; font: 18px 'Trebuchet MS', sans-serif; }
+      .strong { fill: #f8f1e9; font: 700 26px 'Trebuchet MS', sans-serif; }
+      .tiny { fill: #d8c2b2; font: 700 14px 'Trebuchet MS', sans-serif; letter-spacing: 0.18em; text-transform: uppercase; }
+      .grid { stroke: rgba(255, 166, 102, 0.08); stroke-width: 1; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="720" rx="24" fill="url(#bg)"/>
+  <rect x="18" y="18" width="1244" height="684" rx="28" fill="url(#glow)" stroke="rgba(255,122,69,0.2)" stroke-width="4"/>
+
+  <g opacity="0.7">
+    <path class="grid" d="M120 40V680"/>
+    <path class="grid" d="M200 40V680"/>
+    <path class="grid" d="M280 40V680"/>
+    <path class="grid" d="M360 40V680"/>
+    <path class="grid" d="M440 40V680"/>
+    <path class="grid" d="M520 40V680"/>
+    <path class="grid" d="M600 40V680"/>
+    <path class="grid" d="M680 40V680"/>
+    <path class="grid" d="M760 40V680"/>
+    <path class="grid" d="M840 40V680"/>
+    <path class="grid" d="M920 40V680"/>
+    <path class="grid" d="M1000 40V680"/>
+    <path class="grid" d="M1080 40V680"/>
+    <path class="grid" d="M1160 40V680"/>
+    <path class="grid" d="M40 120H1240"/>
+    <path class="grid" d="M40 200H1240"/>
+    <path class="grid" d="M40 280H1240"/>
+    <path class="grid" d="M40 360H1240"/>
+    <path class="grid" d="M40 440H1240"/>
+    <path class="grid" d="M40 520H1240"/>
+    <path class="grid" d="M40 600H1240"/>
+  </g>
+
+  <rect class="hud" x="48" y="40" width="240" height="126" rx="20"/>
+  <text class="tiny" x="72" y="72">DeadVector</text>
+  <text class="strong" x="72" y="112">Wave 4</text>
+  <text class="soft" x="72" y="144">Score 1860</text>
+
+  <rect class="hud" x="996" y="40" width="236" height="126" rx="20"/>
+  <text class="tiny" x="1020" y="72">Weapon</text>
+  <text class="strong" x="1020" y="112">Scatter Cannon</text>
+  <text class="soft" x="1020" y="144">12 active threats</text>
+
+  <ellipse cx="640" cy="368" rx="44" ry="22" fill="rgba(0,0,0,0.3)"/>
+  <g transform="translate(640 340)">
+    <path d="M42 0L-18 18L-26 0L-18 -18L42 0Z" fill="#F7F6F1"/>
+    <circle cx="-2" cy="0" r="18" fill="#6BE0D6"/>
+    <rect x="24" y="-6" width="34" height="12" rx="4" fill="#FF9D6F"/>
+  </g>
+
+  <g transform="translate(498 248)">
+    <circle cx="0" cy="0" r="26" fill="#C8594B"/>
+    <circle cx="-8" cy="-4" r="4" fill="#FFCC85"/>
+    <circle cx="8" cy="-4" r="4" fill="#FFCC85"/>
+    <circle cx="0" cy="0" r="52" stroke="rgba(255, 93, 93, 0.55)" stroke-width="3"/>
+  </g>
+
+  <g transform="translate(806 246)">
+    <circle cx="0" cy="0" r="22" fill="#7BCF78"/>
+    <circle cx="-7" cy="-3" r="4" fill="#D2FFB9"/>
+    <circle cx="7" cy="-3" r="4" fill="#D2FFB9"/>
+  </g>
+
+  <g transform="translate(868 504)">
+    <circle cx="0" cy="0" r="20" fill="#F18E4A"/>
+    <circle cx="-6" cy="-3" r="4" fill="#FFE08E"/>
+    <circle cx="6" cy="-3" r="4" fill="#FFE08E"/>
+  </g>
+
+  <g transform="translate(422 492)">
+    <circle cx="0" cy="0" r="34" fill="#8D4650"/>
+    <circle cx="-10" cy="-4" r="5" fill="#FFC49F"/>
+    <circle cx="10" cy="-4" r="5" fill="#FFC49F"/>
+  </g>
+
+  <circle cx="728" cy="312" r="8" fill="#FFD17B"/>
+  <circle cx="770" cy="298" r="7" fill="#FFD17B"/>
+  <circle cx="812" cy="286" r="6" fill="#FFD17B"/>
+  <circle cx="848" cy="274" r="5" fill="#FFD17B"/>
+
+  <circle cx="930" cy="300" r="10" fill="#A7FF7C"/>
+
+  <ellipse cx="428" cy="498" rx="54" ry="30" fill="rgba(130,17,24,0.22)"/>
+  <ellipse cx="796" cy="250" rx="34" ry="20" fill="rgba(130,17,24,0.16)"/>
+
+  <text class="soft" x="48" y="686">DeadVector browser game preview illustration</text>
+</svg>
