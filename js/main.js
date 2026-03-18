@@ -13,6 +13,9 @@ const bootstrap = () => {
     weapon: document.getElementById("hud-weapon"),
     zombies: document.getElementById("hud-zombies"),
     state: document.getElementById("hud-state"),
+    kills: document.getElementById("hud-kills"),
+    combo: document.getElementById("hud-combo"),
+    healthBar: document.getElementById("health-bar-fill"),
     eventFeed: document.getElementById("event-feed"),
     menuScreen: document.getElementById("menu-screen"),
     pauseScreen: document.getElementById("pause-screen"),
@@ -26,6 +29,7 @@ const bootstrap = () => {
 
   const input = new InputManager(canvas);
   const audio = new AudioManager();
+  audio.installUnlockHandlers();
   const game = new Game({ canvas, input, ui, audio });
 
   ui.bindGame(game);

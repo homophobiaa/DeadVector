@@ -1,19 +1,22 @@
+// Reusable Finite State Machine module
+// Used by all enemy AI in the game
+
 export class FiniteStateMachine {
   constructor({ owner, initialState, states, anyTransitions = [] }) {
     this.owner = owner;
     this.states = states;
     this.anyTransitions = anyTransitions;
     this.currentState = initialState;
+    this.previousState = null;
     this.stateTime = 0;
 
     this.states[this.currentState]?.enter?.(this.owner, null, this);
   }
 
   setState(nextState, context = null) {
-    if (!this.states[nextState] || nextState === this.currentState) {
-      return false;
-    }
+    if (!this.states[nextState] || nextState === this.currentState) return false;
 
+    this.previousState = this.currentState;
     this.states[this.currentState]?.exit?.(this.owner, context, this);
     this.currentState = nextState;
     this.stateTime = 0;
@@ -24,10 +27,7 @@ export class FiniteStateMachine {
   update(delta, context = null) {
     const previousState = this.currentState;
     const activeState = this.states[this.currentState];
-
-    if (!activeState) {
-      return;
-    }
+    if (!activeState) return;
 
     this.stateTime += delta;
     activeState.update?.(this.owner, context, delta, this);
@@ -39,9 +39,7 @@ export class FiniteStateMachine {
       }
     }
 
-    if (previousState !== this.currentState) {
-      return;
-    }
+    if (previousState !== this.currentState) return;
 
     for (const transition of activeState.transitions ?? []) {
       if (transition.when(this.owner, context, this)) {
@@ -49,5 +47,9 @@ export class FiniteStateMachine {
         return;
       }
     }
+  }
+
+  isInState(stateName) {
+    return this.currentState === stateName;
   }
 }

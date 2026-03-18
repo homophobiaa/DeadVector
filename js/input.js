@@ -5,13 +5,7 @@ export class InputManager {
     this.keysPressed = new Set();
     this.keysReleased = new Set();
     this.eventQueue = [];
-    this.mouse = {
-      x: 0,
-      y: 0,
-      leftDown: false,
-      middleDown: false,
-      rightDown: false,
-    };
+    this.mouse = { x: 0, y: 0, leftDown: false, middleDown: false, rightDown: false };
 
     this.attach();
   }
@@ -32,94 +26,62 @@ export class InputManager {
     document.addEventListener("visibilitychange", this.handleVisibilityChange);
   }
 
-  handleKeyDown = (event) => {
-    const key = event.key.toLowerCase();
-
-    if (!this.keysDown.has(key)) {
-      this.keysPressed.add(key);
-    }
-
+  handleKeyDown = (e) => {
+    const key = e.key.toLowerCase();
+    if (!this.keysDown.has(key)) this.keysPressed.add(key);
     this.keysDown.add(key);
-    this.queueEvent("keydown", { key, code: event.code, repeat: event.repeat });
+    this.queueEvent("keydown", { key, code: e.code, repeat: e.repeat });
   };
 
-  handleKeyUp = (event) => {
-    const key = event.key.toLowerCase();
+  handleKeyUp = (e) => {
+    const key = e.key.toLowerCase();
     this.keysDown.delete(key);
     this.keysReleased.add(key);
-    this.queueEvent("keyup", { key, code: event.code });
+    this.queueEvent("keyup", { key, code: e.code });
   };
 
-  handleKeyPress = (event) => {
-    this.queueEvent("keypress", { key: event.key.toLowerCase(), code: event.code });
+  handleKeyPress = (e) => {
+    this.queueEvent("keypress", { key: e.key.toLowerCase(), code: e.code });
   };
 
-  handleMouseMove = (event) => {
-    this.updatePointer(event);
+  handleMouseMove = (e) => {
+    this.updatePointer(e);
     this.queueEvent("mousemove", { x: this.mouse.x, y: this.mouse.y });
   };
 
-  handleMouseDown = (event) => {
-    this.updatePointer(event);
-
-    if (event.button === 0) {
-      this.mouse.leftDown = true;
-    }
-
-    if (event.button === 1) {
-      this.mouse.middleDown = true;
-    }
-
-    if (event.button === 2) {
-      this.mouse.rightDown = true;
-    }
-
-    this.queueEvent("mousedown", { button: event.button, x: this.mouse.x, y: this.mouse.y });
+  handleMouseDown = (e) => {
+    this.updatePointer(e);
+    if (e.button === 0) this.mouse.leftDown = true;
+    if (e.button === 1) this.mouse.middleDown = true;
+    if (e.button === 2) this.mouse.rightDown = true;
+    this.queueEvent("mousedown", { button: e.button, x: this.mouse.x, y: this.mouse.y });
   };
 
-  handleMouseUp = (event) => {
-    this.updatePointer(event);
-
-    if (event.button === 0) {
-      this.mouse.leftDown = false;
-    }
-
-    if (event.button === 1) {
-      this.mouse.middleDown = false;
-    }
-
-    if (event.button === 2) {
-      this.mouse.rightDown = false;
-    }
-
-    this.queueEvent("mouseup", { button: event.button, x: this.mouse.x, y: this.mouse.y });
+  handleMouseUp = (e) => {
+    this.updatePointer(e);
+    if (e.button === 0) this.mouse.leftDown = false;
+    if (e.button === 1) this.mouse.middleDown = false;
+    if (e.button === 2) this.mouse.rightDown = false;
+    this.queueEvent("mouseup", { button: e.button, x: this.mouse.x, y: this.mouse.y });
   };
 
-  handleClick = (event) => {
-    this.updatePointer(event);
-    this.queueEvent("click", { button: event.button, x: this.mouse.x, y: this.mouse.y });
+  handleClick = (e) => {
+    this.updatePointer(e);
+    this.queueEvent("click", { button: e.button, x: this.mouse.x, y: this.mouse.y });
   };
 
-  handleContextMenu = (event) => {
-    if (this.canvas.contains(event.target)) {
-      event.preventDefault();
-    }
-
-    this.updatePointer(event);
+  handleContextMenu = (e) => {
+    if (this.canvas.contains(e.target)) e.preventDefault();
+    this.updatePointer(e);
     this.queueEvent("contextmenu", { x: this.mouse.x, y: this.mouse.y });
   };
 
-  handleWheel = (event) => {
-    if (this.canvas.contains(event.target)) {
-      event.preventDefault();
-    }
-
-    this.queueEvent("wheel", { deltaX: event.deltaX, deltaY: event.deltaY });
+  handleWheel = (e) => {
+    if (this.canvas.contains(e.target)) e.preventDefault();
+    this.queueEvent("wheel", { deltaX: e.deltaX, deltaY: e.deltaY });
   };
 
-  handleFocus = () => {
-    this.queueEvent("focus");
-  };
+  handleFocus = () => this.queueEvent("focus");
 
   handleBlur = () => {
     this.queueEvent("blur");
@@ -132,26 +94,17 @@ export class InputManager {
     this.queueEvent("visibilitychange", { hidden: document.hidden });
   };
 
-  handleResize = () => {
-    this.queueEvent("resize");
-  };
+  handleResize = () => this.queueEvent("resize");
 
-  updatePointer(event) {
+  updatePointer(e) {
     const rect = this.canvas.getBoundingClientRect();
-    this.mouse.x = event.clientX - rect.left;
-    this.mouse.y = event.clientY - rect.top;
+    this.mouse.x = e.clientX - rect.left;
+    this.mouse.y = e.clientY - rect.top;
   }
 
   queueEvent(type, payload = {}) {
-    this.eventQueue.push({
-      type,
-      timestamp: performance.now(),
-      ...payload,
-    });
-
-    if (this.eventQueue.length > 160) {
-      this.eventQueue.shift();
-    }
+    this.eventQueue.push({ type, timestamp: performance.now(), ...payload });
+    if (this.eventQueue.length > 160) this.eventQueue.shift();
   }
 
   consumeEvents() {
@@ -166,7 +119,7 @@ export class InputManager {
   }
 
   isDown(...keys) {
-    return keys.some((key) => this.keysDown.has(key.toLowerCase()));
+    return keys.some((k) => this.keysDown.has(k.toLowerCase()));
   }
 
   wasPressed(key) {

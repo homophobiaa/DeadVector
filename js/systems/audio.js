@@ -1,114 +1,129 @@
+const SOUND_FILES = {
+  pistol: "./assets/sounds/shoot.mp3",
+  scatter: "./assets/sounds/shoot.mp3",
+  smg: "./assets/sounds/shootAuto.mp3",
+  smgBurst: "./assets/sounds/shootAutoRapidFire.mp3",
+  confirm: "./assets/sounds/loadMagazine.mp3",
+  enemyHit: "./assets/sounds/enemyHitBloodSound.wav",
+  enemyKilled: "./assets/sounds/enemyKilledSound.wav",
+  playerHit: "./assets/sounds/playerHit.wav",
+  waveStart: "./assets/sounds/newWave.wav",
+  gameOver: "./assets/sounds/gameover.wav",
+  backgroundMusic: "./assets/sounds/background.mp3",
+  dash: "./assets/sounds/dash.wav",
+};
+
 export class AudioManager {
   constructor() {
-    this.context = null;
-    this.masterGain = null;
-    this.musicInterval = null;
-    this.musicStep = 0;
     this.muted = false;
+    this.ready = false;
+    this.unlockBound = false;
+    this.soundEnabled = false;
+    this.buffers = new Map();
+    this.activeLoops = new Map();
+  }
+
+  installUnlockHandlers() {
+    if (this.unlockBound) return;
+    this.unlockBound = true;
+
+    const unlockOnce = async () => {
+      await this.unlock();
+      if (this.ready) {
+        window.removeEventListener("pointerdown", unlockOnce);
+        window.removeEventListener("keydown", unlockOnce);
+        window.removeEventListener("touchstart", unlockOnce);
+      }
+    };
+
+    window.addEventListener("pointerdown", unlockOnce, { passive: true });
+    window.addEventListener("keydown", unlockOnce);
+    window.addEventListener("touchstart", unlockOnce, { passive: true });
   }
 
   async unlock() {
-    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    this.primeBuffers();
+    this.ready = true;
+    this.soundEnabled = true;
+  }
 
-    if (!AudioCtor) {
-      return;
+  primeBuffers() {
+    for (const [key, path] of Object.entries(SOUND_FILES)) {
+      if (this.buffers.has(key)) continue;
+      const audio = new Audio(path);
+      audio.preload = "auto";
+      audio.volume = this.getVolume(key);
+      this.buffers.set(key, audio);
     }
-
-    if (!this.context) {
-      this.context = new AudioCtor();
-      this.masterGain = this.context.createGain();
-      this.masterGain.gain.value = 0.12;
-      this.masterGain.connect(this.context.destination);
-    }
-
-    if (this.context.state === "suspended") {
-      await this.context.resume();
-    }
-
-    this.startMusic();
   }
 
   toggleMute() {
     this.muted = !this.muted;
-
-    if (this.masterGain) {
-      this.masterGain.gain.value = this.muted ? 0 : 0.12;
-    }
-
+    this.syncLoopVolumes();
     return this.muted;
   }
 
-  startMusic() {
-    if (!this.context || this.musicInterval) {
-      return;
-    }
-
-    const bassLine = [55, 55, 65.4, 49, 55, 73.4, 65.4, 49];
-
-    this.musicInterval = window.setInterval(() => {
-      const note = bassLine[this.musicStep % bassLine.length];
-      this.playTone({ frequency: note, duration: 0.28, gain: 0.055, type: "triangle" });
-      this.playTone({ frequency: note * 2, duration: 0.12, gain: 0.018, type: "square" });
-      this.musicStep += 1;
-    }, 380);
+  getVolume(key) {
+    if (this.muted) return 0;
+    if (key === "backgroundMusic") return 0.24;
+    if (key === "smg" || key === "smgBurst") return 0.42;
+    if (key === "confirm") return 0.55;
+    if (key === "dash") return 0.9;
+    return 0.5;
   }
 
-  playTone({ frequency, duration, gain, type }) {
-    if (!this.context || this.muted) {
-      return;
+  syncLoopVolumes() {
+    for (const [key, audio] of this.activeLoops) {
+      audio.volume = this.getVolume(key);
     }
-
-    const oscillator = this.context.createOscillator();
-    const volume = this.context.createGain();
-    const startTime = this.context.currentTime;
-
-    oscillator.type = type;
-    oscillator.frequency.value = frequency;
-
-    volume.gain.setValueAtTime(0.0001, startTime);
-    volume.gain.exponentialRampToValueAtTime(gain, startTime + 0.02);
-    volume.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-
-    oscillator.connect(volume);
-    volume.connect(this.masterGain);
-    oscillator.start(startTime);
-    oscillator.stop(startTime + duration + 0.03);
   }
+
+  playOneShot(key) {
+    const template = this.buffers.get(key);
+    if (!template || this.muted || !this.soundEnabled) return;
+    const instance = template.cloneNode();
+    instance.volume = this.getVolume(key);
+    instance.currentTime = 0;
+    instance.play().catch(() => {});
+  }
+
+  playLoop(key) {
+    if (this.activeLoops.has(key) || this.muted || !this.soundEnabled) return;
+    const template = this.buffers.get(key);
+    if (!template) return;
+    const loop = template.cloneNode();
+    loop.loop = true;
+    loop.volume = this.getVolume(key);
+    loop.play().catch(() => {});
+    this.activeLoops.set(key, loop);
+  }
+
+  stopLoop(key) {
+    const loop = this.activeLoops.get(key);
+    if (!loop) return;
+    loop.pause();
+    loop.currentTime = 0;
+    this.activeLoops.delete(key);
+  }
+
+  stopAllLoops() {
+    for (const key of [...this.activeLoops.keys()]) this.stopLoop(key);
+  }
+
+  startMusic() { this.playLoop("backgroundMusic"); }
+  stopMusic() { this.stopAllLoops(); }
 
   playShoot(weaponName) {
-    if (weaponName === "Scatter Cannon") {
-      this.playTone({ frequency: 120, duration: 0.12, gain: 0.09, type: "sawtooth" });
-      return;
-    }
-
-    if (weaponName === "Vector SMG") {
-      this.playTone({ frequency: 240, duration: 0.06, gain: 0.035, type: "square" });
-      return;
-    }
-
-    this.playTone({ frequency: 200, duration: 0.08, gain: 0.045, type: "triangle" });
+    if (weaponName === "Vector SMG") { this.playOneShot(Math.random() > 0.45 ? "smgBurst" : "smg"); return; }
+    if (weaponName === "Scatter Cannon") { this.playOneShot("scatter"); return; }
+    this.playOneShot("pistol");
   }
 
-  playEnemyHit() {
-    this.playTone({ frequency: 150, duration: 0.07, gain: 0.03, type: "square" });
-  }
-
-  playPlayerHit() {
-    this.playTone({ frequency: 92, duration: 0.12, gain: 0.08, type: "sawtooth" });
-  }
-
-  playDash() {
-    this.playTone({ frequency: 380, duration: 0.1, gain: 0.05, type: "triangle" });
-  }
-
-  playWaveStart() {
-    this.playTone({ frequency: 392, duration: 0.14, gain: 0.05, type: "triangle" });
-    window.setTimeout(() => {
-      this.playTone({ frequency: 523.2, duration: 0.16, gain: 0.06, type: "triangle" });
-    }, 100);
-  }
-
-  playGameOver() {
-    this.playTone({ frequency: 110, duration: 0.28, gain: 0.08, type: "sawtooth" });
-  }
+  playEnemyHit() { this.playOneShot("enemyHit"); }
+  playEnemyKill() { this.playOneShot("enemyKilled"); }
+  playPlayerHit() { this.playOneShot("playerHit"); }
+  playDash() { this.playOneShot("dash"); }
+  playWaveStart() { this.playOneShot("waveStart"); }
+  playGameOver() { this.playOneShot("gameOver"); }
+  playConfirm() { this.playOneShot("confirm"); }
 }

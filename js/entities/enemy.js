@@ -8,6 +8,7 @@ import {
   randomRange,
 } from "../systems/collision.js";
 
+// Five enemy types for FSM AI variety
 const ENEMY_TYPES = {
   shambler: {
     label: "Shambler",
@@ -23,15 +24,17 @@ const ENEMY_TYPES = {
     retreatThreshold: 0.18,
     retreatTime: [0.75, 1.1],
     retreatCooldown: 3.1,
-    color: "#c8594b",
-    glow: "#ffcc85",
+    bodyColor: "#b84c3e",
+    accentColor: "#ff9966",
+    eyeColor: "#ffcc85",
+    glowColor: "rgba(255,150,80,0.35)",
     score: 18,
     ranged: false,
   },
   sprinter: {
     label: "Sprinter",
     radius: 12,
-    speed: 144,
+    speed: 148,
     maxHealth: 36,
     damage: 10,
     attackRange: 28,
@@ -42,8 +45,10 @@ const ENEMY_TYPES = {
     retreatThreshold: 0.08,
     retreatTime: [0.45, 0.7],
     retreatCooldown: 2.2,
-    color: "#f18e4a",
-    glow: "#ffe08e",
+    bodyColor: "#d4783a",
+    accentColor: "#ffa54e",
+    eyeColor: "#ffe08e",
+    glowColor: "rgba(255,200,100,0.35)",
     score: 22,
     ranged: false,
   },
@@ -62,8 +67,10 @@ const ENEMY_TYPES = {
     retreatThreshold: 0.74,
     retreatTime: [0.8, 1.2],
     retreatCooldown: 2.6,
-    color: "#7bcf78",
-    glow: "#d2ffb9",
+    bodyColor: "#5aad58",
+    accentColor: "#7bcf78",
+    eyeColor: "#d2ffb9",
+    glowColor: "rgba(120,210,100,0.4)",
     score: 28,
     ranged: true,
     projectileSpeed: 360,
@@ -82,10 +89,37 @@ const ENEMY_TYPES = {
     retreatThreshold: 0.12,
     retreatTime: [0.55, 0.85],
     retreatCooldown: 3.4,
-    color: "#8d4650",
-    glow: "#ffc49f",
+    bodyColor: "#7a3040",
+    accentColor: "#cc5060",
+    eyeColor: "#ffc49f",
+    glowColor: "rgba(200,60,80,0.35)",
     score: 44,
     ranged: false,
+  },
+  screamer: {
+    label: "Screamer",
+    radius: 13,
+    speed: 72,
+    maxHealth: 40,
+    damage: 8,
+    attackRange: 160,
+    preferredDistance: 130,
+    attackWindup: 0.8,
+    attackRecovery: 0.4,
+    attackCooldown: 2.0,
+    noticeRange: 340,
+    retreatThreshold: 0.35,
+    retreatTime: [0.9, 1.4],
+    retreatCooldown: 2.8,
+    bodyColor: "#8855aa",
+    accentColor: "#bb88dd",
+    eyeColor: "#eeccff",
+    glowColor: "rgba(160,100,220,0.45)",
+    score: 34,
+    ranged: true,
+    projectileSpeed: 320,
+    auraRadius: 120,
+    buffSpeedMult: 1.2,
   },
 };
 
@@ -112,6 +146,8 @@ export class Enemy {
     this.expired = false;
     this.hasDeathBurst = false;
     this.facing = 0;
+    this.wobble = Math.random() * Math.PI * 2;
+    this.buffed = false;
 
     this.fsm = new FiniteStateMachine({
       owner: this,
@@ -120,7 +156,7 @@ export class Enemy {
       anyTransitions: [
         {
           to: "DEAD",
-          when: (owner, context, machine) => owner.health <= 0 && machine.currentState !== "DEAD",
+          when: (owner, _ctx, machine) => owner.health <= 0 && machine.currentState !== "DEAD",
         },
       ],
     });
@@ -132,25 +168,23 @@ export class Enemy {
         enter: (owner) => {
           owner.stateLabel = "SPAWN";
           owner.spawnTimer = randomRange(0.45, 0.9);
-          owner.opacity = 0.2;
+          owner.opacity = 0.15;
         },
         update: (owner, context, delta) => {
           owner.spawnTimer -= delta;
-          owner.opacity = clamp(1 - owner.spawnTimer / 0.9, 0.2, 1);
+          owner.opacity = clamp(1 - owner.spawnTimer / 0.9, 0.15, 1);
           owner.facePlayer(context.player);
         },
         transitions: [
           {
             to: "CHASE",
-            when: (owner, context) =>
-              owner.spawnTimer <= 0 && owner.distanceToPlayer(context.player) < owner.config.noticeRange,
+            when: (owner, ctx) =>
+              owner.spawnTimer <= 0 && owner.distanceToPlayer(ctx.player) < owner.config.noticeRange,
           },
-          {
-            to: "WANDER",
-            when: (owner) => owner.spawnTimer <= 0,
-          },
+          { to: "WANDER", when: (owner) => owner.spawnTimer <= 0 },
         ],
       },
+
       WANDER: {
         enter: (owner, context) => {
           owner.stateLabel = "WANDER";
@@ -159,35 +193,33 @@ export class Enemy {
         },
         update: (owner, context, delta) => {
           owner.wanderTimer -= delta;
-
           if (owner.wanderTimer <= 0 || owner.distanceTo(owner.wanderTarget) < 12) {
             owner.pickWanderTarget(context.bounds);
             owner.wanderTimer = randomRange(0.9, 1.8);
           }
-
           owner.moveToward(owner.wanderTarget.x, owner.wanderTarget.y, owner.speed * 0.52, delta, context.bounds);
         },
         transitions: [
           {
             to: "CHASE",
-            when: (owner, context) => owner.distanceToPlayer(context.player) < owner.config.noticeRange,
+            when: (owner, ctx) => owner.distanceToPlayer(ctx.player) < owner.config.noticeRange,
           },
           {
             to: "RETREAT",
-            when: (owner, context) => owner.shouldRetreat(context.player),
+            when: (owner, ctx) => owner.shouldRetreat(ctx.player),
           },
         ],
       },
+
       CHASE: {
         enter: (owner) => {
           owner.stateLabel = "CHASE";
         },
         update: (owner, context, delta) => {
-          const playerDistance = owner.distanceToPlayer(context.player);
-
-          if (owner.config.ranged && playerDistance < owner.config.preferredDistance * 0.72) {
+          const dist = owner.distanceToPlayer(context.player);
+          if (owner.config.ranged && dist < (owner.config.preferredDistance || 150) * 0.72) {
             owner.moveAway(context.player.x, context.player.y, owner.speed * 0.95, delta, context.bounds);
-          } else if (owner.config.ranged && playerDistance < owner.config.attackRange) {
+          } else if (owner.config.ranged && dist < owner.config.attackRange) {
             owner.strafe(context.player, owner.speed * 0.8, delta, context.bounds);
           } else {
             owner.moveToward(context.player.x, context.player.y, owner.speed, delta, context.bounds);
@@ -196,21 +228,19 @@ export class Enemy {
         transitions: [
           {
             to: "ATTACK",
-            when: (owner, context) =>
-              owner.attackCooldown <= 0 && owner.distanceToPlayer(context.player) <= owner.config.attackRange,
+            when: (owner, ctx) =>
+              owner.attackCooldown <= 0 && owner.distanceToPlayer(ctx.player) <= owner.config.attackRange,
           },
-          {
-            to: "RETREAT",
-            when: (owner, context) => owner.shouldRetreat(context.player),
-          },
+          { to: "RETREAT", when: (owner, ctx) => owner.shouldRetreat(ctx.player) },
           {
             to: "WANDER",
-            when: (owner, context, machine) =>
+            when: (owner, ctx, machine) =>
               machine.stateTime > 1.3 &&
-              owner.distanceToPlayer(context.player) > owner.config.noticeRange * 1.65,
+              owner.distanceToPlayer(ctx.player) > owner.config.noticeRange * 1.65,
           },
         ],
       },
+
       ATTACK: {
         enter: (owner) => {
           owner.stateLabel = "ATTACK";
@@ -220,20 +250,15 @@ export class Enemy {
         },
         update: (owner, context, delta) => {
           owner.facePlayer(context.player);
-
           if (!owner.attackPerformed) {
             owner.attackWindup -= delta;
-
             if (owner.attackWindup <= 0) {
               owner.performAttack(context);
               owner.attackPerformed = true;
             }
-
             return;
           }
-
           owner.attackRecovery -= delta;
-
           if (owner.config.ranged) {
             owner.moveAway(context.player.x, context.player.y, owner.speed * 0.75, delta, context.bounds);
           }
@@ -245,10 +270,10 @@ export class Enemy {
           },
           {
             to: "CHASE",
-            when: (owner, context) =>
+            when: (owner, ctx) =>
               owner.attackPerformed &&
               owner.attackRecovery <= 0 &&
-              owner.distanceToPlayer(context.player) <= owner.config.noticeRange * 1.4,
+              owner.distanceToPlayer(ctx.player) <= owner.config.noticeRange * 1.4,
           },
           {
             to: "WANDER",
@@ -256,6 +281,7 @@ export class Enemy {
           },
         ],
       },
+
       RETREAT: {
         enter: (owner) => {
           owner.stateLabel = "RETREAT";
@@ -269,41 +295,35 @@ export class Enemy {
         transitions: [
           {
             to: "ATTACK",
-            when: (owner, context) =>
+            when: (owner, ctx) =>
               owner.retreatTimer <= 0 &&
               owner.attackCooldown <= 0 &&
-              owner.distanceToPlayer(context.player) <= owner.config.attackRange,
+              owner.distanceToPlayer(ctx.player) <= owner.config.attackRange,
           },
           {
             to: "CHASE",
-            when: (owner, context) =>
-              owner.retreatTimer <= 0 &&
-              owner.distanceToPlayer(context.player) <= owner.config.noticeRange,
+            when: (owner, ctx) =>
+              owner.retreatTimer <= 0 && owner.distanceToPlayer(ctx.player) <= owner.config.noticeRange,
           },
-          {
-            to: "WANDER",
-            when: (owner) => owner.retreatTimer <= 0,
-          },
+          { to: "WANDER", when: (owner) => owner.retreatTimer <= 0 },
         ],
       },
+
       DEAD: {
         enter: (owner, context) => {
           owner.stateLabel = "DEAD";
           owner.deathTimer = 1.1;
-
           if (!owner.hasDeathBurst) {
             owner.hasDeathBurst = true;
-            context.spawnBurst(owner.x, owner.y, owner.config.color, 12, 40, 120);
-            context.leaveBlood(owner.x, owner.y, owner.radius * 0.9);
+            context.spawnBurst(owner.x, owner.y, owner.config.bodyColor, 14, 40, 140);
+            context.spawnBurst(owner.x, owner.y, "#330808", 8, 20, 60);
+            context.leaveBlood(owner.x, owner.y, owner.radius * 1.1);
           }
         },
-        update: (owner, context, delta) => {
+        update: (owner, _ctx, delta) => {
           owner.deathTimer -= delta;
-          owner.opacity = clamp(owner.deathTimer / 1.1, 0, 0.85);
-
-          if (owner.deathTimer <= 0) {
-            owner.expired = true;
-          }
+          owner.opacity = clamp(owner.deathTimer / 1.1, 0, 0.8);
+          if (owner.deathTimer <= 0) owner.expired = true;
         },
       },
     };
@@ -313,22 +333,32 @@ export class Enemy {
     this.attackCooldown = Math.max(0, this.attackCooldown - delta);
     this.damageFlash = Math.max(0, this.damageFlash - delta * 4);
     this.retreatCooldown = Math.max(0, this.retreatCooldown - delta);
+    this.wobble += delta * (this.stateLabel === "CHASE" ? 8 : 4);
+
+    // Screamer aura: buff nearby allies
+    if (this.type === "screamer" && this.fsm.currentState !== "DEAD") {
+      for (const enemy of context.enemies || []) {
+        if (enemy === this || enemy.fsm.currentState === "DEAD") continue;
+        if (distanceBetween(this.x, this.y, enemy.x, enemy.y) < (this.config.auraRadius || 120)) {
+          enemy.buffed = true;
+        }
+      }
+    }
+
+    // Apply buff speed boost
+    const speedMult = this.buffed ? 1.18 : 1;
+    this._effectiveSpeed = this.speed * speedMult;
+    this.buffed = false;
+
     this.fsm.update(delta, context);
   }
 
   takeDamage(amount) {
-    if (this.fsm.currentState === "DEAD") {
-      return { hit: false, killed: false };
-    }
-
+    if (this.fsm.currentState === "DEAD") return { hit: false, killed: false };
     const wasAlive = this.health > 0;
     this.health -= amount;
     this.damageFlash = 1;
-
-    return {
-      hit: true,
-      killed: wasAlive && this.health <= 0,
-    };
+    return { hit: true, killed: wasAlive && this.health <= 0 };
   }
 
   shouldRetreat(player) {
@@ -352,24 +382,32 @@ export class Enemy {
   }
 
   pickWanderTarget(bounds) {
-    const margin = 56;
+    const m = 56;
     this.wanderTarget = {
-      x: randomRange(margin, bounds.width - margin),
-      y: randomRange(margin, bounds.height - margin),
+      x: randomRange(m, bounds.width - m),
+      y: randomRange(m, bounds.height - m),
     };
   }
 
+  getSpeed() {
+    return this._effectiveSpeed || this.speed;
+  }
+
   moveToward(targetX, targetY, speed, delta, bounds) {
-    const direction = normalize(targetX - this.x, targetY - this.y);
-    this.x += direction.x * speed * delta;
-    this.y += direction.y * speed * delta;
+    const d = normalize(targetX - this.x, targetY - this.y);
+    const s = this.buffed ? speed * 1.18 : speed;
+    this.x += d.x * s * delta;
+    this.y += d.y * s * delta;
+    this.facePoint(targetX, targetY);
     keepCircleInBounds(this, bounds);
   }
 
   moveAway(targetX, targetY, speed, delta, bounds) {
-    const direction = normalize(this.x - targetX, this.y - targetY);
-    this.x += direction.x * speed * delta;
-    this.y += direction.y * speed * delta;
+    const d = normalize(this.x - targetX, this.y - targetY);
+    const s = this.buffed ? speed * 1.18 : speed;
+    this.x += d.x * s * delta;
+    this.y += d.y * s * delta;
+    this.facePoint(targetX, targetY);
     keepCircleInBounds(this, bounds);
   }
 
@@ -378,7 +416,12 @@ export class Enemy {
     const lateral = Math.random() > 0.5 ? 1 : -1;
     this.x += (-away.y * lateral + away.x * 0.25) * speed * delta;
     this.y += (away.x * lateral + away.y * 0.25) * speed * delta;
+    this.facePlayer(player);
     keepCircleInBounds(this, bounds);
+  }
+
+  facePoint(tx, ty) {
+    this.facing = Math.atan2(ty - this.y, tx - this.x);
   }
 
   performAttack(context) {
@@ -393,21 +436,21 @@ export class Enemy {
     if (this.config.ranged) {
       const leadX = context.player.x + context.player.vx * 0.15;
       const leadY = context.player.y + context.player.vy * 0.15;
-      const direction = normalize(leadX - this.x, leadY - this.y);
+      const d = normalize(leadX - this.x, leadY - this.y);
+      const pColor = this.type === "screamer" ? "#cc88ff" : "#a7ff7c";
       const projectile = new Bullet({
-        x: this.x + direction.x * (this.radius + 6),
-        y: this.y + direction.y * (this.radius + 6),
-        vx: direction.x * this.config.projectileSpeed,
-        vy: direction.y * this.config.projectileSpeed,
+        x: this.x + d.x * (this.radius + 6),
+        y: this.y + d.y * (this.radius + 6),
+        vx: d.x * this.config.projectileSpeed,
+        vy: d.y * this.config.projectileSpeed,
         radius: 7,
         damage: this.config.damage,
         life: 1.6,
-        color: "#a7ff7c",
+        color: pColor,
         friendly: false,
       });
-
       context.spawnEnemyProjectile(projectile);
-      context.spawnBurst(this.x, this.y, "#a7ff7c", 6, 20, 60);
+      context.spawnBurst(this.x, this.y, pColor, 6, 20, 60);
       return;
     }
 
@@ -418,62 +461,234 @@ export class Enemy {
   }
 
   render(ctx) {
-    if (this.expired) {
-      return;
-    }
+    if (this.expired) return;
 
     const healthRatio = clamp(this.health / this.maxHealth, 0, 1);
-    const bodyColor = this.damageFlash > 0 ? "#fff0df" : this.config.color;
-    const eyeColor = this.config.glow;
+    const isFlash = this.damageFlash > 0;
+    const c = this.config;
+    const t = performance.now() * 0.001;
 
     ctx.save();
     ctx.globalAlpha = this.opacity;
     ctx.translate(this.x, this.y);
 
-    ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+    // Drop shadow
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
     ctx.beginPath();
-    ctx.ellipse(0, this.radius + 8, this.radius * 0.85, this.radius * 0.45, 0, 0, Math.PI * 2);
+    ctx.ellipse(2, this.radius + 6, this.radius * 0.9, this.radius * 0.4, 0, 0, Math.PI * 2);
     ctx.fill();
 
+    // State-specific effects
     if (this.stateLabel === "SPAWN") {
-      ctx.strokeStyle = "rgba(255, 190, 132, 0.5)";
+      const pulse = 0.5 + Math.sin(t * 8) * 0.3;
+      ctx.strokeStyle = `rgba(255,200,140,${pulse})`;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(0, 0, this.radius + 10 + Math.sin(performance.now() * 0.01) * 3, 0, Math.PI * 2);
+      ctx.arc(0, 0, this.radius + 12 + Math.sin(t * 6) * 3, 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    if (this.stateLabel === "ATTACK") {
-      ctx.strokeStyle = "rgba(255, 93, 93, 0.55)";
-      ctx.lineWidth = 2;
+    if (this.stateLabel === "ATTACK" && !this.attackPerformed) {
+      const windupProgress = 1 - (this.attackWindup / c.attackWindup);
+      ctx.strokeStyle = `rgba(255,60,40,${0.2 + windupProgress * 0.5})`;
+      ctx.lineWidth = 2 + windupProgress * 2;
       ctx.beginPath();
-      ctx.arc(0, 0, this.config.attackRange, 0, Math.PI * 2);
+      ctx.arc(0, 0, this.radius + 4 + windupProgress * 8, 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    ctx.shadowBlur = 22;
-    ctx.shadowColor = this.config.glow;
-    ctx.fillStyle = bodyColor;
+    if (this.stateLabel === "RETREAT") {
+      ctx.strokeStyle = "rgba(100,180,255,0.2)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 6]);
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius + 8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Screamer aura
+    if (this.type === "screamer" && this.stateLabel !== "DEAD") {
+      const auraR = this.config.auraRadius || 120;
+      const pulse = 0.08 + Math.sin(t * 3) * 0.04;
+      const auraGrad = ctx.createRadialGradient(0, 0, this.radius, 0, 0, auraR);
+      auraGrad.addColorStop(0, `rgba(160,100,220,${pulse})`);
+      auraGrad.addColorStop(1, "rgba(160,100,220,0)");
+      ctx.fillStyle = auraGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, auraR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Buff glow indicator
+    if (this.buffed) {
+      ctx.strokeStyle = "rgba(200,140,255,0.4)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius + 4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Body glow
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = c.glowColor;
+
+    // Type-specific body rendering
+    const bodyCol = isFlash ? "#fff0df" : c.bodyColor;
+
+    if (this.type === "brute") {
+      // Brute: large irregular body with armor ridges
+      ctx.fillStyle = bodyCol;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Armor plates
+      ctx.fillStyle = isFlash ? "#eee" : "#5a2030";
+      ctx.beginPath();
+      ctx.arc(-this.radius * 0.5, -this.radius * 0.5, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(this.radius * 0.5, -this.radius * 0.5, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(0, -this.radius * 0.6, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Thick border
+      ctx.strokeStyle = isFlash ? "#ddd" : "#4a1828";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+    } else if (this.type === "sprinter") {
+      // Sprinter: elongated body facing movement direction
+      ctx.save();
+      ctx.rotate(this.facing);
+      ctx.fillStyle = bodyCol;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, this.radius * 1.3, this.radius * 0.85, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Speed streaks
+      if (this.stateLabel === "CHASE") {
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = c.accentColor;
+        for (let i = 1; i <= 3; i++) {
+          ctx.beginPath();
+          ctx.ellipse(-this.radius * 0.8 * i, 0, 3, 2, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = this.opacity;
+      }
+      ctx.restore();
+
+    } else if (this.type === "spitter") {
+      // Spitter: bloated round body with drips
+      ctx.fillStyle = bodyCol;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Bloated belly
+      ctx.fillStyle = isFlash ? "#dfd" : "#4a8a48";
+      ctx.beginPath();
+      ctx.arc(0, 2, this.radius * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Acid drip
+      const dripY = this.radius + 2 + Math.sin(t * 4) * 3;
+      ctx.fillStyle = "#a7ff7c";
+      ctx.globalAlpha = 0.5 * this.opacity;
+      ctx.beginPath();
+      ctx.arc(0, dripY, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = this.opacity;
+
+    } else if (this.type === "screamer") {
+      // Screamer: thin body with pulsing rings
+      ctx.fillStyle = bodyCol;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner energy
+      const pulse = 0.4 + Math.sin(t * 5) * 0.2;
+      ctx.fillStyle = `rgba(200,140,255,${pulse})`;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sound wave rings
+      ctx.strokeStyle = `rgba(200,140,255,${0.15 + Math.sin(t * 4) * 0.1})`;
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 2; i++) {
+        const r = this.radius + 6 + ((t * 20 + i * 15) % 30);
+        const a = Math.max(0, 0.3 - (r - this.radius) / 50);
+        ctx.globalAlpha = a * this.opacity;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = this.opacity;
+
+    } else {
+      // Shambler: classic zombie body
+      ctx.fillStyle = bodyCol;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Shamble wobble arms
+      const armAngle = Math.sin(this.wobble) * 0.3;
+      ctx.save();
+      ctx.rotate(this.facing + armAngle);
+      ctx.fillStyle = isFlash ? "#eee" : c.accentColor;
+      ctx.fillRect(this.radius - 2, -3, 10, 6);
+      ctx.restore();
+      ctx.save();
+      ctx.rotate(this.facing - armAngle);
+      ctx.fillStyle = isFlash ? "#eee" : c.accentColor;
+      ctx.fillRect(this.radius - 2, -3, 10, 6);
+      ctx.restore();
+    }
+
+    // Inner face darkness
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "rgba(15,10,8,0.6)";
     ctx.beginPath();
-    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+    ctx.arc(0, 2, this.radius * 0.55, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "rgba(21, 13, 11, 0.76)";
+    // Eyes (face toward player)
+    const eyeSpread = this.radius * 0.32;
+    const eyeSize = this.type === "brute" ? 4 : this.type === "sprinter" ? 2.5 : 3;
+    ctx.save();
+    ctx.rotate(this.facing);
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = c.eyeColor;
+    ctx.fillStyle = c.eyeColor;
     ctx.beginPath();
-    ctx.arc(0, 3, this.radius * 0.62, 0, Math.PI * 2);
+    ctx.arc(this.radius * 0.3, -eyeSpread, eyeSize, 0, Math.PI * 2);
     ctx.fill();
-
-    ctx.fillStyle = eyeColor;
     ctx.beginPath();
-    ctx.arc(-this.radius * 0.3, -2, 3, 0, Math.PI * 2);
-    ctx.arc(this.radius * 0.3, -2, 3, 0, Math.PI * 2);
+    ctx.arc(this.radius * 0.3, eyeSpread, eyeSize, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
 
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(0, 0, this.radius + 5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * healthRatio);
-    ctx.stroke();
+    // Health bar above
+    ctx.shadowBlur = 0;
+    if (healthRatio < 1 && this.stateLabel !== "DEAD") {
+      const barW = this.radius * 2.2;
+      const barH = 3;
+      const barY = -this.radius - 10;
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      ctx.fillRect(-barW / 2, barY, barW, barH);
+      const hpColor = healthRatio > 0.5 ? "#6c6" : healthRatio > 0.25 ? "#cc6" : "#c44";
+      ctx.fillStyle = hpColor;
+      ctx.fillRect(-barW / 2, barY, barW * healthRatio, barH);
+    }
 
     ctx.restore();
   }

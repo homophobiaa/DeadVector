@@ -62,6 +62,9 @@ export class Player {
     this.dashCooldown = 0;
     this.damageFlash = 0;
     this.invulnerability = 0;
+    this.muzzleFlash = 0;
+    this.afterImages = [];
+    this.kills = 0;
   }
 
   update(delta, input, bounds) {
@@ -84,7 +87,14 @@ export class Player {
     this.dashCooldown = Math.max(0, this.dashCooldown - delta);
     this.invulnerability = Math.max(0, this.invulnerability - delta);
     this.damageFlash = Math.max(0, this.damageFlash - delta * 2.4);
+    this.muzzleFlash = Math.max(0, this.muzzleFlash - delta * 12);
     this.energy = clamp(this.energy + 28 * delta, 0, 100);
+
+    // Fade afterimages
+    for (let i = this.afterImages.length - 1; i >= 0; i--) {
+      this.afterImages[i].alpha -= delta * 3;
+      if (this.afterImages[i].alpha <= 0) this.afterImages.splice(i, 1);
+    }
   }
 
   get weapon() {
@@ -98,37 +108,32 @@ export class Player {
   }
 
   selectWeapon(index) {
-    if (index < 0 || index >= this.weapons.length) {
-      return this.weapon;
-    }
-
+    if (index < 0 || index >= this.weapons.length) return this.weapon;
     this.weaponIndex = index;
     return this.weapon;
   }
 
   tryShoot(targetX, targetY) {
-    if (this.fireCooldown > 0) {
-      return [];
-    }
+    if (this.fireCooldown > 0) return [];
 
     const angle = Math.atan2(targetY - this.y, targetX - this.x);
     const bullets = [];
     const weapon = this.weapon;
 
     this.fireCooldown = weapon.cooldown;
+    this.muzzleFlash = 1;
 
-    for (let index = 0; index < weapon.pellets; index += 1) {
+    for (let i = 0; i < weapon.pellets; i++) {
       const spreadOffset = (Math.random() - 0.5) * weapon.spread;
-      const bulletAngle = angle + spreadOffset;
-      const velocityX = Math.cos(bulletAngle) * weapon.projectileSpeed;
-      const velocityY = Math.sin(bulletAngle) * weapon.projectileSpeed;
+      const a = angle + spreadOffset;
+      const vx = Math.cos(a) * weapon.projectileSpeed;
+      const vy = Math.sin(a) * weapon.projectileSpeed;
 
       bullets.push(
         new Bullet({
-          x: this.x + Math.cos(bulletAngle) * (this.radius + 10),
-          y: this.y + Math.sin(bulletAngle) * (this.radius + 10),
-          vx: velocityX,
-          vy: velocityY,
+          x: this.x + Math.cos(a) * (this.radius + 12),
+          y: this.y + Math.sin(a) * (this.radius + 12),
+          vx, vy,
           radius: weapon.radius,
           damage: weapon.damage,
           life: 0.9,
@@ -137,25 +142,31 @@ export class Player {
         }),
       );
     }
-
     return bullets;
   }
 
   useDash(targetX, targetY, bounds) {
-    if (this.dashCooldown > 0 || this.energy < 35) {
-      return false;
-    }
+    if (this.dashCooldown > 0 || this.energy < 35) return false;
+
+    // Store afterimage
+    this.afterImages.push({ x: this.x, y: this.y, angle: this.aimAngle, alpha: 0.6 });
 
     const direction = normalize(targetX - this.x, targetY - this.y);
-
-    this.x += direction.x * 130;
-    this.y += direction.y * 130;
+    this.x += direction.x * 135;
+    this.y += direction.y * 135;
     keepCircleInBounds(this, bounds);
+
+    // Second afterimage at midpoint
+    this.afterImages.push({
+      x: (this.afterImages[this.afterImages.length - 1].x + this.x) / 2,
+      y: (this.afterImages[this.afterImages.length - 1].y + this.y) / 2,
+      angle: this.aimAngle,
+      alpha: 0.35,
+    });
 
     this.energy -= 35;
     this.dashCooldown = 1.25;
     this.invulnerability = 0.24;
-
     return true;
   }
 
@@ -164,50 +175,159 @@ export class Player {
   }
 
   takeDamage(amount) {
-    if (this.invulnerability > 0) {
-      return false;
-    }
-
+    if (this.invulnerability > 0) return false;
     this.health = clamp(this.health - amount, 0, this.maxHealth);
     this.invulnerability = 0.42;
     this.damageFlash = 1;
     return true;
   }
 
+  renderAfterImages(ctx) {
+    for (const img of this.afterImages) {
+      ctx.save();
+      ctx.globalAlpha = img.alpha * 0.4;
+      ctx.translate(img.x, img.y);
+      ctx.rotate(img.angle);
+      ctx.fillStyle = "#6be0d6";
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
   render(ctx) {
+    // Afterimages first (behind player)
+    this.renderAfterImages(ctx);
+
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.aimAngle);
 
-    ctx.shadowBlur = 24;
-    ctx.shadowColor = "rgba(107, 224, 214, 0.34)";
-
-    ctx.fillStyle = this.damageFlash > 0 ? "#ffd1c3" : "#f7f6f1";
+    // Drop shadow
+    ctx.save();
+    ctx.rotate(-this.aimAngle);
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
     ctx.beginPath();
-    ctx.moveTo(22, 0);
-    ctx.lineTo(-10, 12);
-    ctx.lineTo(-14, 0);
-    ctx.lineTo(-10, -12);
-    ctx.closePath();
+    ctx.ellipse(3, 6, this.radius * 1.05, this.radius * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Body glow
+    const isHurt = this.damageFlash > 0;
+    ctx.shadowBlur = isHurt ? 35 : 22;
+    ctx.shadowColor = isHurt ? "rgba(255,100,70,0.5)" : "rgba(107,224,214,0.2)";
+
+    // Main body
+    const bodyGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, this.radius);
+    bodyGrad.addColorStop(0, isHurt ? "#ffd8c8" : "#e8e4de");
+    bodyGrad.addColorStop(0.65, isHurt ? "#c47060" : "#bbb5ab");
+    bodyGrad.addColorStop(1, isHurt ? "#a05040" : "#8a857d");
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#6be0d6";
+    // Shoulder pads
+    ctx.fillStyle = "#555";
     ctx.beginPath();
-    ctx.arc(-4, 0, 9, 0, Math.PI * 2);
+    ctx.arc(-4, -10, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(-4, 10, 5.5, 0, Math.PI * 2);
     ctx.fill();
 
+    // Armor trim
+    ctx.strokeStyle = "rgba(107,224,214,0.15)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius - 1, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Weapon barrel
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#3a3a3a";
+    ctx.fillRect(10, -3.5, 22, 7);
+    ctx.fillStyle = "#555";
+    ctx.fillRect(10, -3.5, 4, 7);
+
+    // Muzzle tip
     ctx.fillStyle = this.weapon.color;
-    ctx.fillRect(12, -3, 18, 6);
+    ctx.fillRect(28, -2.5, 6, 5);
+
+    // Muzzle flash
+    if (this.muzzleFlash > 0) {
+      ctx.save();
+      ctx.globalAlpha = this.muzzleFlash;
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = this.weapon.color;
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(36, 0, 4 + this.muzzleFlash * 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = this.weapon.color;
+      ctx.beginPath();
+      ctx.arc(36, 0, 2 + this.muzzleFlash * 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Head / visor
+    const visorGrad = ctx.createRadialGradient(2, 0, 1, 2, 0, 7);
+    visorGrad.addColorStop(0, "#9ffffa");
+    visorGrad.addColorStop(0.6, "#6be0d6");
+    visorGrad.addColorStop(1, "#3cb5ab");
+    ctx.fillStyle = visorGrad;
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = "rgba(107,224,214,0.4)";
+    ctx.beginPath();
+    ctx.arc(3, 0, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Visor slit
+    ctx.strokeStyle = "#1a3530";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(6, -3);
+    ctx.lineTo(8, 0);
+    ctx.lineTo(6, 3);
+    ctx.stroke();
 
     ctx.restore();
 
+    // UI rings (not rotated)
     ctx.save();
     ctx.translate(this.x, this.y);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
+
+    // Health ring
+    const healthRatio = this.health / this.maxHealth;
+    const hColor = healthRatio > 0.6 ? "#78ff78" : healthRatio > 0.3 ? "#ffc850" : "#ff5040";
+    ctx.strokeStyle = hColor;
+    ctx.globalAlpha = 0.35;
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(0, 0, this.radius + 6, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * this.energy) / 100);
+    ctx.arc(0, 0, this.radius + 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * healthRatio);
     ctx.stroke();
+
+    // Energy ring
+    const energyRatio = this.energy / 100;
+    ctx.strokeStyle = this.dashCooldown > 0 ? "rgba(255,255,255,0.06)" : "rgba(107,224,214,0.22)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius + 8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * energyRatio);
+    ctx.stroke();
+
+    // Invulnerability flash
+    if (this.invulnerability > 0) {
+      ctx.globalAlpha = Math.sin(this.invulnerability * 30) * 0.15 + 0.05;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius + 12, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
     ctx.restore();
   }
 }

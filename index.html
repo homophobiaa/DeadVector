@@ -9,19 +9,24 @@
 <body>
   <div class="page-shell">
     <header class="brand-bar">
-      <div>
+      <div class="brand-copy">
         <p class="eyebrow">Browser Game with Finite State Machine AI</p>
         <h1>DeadVector</h1>
+        <p class="brand-summary">Containment arena / adaptive undead AI / survival protocol build</p>
       </div>
-      <button id="mute-button" class="ghost-button" type="button">Mute: Off</button>
+      <div class="brand-side">
+        <span class="signal-chip">Live Build</span>
+        <button id="mute-button" class="ghost-button" type="button">Sound: On</button>
+      </div>
     </header>
 
     <main class="game-layout">
       <aside class="hud-panel">
         <div class="hud-grid">
-          <article class="hud-card">
+          <article class="hud-card hud-card--health">
             <span class="hud-label">Health</span>
             <strong id="hud-health">100 / 100</strong>
+            <div class="health-bar"><div class="health-bar-fill" id="health-bar-fill"></div></div>
           </article>
           <article class="hud-card">
             <span class="hud-label">Score</span>
@@ -36,6 +41,14 @@
             <strong id="hud-weapon">Service Pistol</strong>
           </article>
           <article class="hud-card">
+            <span class="hud-label">Kills</span>
+            <strong id="hud-kills">0</strong>
+          </article>
+          <article class="hud-card">
+            <span class="hud-label">Combo</span>
+            <strong id="hud-combo">---</strong>
+          </article>
+          <article class="hud-card">
             <span class="hud-label">Threat</span>
             <strong id="hud-zombies">0 active</strong>
           </article>
@@ -46,7 +59,10 @@
         </div>
 
         <section class="status-panel">
-          <p class="status-label">Arena Feed</p>
+          <div class="status-header">
+            <p class="status-label">Arena Feed</p>
+            <span class="status-chip">System Online</span>
+          </div>
           <ul id="event-feed" class="event-feed">
             <li>Assignment-ready canvas arena initialized.</li>
             <li>Play with mouse and keyboard. Right click to dash.</li>
@@ -61,9 +77,23 @@
           <p class="overlay-kicker">Top-down survival shooter</p>
           <h2>DeadVector</h2>
           <p>
-            Survive escalating zombie waves, juggle three weapons, and exploit the undead FSM:
-            <span class="accent-copy">SPAWN - WANDER - CHASE - ATTACK - RETREAT - DEAD</span>
+            Survive escalating zombie waves, chain kills for combo multipliers, collect health pickups, and exploit the undead FSM:
+            <span class="accent-copy">SPAWN → WANDER → CHASE → ATTACK → RETREAT → DEAD</span>
           </p>
+          <div class="menu-highlights">
+            <article>
+              <span>Loadout</span>
+              <strong>3 Weapons</strong>
+            </article>
+            <article>
+              <span>Enemies</span>
+              <strong>5 Variants</strong>
+            </article>
+            <article>
+              <span>State Logic</span>
+              <strong>6-State FSM</strong>
+            </article>
+          </div>
           <div class="controls-list">
             <p><span>Move</span><strong>WASD</strong></p>
             <p><span>Aim</span><strong>Mouse Move</strong></p>
@@ -81,6 +111,7 @@
           <p class="overlay-kicker">System hold</p>
           <h2>Paused</h2>
           <p>The quarantine breach is frozen. Resume when you are ready.</p>
+          <p class="overlay-note">Focus loss and tab hiding also trigger an automatic pause.</p>
           <div class="button-row">
             <button id="resume-button" class="solid-button" type="button">Resume</button>
           </div>
@@ -88,8 +119,9 @@
 
         <section id="game-over-screen" class="overlay-card hidden">
           <p class="overlay-kicker">Signal lost</p>
-          <h2>Run Over</h2>
-          <p id="final-summary">Score 0. Wave 0.</p>
+          <h2>Operator Down</h2>
+          <p id="final-summary">Score: 0 | Wave: 0 | Kills: 0</p>
+          <p class="overlay-note">Chain combos, collect health pickups, keep moving. Try again.</p>
           <div class="button-row">
             <button id="restart-button" class="solid-button" type="button">Restart</button>
           </div>
