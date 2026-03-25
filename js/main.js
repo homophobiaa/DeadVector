@@ -7,16 +7,6 @@ const bootstrap = () => {
   const canvas = document.getElementById("game-canvas");
 
   const ui = new UIManager({
-    health: document.getElementById("hud-health"),
-    score: document.getElementById("hud-score"),
-    wave: document.getElementById("hud-wave"),
-    weapon: document.getElementById("hud-weapon"),
-    zombies: document.getElementById("hud-zombies"),
-    state: document.getElementById("hud-state"),
-    kills: document.getElementById("hud-kills"),
-    combo: document.getElementById("hud-combo"),
-    healthBar: document.getElementById("health-bar-fill"),
-    eventFeed: document.getElementById("event-feed"),
     menuScreen: document.getElementById("menu-screen"),
     pauseScreen: document.getElementById("pause-screen"),
     gameOverScreen: document.getElementById("game-over-screen"),

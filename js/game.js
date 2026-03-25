@@ -172,7 +172,7 @@ export class Game {
     this.bounds.height = Math.max(320, Math.floor(rect.height));
     this.canvas.width = Math.floor(this.bounds.width * this.dpr);
     this.canvas.height = Math.floor(this.bounds.height * this.dpr);
-    keepCircleInBounds(this.player, this.bounds);
+    if (this.player) keepCircleInBounds(this.player, this.bounds);
   }
 
   loop(timestamp) {
@@ -313,6 +313,9 @@ export class Game {
 
     // Update ambient dust
     this.updateAmbientDust(delta);
+
+    // Update toast notifications
+    this.ui.updateToasts(delta);
 
     // Collisions
     this.resolveCollisions();
@@ -544,25 +547,13 @@ export class Game {
     this.ui.showPause(false);
     this.ui.showGameOver(
       true,
-      `Score: ${this.score.toLocaleString()} | Wave: ${this.waveSpawner.wave} | Kills: ${this.player.kills} | Max Combo: ${this.maxCombo}x`,
+      `Score: ${this.score.toLocaleString()} \u2022 Wave: ${this.waveSpawner.wave} \u2022 Kills: ${this.player.kills} \u2022 Max Combo: ${this.maxCombo}x`,
     );
     this.syncHud();
   }
 
   syncHud() {
-    const labels = { menu: "Menu", playing: "Playing", paused: "Paused", gameover: "Game Over" };
-    this.ui.updateHud({
-      health: this.player.health,
-      maxHealth: this.player.maxHealth,
-      score: this.score,
-      wave: this.waveSpawner.wave,
-      weapon: this.player.weapon.name,
-      activeZombies: this.enemies.filter((e) => e.fsm.currentState !== "DEAD").length,
-      state: labels[this.state],
-      kills: this.player.kills,
-      combo: this.combo,
-      comboMultiplier: this.getComboMultiplier(),
-    });
+    // HUD is now rendered directly on canvas — no DOM updates needed
   }
 
   // ====== RENDERING ======
@@ -570,19 +561,19 @@ export class Game {
   renderBackground() {
     const { ctx, bounds } = this;
 
-    // Dark radial gradient
+    // Dark green radial gradient
     const bg = ctx.createRadialGradient(
       bounds.width * 0.5, bounds.height * 0.45, 60,
       bounds.width * 0.5, bounds.height * 0.45, bounds.width * 0.9,
     );
-    bg.addColorStop(0, "#241815");
-    bg.addColorStop(0.4, "#18110f");
-    bg.addColorStop(1, "#080606");
+    bg.addColorStop(0, "#0e1a0e");
+    bg.addColorStop(0.4, "#0a120a");
+    bg.addColorStop(1, "#040804");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, bounds.width, bounds.height);
 
     // Grid lines
-    ctx.strokeStyle = "rgba(255,160,100,0.045)";
+    ctx.strokeStyle = "rgba(0,255,136,0.03)";
     ctx.lineWidth = 1;
     for (let x = 24; x < bounds.width; x += 48) {
       ctx.beginPath();
@@ -598,7 +589,7 @@ export class Game {
     }
 
     // Ground debris
-    ctx.fillStyle = "rgba(255,200,160,0.025)";
+    ctx.fillStyle = "rgba(0,255,136,0.015)";
     for (const d of this.debris) {
       ctx.save();
       ctx.translate(d.x % bounds.width, d.y % bounds.height);
@@ -609,13 +600,13 @@ export class Game {
     }
 
     // Arena border
-    ctx.strokeStyle = "rgba(255,130,70,0.18)";
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(0,255,136,0.12)";
+    ctx.lineWidth = 2;
     ctx.strokeRect(18, 18, bounds.width - 36, bounds.height - 36);
 
     // Corner accents
     const cornerSize = 24;
-    ctx.strokeStyle = "rgba(255,130,70,0.3)";
+    ctx.strokeStyle = "rgba(0,255,136,0.25)";
     ctx.lineWidth = 2;
     const corners = [
       [18, 18, 1, 1], [bounds.width - 18, 18, -1, 1],
@@ -639,7 +630,7 @@ export class Game {
 
     // Ambient dust
     for (const d of this.ambientDust) {
-      ctx.fillStyle = `rgba(255,220,180,${d.alpha})`;
+      ctx.fillStyle = `rgba(180,255,200,${d.alpha * 0.5})`;
       ctx.beginPath();
       ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
       ctx.fill();
@@ -709,7 +700,7 @@ export class Game {
       const alpha = clamp(dn.life * 2, 0, 1);
       ctx.save();
       ctx.globalAlpha = alpha;
-      ctx.font = `bold ${13 + dn.scale}px "Trebuchet MS", sans-serif`;
+      ctx.font = `bold ${13 + dn.scale}px "Inter", sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
@@ -737,18 +728,18 @@ export class Game {
     ctx.textBaseline = "middle";
 
     // Large title
-    ctx.font = 'bold 64px Impact, "Arial Black", sans-serif';
+    ctx.font = 'bold 64px "Orbitron", "Arial Black", sans-serif';
     ctx.fillStyle = "rgba(0,0,0,0.4)";
     ctx.fillText(wa.text, bounds.width / 2 + 2, bounds.height / 2 + 2);
-    ctx.fillStyle = "#ff8855";
+    ctx.fillStyle = "#00ff88";
     ctx.shadowBlur = 30;
-    ctx.shadowColor = "rgba(255,130,70,0.5)";
+    ctx.shadowColor = "rgba(0,255,136,0.5)";
     ctx.fillText(wa.text, bounds.width / 2, bounds.height / 2);
 
     // Subtitle
-    ctx.font = '18px "Trebuchet MS", sans-serif';
+    ctx.font = '18px "Inter", sans-serif';
     ctx.shadowBlur = 0;
-    ctx.fillStyle = "rgba(255,200,160,0.7)";
+    ctx.fillStyle = "rgba(0,255,136,0.5)";
     ctx.fillText("SURVIVE", bounds.width / 2, bounds.height / 2 + 40);
 
     ctx.restore();
@@ -769,18 +760,18 @@ export class Game {
     const multText = `${this.getComboMultiplier().toFixed(1)}x SCORE`;
 
     // Combo number
-    ctx.font = 'bold 42px Impact, "Arial Black", sans-serif';
+    ctx.font = 'bold 42px "Orbitron", "Arial Black", sans-serif';
     ctx.fillStyle = "rgba(0,0,0,0.4)";
     ctx.fillText(comboText, bounds.width - 22, 22);
-    ctx.fillStyle = this.combo >= 10 ? "#ff5533" : this.combo >= 5 ? "#ffc850" : "#ffaa66";
+    ctx.fillStyle = this.combo >= 10 ? "#ff3355" : this.combo >= 5 ? "#ffc850" : "#00ff88";
     ctx.shadowBlur = 20;
-    ctx.shadowColor = "rgba(255,180,80,0.4)";
+    ctx.shadowColor = "rgba(0,255,136,0.4)";
     ctx.fillText(comboText, bounds.width - 20, 20);
 
     // Multiplier
-    ctx.font = '14px "Trebuchet MS", sans-serif';
+    ctx.font = '14px "Inter", sans-serif';
     ctx.shadowBlur = 0;
-    ctx.fillStyle = "rgba(255,200,160,0.6)";
+    ctx.fillStyle = "rgba(0,255,136,0.5)";
     ctx.fillText(multText, bounds.width - 20, 64);
 
     ctx.restore();
@@ -795,7 +786,7 @@ export class Game {
       bounds.width / 2, bounds.height / 2, bounds.width * 0.75,
     );
     vignette.addColorStop(0, "rgba(0,0,0,0)");
-    vignette.addColorStop(1, "rgba(0,0,0,0.35)");
+    vignette.addColorStop(1, "rgba(0,0,0,0.4)");
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, bounds.width, bounds.height);
 
@@ -806,10 +797,125 @@ export class Game {
         bounds.width / 2, bounds.height / 2, bounds.width * 0.65,
       );
       dmgVig.addColorStop(0, "rgba(180,20,20,0)");
-      dmgVig.addColorStop(1, `rgba(180,20,20,${this.damageVignette * 0.4})`);
+      dmgVig.addColorStop(1, `rgba(180,20,20,${this.damageVignette * 0.45})`);
       ctx.fillStyle = dmgVig;
       ctx.fillRect(0, 0, bounds.width, bounds.height);
     }
+  }
+
+  renderHud() {
+    if (this.state === "menu") return;
+    const { ctx, bounds } = this;
+
+    ctx.save();
+
+    // ---- Health bar (bottom-center) ----
+    const barW = 200;
+    const barH = 8;
+    const barX = (bounds.width - barW) / 2;
+    const barY = bounds.height - 32;
+    const pct = clamp(this.player.health / this.player.maxHealth, 0, 1);
+
+    // Background
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.beginPath();
+    ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 4);
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = "rgba(0,255,136,0.25)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 4);
+    ctx.stroke();
+
+    // Fill
+    const hpColor = pct > 0.6 ? "#00ff88" : pct > 0.3 ? "#ffcc00" : "#ff3355";
+    ctx.fillStyle = hpColor;
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = hpColor;
+    ctx.beginPath();
+    ctx.roundRect(barX, barY, barW * pct, barH, 3);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // HP text
+    ctx.font = '600 11px "Inter", sans-serif';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.fillText(`${Math.ceil(this.player.health)} / ${this.player.maxHealth}`, bounds.width / 2, barY - 5);
+
+    // ---- Top-left: Score + Wave ----
+    const tlX = 56;
+    const tlY = 18;
+
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+
+    // Score
+    ctx.font = 'bold 18px "Orbitron", monospace';
+    ctx.fillStyle = "#00ff88";
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "rgba(0,255,136,0.3)";
+    ctx.fillText(this.score.toLocaleString(), tlX, tlY);
+    ctx.shadowBlur = 0;
+
+    // Wave label
+    ctx.font = '500 11px "Inter", sans-serif';
+    ctx.fillStyle = "rgba(0,255,136,0.45)";
+    ctx.fillText(`WAVE ${this.waveSpawner.wave}`, tlX, tlY + 24);
+
+    // ---- Bottom-left: Weapon ----
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    ctx.font = '600 12px "Inter", sans-serif';
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.fillText(this.player.weapon.name.toUpperCase(), 22, bounds.height - 18);
+
+    // Weapon indicator dots
+    const weapons = this.player.weapons || [];
+    for (let i = 0; i < weapons.length; i++) {
+      const dotX = 22 + i * 14;
+      const dotY = bounds.height - 38;
+      const active = weapons[i] === this.player.weapon;
+      ctx.fillStyle = active ? "#00ff88" : "rgba(255,255,255,0.2)";
+      ctx.beginPath();
+      ctx.arc(dotX + 4, dotY, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // ---- Bottom-right: Kills ----
+    ctx.textAlign = "right";
+    ctx.textBaseline = "bottom";
+    ctx.font = '600 12px "Inter", sans-serif';
+    ctx.fillStyle = "rgba(255,255,255,0.4)";
+    ctx.fillText(`${this.player.kills} KILLS`, bounds.width - 22, bounds.height - 18);
+
+    ctx.restore();
+  }
+
+  renderToasts() {
+    const toasts = this.ui.toasts;
+    if (toasts.length === 0) return;
+
+    const { ctx, bounds } = this;
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.font = '500 12px "Inter", sans-serif';
+
+    for (let i = 0; i < toasts.length; i++) {
+      const t = toasts[i];
+      const alpha = t.life > 2.5 ? clamp((3.5 - t.life) * 2, 0, 0.7) : clamp(t.life / 1.5, 0, 0.7);
+      const yOff = 50 + i * 24;
+
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "rgba(0,255,136,0.6)";
+      ctx.fillText(t.text, bounds.width / 2, yOff);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   render() {
@@ -856,9 +962,15 @@ export class Game {
     // Combo overlay
     this.renderComboOverlay();
 
+    // In-game HUD
+    this.renderHud();
+
+    // Toast notifications
+    this.renderToasts();
+
     // Pause overlay
     if (this.state === "paused") {
-      ctx.fillStyle = "rgba(4,4,4,0.35)";
+      ctx.fillStyle = "rgba(4,8,4,0.3)";
       ctx.fillRect(0, 0, bounds.width, bounds.height);
     }
   }
