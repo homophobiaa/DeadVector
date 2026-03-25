@@ -101,9 +101,11 @@ export function renderZombieParts(ctx, enemy) {
   ctx.save();
 
   // Damage flash: brighten all subsequent draws
-  if (flash > 0) {
-    ctx.filter = `brightness(${1 + flash * 2})`;
-  }
+  // Type tint + optional damage flash combined into one filter string
+  const parts = [];
+  if (c.tintFilter) parts.push(c.tintFilter);
+  if (flash > 0) parts.push(`brightness(${1 + flash * 2})`);
+  if (parts.length) ctx.filter = parts.join(" ");
 
   // Orient: images face UP in their PNGs, so adding π/2 maps image-up → +facing.
   // After this rotation the local coordinate space is:
