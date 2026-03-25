@@ -4,7 +4,9 @@ import { AudioManager } from "./systems/audio.js";
 import { Settings } from "./systems/settings.js";
 import { UIManager } from "./systems/ui.js";
 
-const bootstrap = () => {
+const bootstrap = async () => {
+  const mapObstacles = await fetch("./js/map-data.json").then(r => r.json());
+
   const canvas = document.getElementById("game-canvas");
 
   const ui = new UIManager({
@@ -34,7 +36,7 @@ const bootstrap = () => {
   const audio = new AudioManager();
   const settings = new Settings();
   audio.installUnlockHandlers();
-  const game = new Game({ canvas, input, ui, audio, settings });
+  const game = new Game({ canvas, input, ui, audio, settings, mapObstacles });
 
   ui.bindGame(game);
   ui.bindSettings(settings);

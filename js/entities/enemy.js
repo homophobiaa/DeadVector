@@ -431,7 +431,14 @@ export class Enemy {
       let blocked = false;
       if (obstacles) {
         for (const obs of obstacles) {
-          if (pointInRect(tx, ty, obs)) { blocked = true; break; }
+          let px = tx, py = ty;
+          if (obs.rot) {
+            const cos = Math.cos(-obs.rot), sin = Math.sin(-obs.rot);
+            const ddx = tx - obs.cx, ddy = ty - obs.cy;
+            px = obs.cx + ddx * cos - ddy * sin;
+            py = obs.cy + ddx * sin + ddy * cos;
+          }
+          if (pointInRect(px, py, obs)) { blocked = true; break; }
         }
       }
       if (!blocked) {

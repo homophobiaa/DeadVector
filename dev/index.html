@@ -8,671 +8,483 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* ========================================
-   DeadVector Dev Panel
-   ======================================== */
-
-/* ---- Reset & Tokens ---- */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
-  --bg-0: #08090c;
-  --bg-1: #0e1014;
-  --bg-2: #14161c;
-  --bg-3: #1a1d25;
-  --bg-4: #22252f;
-  --border: #2a2d38;
-  --border-hi: #3a3e4d;
-  --text-0: #eaedf6;
-  --text-1: #b0b5c5;
-  --text-2: #6e7385;
-  --text-3: #454a5a;
-  --accent: #ff3a3a;
-  --accent-dim: #cc2020;
-  --green: #00ff88;
-  --green-dim: rgba(0,255,136,0.15);
-  --yellow: #ffd544;
+  --bg-0: #08090c; --bg-1: #0e1014; --bg-2: #14161c; --bg-3: #1a1d25; --bg-4: #22252f;
+  --border: #2a2d38; --border-hi: #3a3e4d;
+  --text-0: #eaedf6; --text-1: #b0b5c5; --text-2: #6e7385; --text-3: #454a5a;
+  --accent: #ff3a3a; --accent-dim: #cc2020;
+  --green: #00ff88; --green-dim: rgba(0,255,136,0.15);
   --cyan: #44d4ff;
   --font-display: 'Orbitron', sans-serif;
   --font-mono: 'Share Tech Mono', 'Consolas', monospace;
   --font-ui: 'Inter', 'Segoe UI', sans-serif;
-  --radius: 8px;
-  --radius-sm: 5px;
+  --radius: 8px; --radius-sm: 5px;
   --transition: 0.18s ease;
 }
-
-body {
-  background: var(--bg-0);
-  color: var(--text-1);
-  font-family: var(--font-ui);
-  height: 100vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  user-select: none;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
+body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui); height: 100vh; overflow: hidden; display: flex; flex-direction: column; user-select: none; }
+::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--border-hi); }
 
-/* ---- Top Nav Bar ---- */
-#topnav {
-  height: 48px;
-  min-height: 48px;
-  background: var(--bg-1);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-  gap: 16px;
-  position: relative;
-  z-index: 20;
-}
-#topnav::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent) 20%, var(--accent) 80%, transparent);
-  opacity: 0.3;
-}
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.nav-brand .logo {
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 16px;
-  letter-spacing: 2px;
-  color: var(--accent);
-  text-transform: uppercase;
-}
-.nav-brand .divider {
-  width: 1px;
-  height: 20px;
-  background: var(--border);
-}
-.nav-brand .subtitle {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-2);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-.nav-tabs {
-  display: flex;
-  gap: 2px;
-  margin-left: 24px;
-}
-.nav-tab {
-  padding: 6px 16px;
-  background: transparent;
-  color: var(--text-2);
-  border: none;
-  font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  transition: all var(--transition);
-  position: relative;
-  letter-spacing: 0.3px;
-}
-.nav-tab:hover { color: var(--text-1); background: var(--bg-2); }
-.nav-tab.active {
-  color: var(--green);
-  background: var(--bg-2);
-}
-.nav-tab.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 2px;
-  background: var(--green);
-  border-radius: 2px 2px 0 0;
-}
+/* ---- Nav ---- */
+#topnav { height: 44px; min-height: 44px; background: var(--bg-1); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 12px; z-index: 100; position: relative; }
+#topnav::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--accent) 20%, var(--accent) 80%, transparent); opacity: 0.25; }
+.nav-brand { display: flex; align-items: center; gap: 8px; }
+.nav-brand .logo { font-family: var(--font-display); font-weight: 900; font-size: 14px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; }
+.nav-brand .divider { width: 1px; height: 18px; background: var(--border); }
+.nav-brand .subtitle { font-family: var(--font-mono); font-size: 10px; color: var(--text-2); letter-spacing: 1px; text-transform: uppercase; }
 .nav-spacer { flex: 1; }
-.nav-status {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  font-size: 11px;
-  font-family: var(--font-mono);
-  color: var(--text-3);
-}
-.status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 6px var(--green);
-  animation: pulse 2s ease-in-out infinite;
-}
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-.nav-back {
-  padding: 5px 12px;
-  background: var(--bg-3);
-  color: var(--text-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-ui);
-  font-size: 11px;
-  cursor: pointer;
-  transition: all var(--transition);
-  text-decoration: none;
-}
+.nav-toggles { display: flex; gap: 3px; }
+.nav-toggle { padding: 4px 10px; background: var(--bg-3); color: var(--text-2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 10px; font-weight: 500; cursor: pointer; transition: all var(--transition); }
+.nav-toggle:hover { color: var(--text-0); border-color: var(--border-hi); }
+.nav-toggle.active { color: var(--green); border-color: rgba(0,255,136,0.3); }
+.nav-status { display: flex; align-items: center; gap: 10px; font-size: 10px; font-family: var(--font-mono); color: var(--text-3); }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 5px var(--green); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+.nav-back { padding: 4px 10px; background: var(--bg-3); color: var(--text-2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 10px; cursor: pointer; transition: all var(--transition); text-decoration: none; }
 .nav-back:hover { color: var(--text-0); border-color: var(--border-hi); background: var(--bg-4); }
 
-/* ---- Main Layout ---- */
-#main {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-}
+/* ---- Main ---- */
+#main { flex: 1; position: relative; overflow: hidden; background: var(--bg-0); }
 
-/* ---- Panel (Left Sidebar) ---- */
-#panel {
-  width: 360px;
-  min-width: 360px;
-  background: var(--bg-1);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
+/* ---- Pages ---- */
+.dev-page { position: absolute; inset: 0; display: none; }
+.dev-page.active { display: block; }
+.dev-page canvas { position: absolute; top: 0; left: 0; }
 
-.panel-header {
-  padding: 14px 18px 12px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.panel-header .icon {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, var(--accent-dim), var(--accent));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  color: #fff;
-  flex-shrink: 0;
-}
-.panel-header h2 {
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-0);
-  letter-spacing: 1px;
-}
-.panel-header .count {
-  margin-left: auto;
-  background: var(--bg-4);
-  color: var(--text-2);
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 10px;
-  font-family: var(--font-mono);
-}
+/* ---- Tabs ---- */
+.nav-tabs { display: flex; gap: 2px; margin-left: 8px; }
+.nav-tab { padding: 5px 14px; background: transparent; color: var(--text-2); border: 1px solid transparent; border-bottom: none; border-radius: var(--radius-sm) var(--radius-sm) 0 0; font-family: var(--font-ui); font-size: 10px; font-weight: 600; cursor: pointer; transition: all var(--transition); letter-spacing: 0.3px; }
+.nav-tab:hover { color: var(--text-0); background: var(--bg-2); }
+.nav-tab.active { color: var(--accent); background: var(--bg-0); border-color: var(--border); position: relative; }
+.nav-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px; background: var(--bg-0); }
 
-/* ---- Toolbar ---- */
-.toolbar {
-  display: flex;
-  gap: 6px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-}
-.btn {
-  padding: 6px 14px;
-  background: var(--bg-3);
-  color: var(--text-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: 500;
-  transition: all var(--transition);
-  white-space: nowrap;
-}
+/* ---- Placeholder Pages ---- */
+.page-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 14px; text-align: center; }
+.page-placeholder .ph-icon { font-size: 48px; opacity: 0.3; filter: grayscale(0.5); }
+.page-placeholder h2 { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--text-1); letter-spacing: 2px; text-transform: uppercase; }
+.page-placeholder p { font-size: 12px; color: var(--text-3); max-width: 300px; line-height: 1.6; }
+.page-placeholder .ph-badge { padding: 4px 14px; border: 1px solid var(--border); border-radius: 20px; font-family: var(--font-mono); font-size: 10px; color: var(--text-3); letter-spacing: 1px; text-transform: uppercase; }
+
+/* ---- Floating Panels ---- */
+.fp { position: absolute; z-index: 30; display: flex; flex-direction: column; background: rgba(10,12,16,0.88); backdrop-filter: blur(14px); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: 0 6px 28px rgba(0,0,0,0.45); }
+.fp.hidden { display: none !important; }
+.fp-bar { display: flex; align-items: center; padding: 6px 10px; background: rgba(14,16,20,0.5); border-bottom: 1px solid var(--border); cursor: grab; gap: 6px; flex-shrink: 0; }
+.fp-bar:active { cursor: grabbing; }
+.fp-bar .fp-icon { font-size: 11px; color: var(--accent); }
+.fp-bar .fp-title { flex: 1; font-family: var(--font-display); font-size: 9px; font-weight: 700; color: var(--text-2); letter-spacing: 1px; text-transform: uppercase; }
+.fp-bar .fp-count { background: var(--bg-4); color: var(--text-2); padding: 1px 6px; border-radius: 8px; font-size: 9px; font-family: var(--font-mono); }
+.fp-close { width: 18px; height: 18px; border: none; background: var(--bg-4); color: var(--text-3); border-radius: 3px; cursor: pointer; font-size: 13px; line-height: 1; display: flex; align-items: center; justify-content: center; transition: all 0.12s; }
+.fp-close:hover { background: var(--accent); color: #fff; }
+.fp-body { flex: 1; overflow-y: auto; overflow-x: hidden; }
+.fp-grip { position: absolute; bottom: 0; right: 0; width: 16px; height: 16px; cursor: nwse-resize; z-index: 2; }
+.fp-grip::after { content: ''; position: absolute; bottom: 3px; right: 3px; width: 7px; height: 7px; border-right: 2px solid var(--border-hi); border-bottom: 2px solid var(--border-hi); opacity: 0.6; }
+
+/* ---- Panel content ---- */
+.fp-toolbar { display: flex; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--border); flex-wrap: wrap; flex-shrink: 0; }
+.btn { padding: 4px 10px; background: var(--bg-3); color: var(--text-1); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-family: var(--font-ui); font-size: 10px; font-weight: 500; transition: all var(--transition); white-space: nowrap; }
 .btn:hover { background: var(--bg-4); border-color: var(--border-hi); color: var(--text-0); }
-.btn:active { transform: scale(0.97); }
+.btn:active { transform: scale(0.96); }
 .btn.primary { color: var(--green); border-color: rgba(0,255,136,0.25); }
 .btn.primary:hover { background: var(--green-dim); border-color: rgba(0,255,136,0.4); }
 .btn.danger { color: #ff6b6b; border-color: rgba(255,60,60,0.2); }
 .btn.danger:hover { background: rgba(255,60,60,0.08); border-color: rgba(255,60,60,0.35); }
 
-/* ---- Obstacle List ---- */
-#obstacle-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px 0;
-}
-.obs-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 14px;
-  cursor: pointer;
-  border-left: 3px solid transparent;
-  transition: all 0.12s;
-}
+.obs-item { display: flex; align-items: center; gap: 6px; padding: 5px 10px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.1s; }
 .obs-item:hover { background: var(--bg-2); }
-.obs-item.selected {
-  background: rgba(0,255,136,0.05);
-  border-left-color: var(--green);
-}
-.obs-item .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  background: var(--accent);
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-.obs-item.selected .dot { background: var(--green); box-shadow: 0 0 4px var(--green); }
-.obs-item .lbl {
-  flex: 1;
-  font-size: 12px;
-  color: var(--text-1);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.obs-item.selected { background: rgba(0,255,136,0.05); border-left-color: var(--green); }
+.obs-item .dot { width: 7px; height: 7px; border-radius: 2px; background: var(--accent); flex-shrink: 0; }
+.obs-item.selected .dot { background: var(--green); box-shadow: 0 0 3px var(--green); }
+.obs-item .lbl { flex: 1; font-size: 11px; color: var(--text-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .obs-item.selected .lbl { color: var(--text-0); }
-.obs-item .coords {
-  font-size: 10px;
-  font-family: var(--font-mono);
-  color: var(--text-3);
-}
+.obs-item .coords { font-size: 9px; font-family: var(--font-mono); color: var(--text-3); }
 
-/* ---- Properties Panel ---- */
-#props {
-  border-top: 1px solid var(--border);
-  padding: 14px 16px;
-  background: var(--bg-2);
-}
-#props .section-title {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  margin-bottom: 10px;
-}
-#props .row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 6px;
-  align-items: center;
-}
-#props label {
-  font-size: 10px;
-  font-family: var(--font-mono);
-  color: var(--text-3);
-  width: 28px;
-  text-align: right;
-  flex-shrink: 0;
-  text-transform: uppercase;
-}
-#props input[type="number"],
-#props input[type="text"] {
-  flex: 1;
-  background: var(--bg-0);
-  border: 1px solid var(--border);
-  color: var(--text-0);
-  padding: 5px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  font-family: var(--font-mono);
-  transition: border-color var(--transition);
-}
-#props input:focus { outline: none; border-color: var(--green); }
-#no-selection {
-  color: var(--text-3);
-  font-size: 12px;
-  font-style: italic;
-  text-align: center;
-  padding: 8px 0;
-}
+.props-inner { padding: 10px 10px 8px; }
+.props-inner .section-title { font-size: 9px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px; }
+.props-inner .row { display: flex; gap: 6px; margin-bottom: 5px; align-items: center; }
+.props-inner label { font-size: 9px; font-family: var(--font-mono); color: var(--text-3); width: 22px; text-align: right; flex-shrink: 0; text-transform: uppercase; }
+.props-inner input[type="number"], .props-inner input[type="text"] { flex: 1; background: var(--bg-0); border: 1px solid var(--border); color: var(--text-0); padding: 4px 6px; border-radius: var(--radius-sm); font-size: 11px; font-family: var(--font-mono); transition: border-color var(--transition); min-width: 0; }
+.props-inner input:focus { outline: none; border-color: var(--green); }
+#no-selection { color: var(--text-3); font-size: 11px; font-style: italic; text-align: center; padding: 12px 0; }
 
-/* ---- Export Panel ---- */
-#export-panel {
-  border-top: 1px solid var(--border);
-  padding: 12px 14px;
-  background: var(--bg-1);
-}
-#export-panel .section-title {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  margin-bottom: 8px;
-}
-#export-box {
-  width: 100%;
-  height: 110px;
-  background: var(--bg-0);
-  color: var(--green);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 10px;
-  font-size: 10px;
-  font-family: var(--font-mono);
-  resize: vertical;
-  line-height: 1.5;
-  transition: border-color var(--transition);
-}
+.export-inner { padding: 10px; display: flex; flex-direction: column; gap: 8px; height: 100%; }
+#export-box { flex: 1; min-height: 60px; background: var(--bg-0); color: var(--green); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px; font-size: 9px; font-family: var(--font-mono); resize: none; line-height: 1.5; }
 #export-box:focus { outline: none; border-color: var(--green); }
-#export-panel .actions {
-  display: flex;
-  gap: 6px;
-  margin-top: 8px;
-}
-#export-panel .actions .btn { flex: 1; text-align: center; }
+.export-inner .actions { display: flex; gap: 4px; }
+.export-inner .actions .btn { flex: 1; text-align: center; }
 
-/* ---- Canvas Viewport ---- */
-#viewport {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  background: var(--bg-0);
-}
-#viewport canvas {
-  position: absolute;
-  top: 0; left: 0;
-}
+/* ---- Status bar ---- */
+#statusbar { position: absolute; bottom: 0; left: 0; right: 0; height: 24px; background: var(--bg-1); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 12px; gap: 14px; font-size: 9px; font-family: var(--font-mono); color: var(--text-3); z-index: 10; }
+#statusbar .sep { width: 1px; height: 10px; background: var(--border); }
 
-/* ---- Status Bar (bottom of viewport) ---- */
-#statusbar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 28px;
-  background: var(--bg-1);
-  border-top: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 14px;
-  gap: 18px;
-  font-size: 10px;
-  font-family: var(--font-mono);
-  color: var(--text-3);
-  z-index: 10;
-}
-#statusbar .separator {
-  width: 1px;
-  height: 12px;
-  background: var(--border);
-}
+/* ---- Help ---- */
+#helpbar { position: absolute; top: 10px; right: 10px; background: rgba(10,12,16,0.82); backdrop-filter: blur(8px); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; z-index: 15; pointer-events: none; transition: opacity 0.2s; }
+#helpbar.hidden { opacity: 0; pointer-events: none; }
+.help-title { font-size: 8px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px; }
+.help-row { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; font-size: 10px; color: var(--text-2); }
+.help-row kbd { display: inline-block; background: var(--bg-4); border: 1px solid var(--border); border-radius: 3px; padding: 0 5px; font-family: var(--font-mono); font-size: 8px; color: var(--text-1); min-width: 18px; text-align: center; }
 
-/* ---- Help Overlay ---- */
-#helpbar {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  background: rgba(14,16,20,0.85);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px 14px;
-  z-index: 10;
-  pointer-events: none;
-}
-#helpbar .help-title {
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  margin-bottom: 6px;
-}
-#helpbar .help-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 3px;
-  font-size: 11px;
-  color: var(--text-2);
-}
-#helpbar kbd {
-  display: inline-block;
-  background: var(--bg-4);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 1px 6px;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  color: var(--text-1);
-  min-width: 22px;
-  text-align: center;
-}
+/* ---- Toast ---- */
+.toast { position: fixed; top: 54px; left: 50%; transform: translateX(-50%) translateY(-6px); background: var(--bg-3); color: var(--green); border: 1px solid rgba(0,255,136,0.2); border-radius: var(--radius); padding: 6px 18px; font-family: var(--font-mono); font-size: 11px; z-index: 200; opacity: 0; transition: all 0.3s ease; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ---- Toast notification ---- */
-.toast {
-  position: fixed;
-  top: 60px;
-  left: 50%;
-  transform: translateX(-50%) translateY(-8px);
-  background: var(--bg-3);
-  color: var(--green);
-  border: 1px solid rgba(0,255,136,0.2);
-  border-radius: var(--radius);
-  padding: 8px 20px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  z-index: 200;
-  opacity: 0;
-  transition: all 0.3s ease;
-  pointer-events: none;
-}
-.toast.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-/* ---- Scanline overlay (subtle) ---- */
-#viewport::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0,0,0,0.03) 2px,
-    rgba(0,0,0,0.03) 4px
-  );
-  pointer-events: none;
-  z-index: 5;
-}
-
-/* ---- Crosshair overlay ---- */
-#crosshair-h, #crosshair-v {
-  position: absolute;
-  background: rgba(0,255,136,0.08);
-  pointer-events: none;
-  z-index: 4;
-  display: none;
-}
+/* ---- Scanline + crosshair ---- */
+#page-map::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.02) 2px, rgba(0,0,0,0.02) 4px); pointer-events: none; z-index: 5; }
+#crosshair-h, #crosshair-v { position: absolute; background: rgba(0,255,136,0.07); pointer-events: none; z-index: 4; display: none; }
 #crosshair-h { height: 1px; left: 0; right: 0; }
 #crosshair-v { width: 1px; top: 0; bottom: 0; }
 </style>
 </head>
 <body>
 
-<!-- ---- Top Nav ---- -->
 <nav id="topnav">
   <div class="nav-brand">
-    <div class="logo">DeadVector</div>
-    <div class="divider"></div>
-    <div class="subtitle">Dev Panel</div>
+    <span class="logo">DeadVector</span>
+    <span class="divider"></span>
+    <span class="subtitle">Dev Panel</span>
   </div>
   <div class="nav-tabs">
-    <button class="nav-tab active" data-tab="editor">Map Editor</button>
+    <button class="nav-tab active" data-page="page-map">Map Editor</button>
+    <button class="nav-tab" data-page="page-enemies">Enemies</button>
+    <button class="nav-tab" data-page="page-weapons">Weapons</button>
+    <button class="nav-tab" data-page="page-settings">Settings</button>
   </div>
   <div class="nav-spacer"></div>
-  <div class="nav-status">
-    <div class="status-dot"></div>
-    <span id="nav-obstacle-count">11 obstacles</span>
+  <div class="nav-toggles" id="map-toggles">
+    <button class="nav-toggle active" data-panel="fp-obstacles" title="Obstacles (1)">Obstacles</button>
+    <button class="nav-toggle active" data-panel="fp-props" title="Properties (2)">Properties</button>
+    <button class="nav-toggle active" data-panel="fp-export" title="Export (3)">Export</button>
+    <button class="nav-toggle" id="btn-toggle-help" title="Help (H)">Help</button>
   </div>
-  <a class="nav-back" href="../index.html">&larr; Back to Game</a>
+  <div class="nav-status" id="map-status">
+    <div class="status-dot"></div>
+    <span id="nav-count">11</span>
+  </div>
+  <a class="nav-back" href="../index.html">&larr; Game</a>
 </nav>
 
-<!-- ---- Main Area ---- -->
 <div id="main">
-  <!-- ---- Left Panel ---- -->
-  <aside id="panel">
-    <div class="panel-header">
-      <div class="icon">&#9638;</div>
-      <h2>OBSTACLES</h2>
-      <div class="count" id="panel-count">0</div>
-    </div>
+  <!-- ===== Map Editor Page ===== -->
+  <div class="dev-page active" id="page-map">
+  <canvas id="canvas"></canvas>
+  <div id="crosshair-h"></div>
+  <div id="crosshair-v"></div>
 
-    <div class="toolbar">
+  <!-- Floating Panel: Obstacles -->
+  <div class="fp" id="fp-obstacles">
+    <div class="fp-bar" data-drag="fp-obstacles">
+      <span class="fp-icon">&#9638;</span>
+      <span class="fp-title">Obstacles</span>
+      <span class="fp-count" id="panel-count">0</span>
+      <button class="fp-close" data-close="fp-obstacles">&times;</button>
+    </div>
+    <div class="fp-toolbar">
       <button class="btn primary" id="btn-add">+ Add</button>
-      <button class="btn" id="btn-dup">Duplicate</button>
-      <button class="btn danger" id="btn-del">Delete</button>
+      <button class="btn" id="btn-dup">Dup</button>
+      <button class="btn danger" id="btn-del">Del</button>
       <button class="btn danger" id="btn-clear">Clear</button>
-      <button class="btn" id="btn-reset" title="Reset to defaults">Reset</button>
+      <button class="btn" id="btn-reset">Reset</button>
+      <button class="btn" id="btn-load-map" style="color:var(--cyan);border-color:rgba(68,212,255,0.3)">Load Map</button>
     </div>
+    <div class="fp-body" id="obstacle-list"></div>
+    <div class="fp-grip" data-resize="fp-obstacles"></div>
+  </div>
 
-    <div id="obstacle-list"></div>
-
-    <div id="props">
-      <div class="section-title">Properties</div>
-      <div id="props-content">
+  <!-- Floating Panel: Properties -->
+  <div class="fp" id="fp-props">
+    <div class="fp-bar" data-drag="fp-props">
+      <span class="fp-icon">&#9881;</span>
+      <span class="fp-title">Properties</span>
+      <button class="fp-close" data-close="fp-props">&times;</button>
+    </div>
+    <div class="fp-body">
+      <div class="props-inner" id="props-content">
         <div id="no-selection">Select an obstacle</div>
       </div>
     </div>
+    <div class="fp-grip" data-resize="fp-props"></div>
+  </div>
 
-    <div id="export-panel">
-      <div class="section-title">Export / Import</div>
-      <textarea id="export-box" spellcheck="false" placeholder="Obstacle data appears here..."></textarea>
-      <div class="actions">
-        <button class="btn primary" id="btn-copy">Copy</button>
-        <button class="btn" id="btn-import">Import</button>
+  <!-- Floating Panel: Export -->
+  <div class="fp" id="fp-export">
+    <div class="fp-bar" data-drag="fp-export">
+      <span class="fp-icon">&#8680;</span>
+      <span class="fp-title">Export / Import</span>
+      <button class="fp-close" data-close="fp-export">&times;</button>
+    </div>
+    <div class="fp-body">
+      <div class="export-inner">
+        <textarea id="export-box" spellcheck="false" placeholder="Obstacle data..."></textarea>
+        <div class="actions">
+          <button class="btn primary" id="btn-copy">Copy</button>
+          <button class="btn" id="btn-import">Import</button>
+        </div>
       </div>
     </div>
-  </aside>
+    <div class="fp-grip" data-resize="fp-export"></div>
+  </div>
 
-  <!-- ---- Canvas Viewport ---- -->
-  <section id="viewport">
-    <canvas id="canvas"></canvas>
-    <div id="crosshair-h"></div>
-    <div id="crosshair-v"></div>
+  <div id="helpbar">
+    <div class="help-title">Controls</div>
+    <div class="help-row"><kbd>Click</kbd> Select</div>
+    <div class="help-row"><kbd>Drag</kbd> Move</div>
+    <div class="help-row"><kbd>Edges</kbd> Resize</div>
+    <div class="help-row"><kbd>&#9670;</kbd> Drag corner &#9670; to round</div>
+    <div class="help-row"><kbd>&#8635;</kbd> Drag top &#9675; to rotate</div>
+    <div class="help-row"><kbd>Del</kbd> Delete</div>
+    <div class="help-row"><kbd>Ctrl D</kbd> Duplicate</div>
+    <div class="help-row"><kbd>Ctrl A</kbd> Add New</div>
+    <div class="help-row"><kbd>1 2 3</kbd> Toggle panels</div>
+    <div class="help-row"><kbd>H</kbd> Toggle help</div>
+  </div>
 
-    <div id="helpbar">
-      <div class="help-title">Controls</div>
-      <div class="help-row"><kbd>Click</kbd> Select</div>
-      <div class="help-row"><kbd>Drag</kbd> Move</div>
-      <div class="help-row"><kbd>Edges</kbd> Resize</div>
-      <div class="help-row"><kbd>Del</kbd> Delete</div>
-      <div class="help-row"><kbd>Ctrl D</kbd> Duplicate</div>
-      <div class="help-row"><kbd>Ctrl A</kbd> Add New</div>
+  <div id="statusbar">
+    <span id="status-mouse">X: 0  Y: 0</span>
+    <div class="sep"></div>
+    <span id="status-norm">nX: 0  nY: 0</span>
+    <div class="sep"></div>
+    <span id="status-sel">No selection</span>
+    <div class="sep"></div>
+    <span id="status-zoom">Zoom: 0.88x</span>
+  </div>
+  </div><!-- /page-map -->
+
+  <!-- ===== Enemies Page ===== -->
+  <div class="dev-page" id="page-enemies">
+    <div class="page-placeholder">
+      <div class="ph-icon">&#128128;</div>
+      <h2>Enemy Tuner</h2>
+      <p>Tune enemy types, FSM states, speed, health, and spawn rates.</p>
+      <span class="ph-badge">Coming Soon</span>
     </div>
+  </div>
 
-    <div id="statusbar">
-      <span id="status-mouse">X: 0 Y: 0</span>
-      <div class="separator"></div>
-      <span id="status-norm">nX: 0 nY: 0</span>
-      <div class="separator"></div>
-      <span id="status-selected">No selection</span>
-      <div class="separator"></div>
-      <span id="status-zoom">Zoom: 1.12x</span>
+  <!-- ===== Weapons Page ===== -->
+  <div class="dev-page" id="page-weapons">
+    <div class="page-placeholder">
+      <div class="ph-icon">&#9876;</div>
+      <h2>Weapon Stats</h2>
+      <p>Adjust weapon damage, fire rate, spread, and projectile properties.</p>
+      <span class="ph-badge">Coming Soon</span>
     </div>
-  </section>
+  </div>
+
+  <!-- ===== Settings Page ===== -->
+  <div class="dev-page" id="page-settings">
+    <div class="page-placeholder">
+      <div class="ph-icon">&#9881;</div>
+      <h2>Game Settings</h2>
+      <p>Configure game rules, difficulty scaling, and debug options.</p>
+      <span class="ph-badge">Coming Soon</span>
+    </div>
+  </div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
 // ===========================================================================
-//  DeadVector Map Obstacle Editor
+//  DeadVector  —  Map Obstacle Editor
 // ===========================================================================
 
 const BG_SRC = "../assets/images/background.png";
-const HANDLE_SIZE = 7;
-const ZOOM = 1.12;
+const HANDLE = 7;
+const ZOOM = 0.88;
+const RAD_HANDLE = 5;
+const ROT_HANDLE_DIST = 28;
+const MIN_PW = 180;
+const MIN_PH = 90;
 
+// ---- State ----
+let radiusLocked = true;
 let obstacles = [];
 let selectedIdx = -1;
+const undoStack = [];
+const redoStack = [];
+const MAX_UNDO = 60;
 let bgImg = new Image();
-let bgTransform = { x: 0, y: 0, w: 0, h: 0 };
-
+let bgT = { x: 0, y: 0, w: 0, h: 0 };
 let dragMode = null;
 let dragStart = null;
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const viewport = document.getElementById("viewport");
+const mainEl = document.getElementById("main");
 const crossH = document.getElementById("crosshair-h");
 const crossV = document.getElementById("crosshair-v");
 
-// ---- Default obstacles ----
-const DEFAULT_OBSTACLES = [
-  { nx: 0.275, ny: -0.01, nw: 0.445, nh: 0.225, label: "Top Building" },
-  { nx: 0.245, ny: 0.79, nw: 0.48, nh: 0.22, label: "Bottom Building" },
-  { nx: -0.01, ny: -0.01, nw: 0.13, nh: 0.225, label: "TL Corner" },
-  { nx: 0.875, ny: -0.01, nw: 0.135, nh: 0.225, label: "TR Corner" },
-  { nx: -0.01, ny: 0.79, nw: 0.10, nh: 0.22, label: "BL Corner" },
-  { nx: 0.91, ny: 0.79, nw: 0.10, nh: 0.22, label: "BR Corner" },
-  { nx: 0.175, ny: 0.02, nw: 0.07, nh: 0.07, label: "Car TL" },
-  { nx: -0.005, ny: 0.30, nw: 0.05, nh: 0.12, label: "Car L1" },
-  { nx: -0.005, ny: 0.57, nw: 0.055, nh: 0.12, label: "Car L2" },
-  { nx: 0.075, ny: 0.845, nw: 0.06, nh: 0.06, label: "Car BL" },
-  { nx: 0.815, ny: 0.86, nw: 0.065, nh: 0.06, label: "Car BR" },
-];
+// Default obstacles are loaded at startup from map-data.json.
+let DEFAULT_OBSTACLES = [];
 
-// ---- Toast ----
+// ===========================================================================
+//  Toast
+// ===========================================================================
 let toastTimer = null;
 function showToast(msg) {
   const el = document.getElementById("toast");
   el.textContent = msg;
   el.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove("show"), 2000);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
 }
 
-// ---- Init ----
-function init() {
+// ===========================================================================
+//  Floating Panel System
+// ===========================================================================
+const PANEL_IDS = ["fp-obstacles", "fp-props", "fp-export"];
+const PANEL_DEFAULTS = {
+  "fp-obstacles": { x: 12, y: 12, w: 270, h: 380 },
+  "fp-props":     { x: 12, y: 404, w: 270, h: 310 },
+  "fp-export":    { x: 12, y: 636, w: 270, h: 240 },
+};
+let panelZ = 30;
+let fpDrag = null;
+
+function loadPanels() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem("dv_panel_layout") || "{}"); } catch {}
+  for (const id of PANEL_IDS) {
+    const def = PANEL_DEFAULTS[id];
+    const s = saved[id] || {};
+    const el = document.getElementById(id);
+    el.style.left   = (s.x ?? def.x) + "px";
+    el.style.top    = (s.y ?? def.y) + "px";
+    el.style.width  = (s.w ?? def.w) + "px";
+    el.style.height = (s.h ?? def.h) + "px";
+    if (s.hidden) el.classList.add("hidden");
+    syncToggle(id);
+  }
+}
+
+function savePanels() {
+  const out = {};
+  for (const id of PANEL_IDS) {
+    const el = document.getElementById(id);
+    out[id] = {
+      x: parseInt(el.style.left) || 0,
+      y: parseInt(el.style.top) || 0,
+      w: parseInt(el.style.width) || 200,
+      h: parseInt(el.style.height) || 150,
+      hidden: el.classList.contains("hidden"),
+    };
+  }
+  localStorage.setItem("dv_panel_layout", JSON.stringify(out));
+}
+
+function bringFront(id) {
+  panelZ++;
+  document.getElementById(id).style.zIndex = panelZ;
+}
+
+function togglePanel(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle("hidden");
+  if (!el.classList.contains("hidden")) bringFront(id);
+  syncToggle(id);
+  savePanels();
+}
+
+function syncToggle(id) {
+  const btn = document.querySelector(`.nav-toggle[data-panel="${id}"]`);
+  if (!btn) return;
+  btn.classList.toggle("active", !document.getElementById(id).classList.contains("hidden"));
+}
+
+// Panel drag / resize
+document.addEventListener("mousedown", (e) => {
+  const closeBtn = e.target.closest("[data-close]");
+  if (closeBtn) { togglePanel(closeBtn.dataset.close); return; }
+  const dragBar = e.target.closest("[data-drag]");
+  if (dragBar) { startFpDrag(e, dragBar.dataset.drag, "move"); return; }
+  const grip = e.target.closest("[data-resize]");
+  if (grip) { startFpDrag(e, grip.dataset.resize, "resize"); return; }
+  const fp = e.target.closest(".fp");
+  if (fp && PANEL_IDS.includes(fp.id)) bringFront(fp.id);
+});
+
+function startFpDrag(e, id, mode) {
+  e.preventDefault();
+  bringFront(id);
+  const el = document.getElementById(id);
+  const rect = el.getBoundingClientRect();
+  const vpRect = mainEl.getBoundingClientRect();
+  fpDrag = {
+    id, mode,
+    mx0: e.clientX, my0: e.clientY,
+    x0: rect.left - vpRect.left, y0: rect.top - vpRect.top,
+    w0: rect.width, h0: rect.height,
+  };
+}
+
+document.addEventListener("mousemove", (e) => {
+  if (!fpDrag) return;
+  const dx = e.clientX - fpDrag.mx0, dy = e.clientY - fpDrag.my0;
+  const el = document.getElementById(fpDrag.id);
+  if (fpDrag.mode === "move") {
+    el.style.left = (fpDrag.x0 + dx) + "px";
+    el.style.top  = (fpDrag.y0 + dy) + "px";
+  } else {
+    el.style.width  = Math.max(MIN_PW, fpDrag.w0 + dx) + "px";
+    el.style.height = Math.max(MIN_PH, fpDrag.h0 + dy) + "px";
+  }
+});
+
+document.addEventListener("mouseup", () => {
+  if (fpDrag) { fpDrag = null; savePanels(); }
+});
+
+document.querySelectorAll(".nav-toggle[data-panel]").forEach(btn => {
+  btn.addEventListener("click", () => togglePanel(btn.dataset.panel));
+});
+
+let helpVisible = true;
+document.getElementById("btn-toggle-help").addEventListener("click", toggleHelp);
+function toggleHelp() {
+  helpVisible = !helpVisible;
+  document.getElementById("helpbar").classList.toggle("hidden", !helpVisible);
+  document.getElementById("btn-toggle-help").classList.toggle("active", helpVisible);
+}
+
+// ===========================================================================
+//  Init
+// ===========================================================================
+async function init() {
+  loadPanels();
+  try {
+    const raw = await fetch("../js/map-data.json").then(r => r.json());
+    for (const o of raw) {
+      if (typeof o.nr === "number") o.nr = [o.nr, o.nr, o.nr, o.nr];
+      if (!Array.isArray(o.nr)) o.nr = [0,0,0,0];
+      if (typeof o.rot !== "number") o.rot = 0;
+    }
+    DEFAULT_OBSTACLES = raw;
+  } catch { DEFAULT_OBSTACLES = []; }
   const saved = localStorage.getItem("dv_editor_obstacles");
   if (saved) {
     try { obstacles = JSON.parse(saved); } catch { obstacles = structuredClone(DEFAULT_OBSTACLES); }
   } else {
     obstacles = structuredClone(DEFAULT_OBSTACLES);
   }
+  for (const o of obstacles) {
+    if (typeof o.nr === "number") o.nr = [o.nr, o.nr, o.nr, o.nr];
+    if (!Array.isArray(o.nr)) o.nr = [0,0,0,0];
+    if (typeof o.rot !== "number") o.rot = 0;
+  }
 
   bgImg.onload = () => { resizeCanvas(); draw(); };
   bgImg.src = BG_SRC;
-
   window.addEventListener("resize", () => { resizeCanvas(); draw(); });
-  resizeCanvas();
-  draw();
-  updateList();
-  updateExport();
-  syncCounts();
+  resizeCanvas(); draw(); updateList(); updateExport(); syncCounts();
 }
 
-// ---- Layout ----
+// ===========================================================================
+//  Canvas Layout
+// ===========================================================================
 function resizeCanvas() {
-  const rect = viewport.getBoundingClientRect();
+  const rect = mainEl.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const h = rect.height - 28; // account for statusbar
+  const h = rect.height - 24;
   canvas.width = Math.floor(rect.width * dpr);
   canvas.height = Math.floor(h * dpr);
   canvas.style.width = rect.width + "px";
@@ -683,208 +495,258 @@ function resizeCanvas() {
 
 function computeBg(cw, ch) {
   if (!bgImg.naturalWidth) return;
-  const imgAspect = bgImg.naturalWidth / bgImg.naturalHeight;
-  const canAspect = cw / ch;
+  const ia = bgImg.naturalWidth / bgImg.naturalHeight, ca = cw / ch;
   let dw, dh;
-  if (canAspect > imgAspect) { dw = cw * ZOOM; dh = dw / imgAspect; }
-  else { dh = ch * ZOOM; dw = dh * imgAspect; }
-  bgTransform = { x: (cw - dw) / 2, y: (ch - dh) / 2, w: dw, h: dh };
+  if (ca > ia) { dw = cw * ZOOM; dh = dw / ia; } else { dh = ch * ZOOM; dw = dh * ia; }
+  bgT = { x: (cw - dw) / 2, y: (ch - dh) / 2, w: dw, h: dh };
 }
 
-// ---- Coord helpers ----
-function normToCanvas(o) {
-  const bt = bgTransform;
-  return { x: bt.x + o.nx * bt.w, y: bt.y + o.ny * bt.h, w: o.nw * bt.w, h: o.nh * bt.h };
+// ===========================================================================
+//  Coord Helpers
+// ===========================================================================
+function n2c(o) {
+  const w = o.nw * bgT.w, h = o.nh * bgT.h;
+  const x = bgT.x + o.nx * bgT.w, y = bgT.y + o.ny * bgT.h;
+  const nr = o.nr || [0,0,0,0];
+  const m = Math.min(w, h);
+  return { x, y, w, h, r: nr.map(v => v * m), rot: (o.rot || 0) * Math.PI / 180, cx: x + w / 2, cy: y + h / 2 };
 }
-function canvasToNorm(x, y, w, h) {
-  const bt = bgTransform;
-  return { nx: r4((x - bt.x) / bt.w), ny: r4((y - bt.y) / bt.h), nw: r4(w / bt.w), nh: r4(h / bt.h) };
+function toLocal(mx, my, c) {
+  if (!c.rot) return { x: mx, y: my };
+  const dx = mx - c.cx, dy = my - c.cy;
+  const cos = Math.cos(-c.rot), sin = Math.sin(-c.rot);
+  return { x: c.cx + dx * cos - dy * sin, y: c.cy + dx * sin + dy * cos };
+}
+function c2n(x, y, w, h) {
+  return { nx: r4((x - bgT.x) / bgT.w), ny: r4((y - bgT.y) / bgT.h), nw: r4(w / bgT.w), nh: r4(h / bgT.h) };
 }
 function r4(v) { return Math.round(v * 10000) / 10000; }
 
-// ---- Drawing ----
+// ===========================================================================
+//  Drawing
+// ===========================================================================
 function draw() {
-  const rect = viewport.getBoundingClientRect();
-  const cw = rect.width;
-  const ch = rect.height - 28;
+  const rect = mainEl.getBoundingClientRect();
+  const cw = rect.width, ch = rect.height - 24;
   ctx.clearRect(0, 0, cw, ch);
 
-  // Background
   if (bgImg.naturalWidth) {
-    ctx.drawImage(bgImg, bgTransform.x, bgTransform.y, bgTransform.w, bgTransform.h);
-    ctx.fillStyle = "rgba(0,0,0,0.12)";
+    ctx.drawImage(bgImg, bgT.x, bgT.y, bgT.w, bgT.h);
+    ctx.fillStyle = "rgba(0,0,0,0.10)";
     ctx.fillRect(0, 0, cw, ch);
   } else {
-    ctx.fillStyle = "#0a0a0e";
-    ctx.fillRect(0, 0, cw, ch);
-    ctx.fillStyle = "#333";
-    ctx.font = "14px Inter, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("Loading background...", cw / 2, ch / 2);
-    ctx.textAlign = "start";
+    ctx.fillStyle = "#0a0a0e"; ctx.fillRect(0, 0, cw, ch);
+    ctx.fillStyle = "#333"; ctx.font = "13px Inter,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("Loading background…", cw / 2, ch / 2); ctx.textAlign = "start";
   }
 
-  // Grid overlay (subtle)
-  ctx.strokeStyle = "rgba(0,255,136,0.04)";
-  ctx.lineWidth = 0.5;
+  ctx.strokeStyle = "rgba(0,255,136,0.035)"; ctx.lineWidth = 0.5;
   const gs = 60;
-  for (let x = bgTransform.x % gs; x < cw; x += gs) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ch); ctx.stroke();
-  }
-  for (let y = bgTransform.y % gs; y < ch; y += gs) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cw, y); ctx.stroke();
-  }
+  for (let x = bgT.x % gs; x < cw; x += gs) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ch); ctx.stroke(); }
+  for (let y = bgT.y % gs; y < ch; y += gs) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cw, y); ctx.stroke(); }
 
-  // Obstacles
-  for (let i = 0; i < obstacles.length; i++) {
-    const sel = i === selectedIdx;
-    const r = normToCanvas(obstacles[i]);
-    drawObstacle(r, obstacles[i].label, sel, i);
-  }
+  for (let i = 0; i < obstacles.length; i++) drawObs(n2c(obstacles[i]), obstacles[i].label, i === selectedIdx, i);
 }
 
-function drawObstacle(r, label, selected, idx) {
-  // Fill
-  if (selected) {
-    ctx.fillStyle = "rgba(0,255,136,0.12)";
-  } else {
-    ctx.fillStyle = "rgba(255,58,58,0.08)";
-  }
-  ctx.fillRect(r.x, r.y, r.w, r.h);
+function rrPath(ctx, x, y, w, h, r) {
+  let tl, tr, bl, br;
+  if (Array.isArray(r)) { [tl, tr, bl, br] = r; } else { tl = tr = bl = br = r || 0; }
+  const hw = w / 2, hh = h / 2;
+  tl = Math.min(Math.max(tl, 0), hw, hh); tr = Math.min(Math.max(tr, 0), hw, hh);
+  bl = Math.min(Math.max(bl, 0), hw, hh); br = Math.min(Math.max(br, 0), hw, hh);
+  if (tl < 0.5 && tr < 0.5 && bl < 0.5 && br < 0.5) { ctx.beginPath(); ctx.rect(x, y, w, h); return; }
+  ctx.beginPath();
+  ctx.moveTo(x + tl, y);
+  ctx.lineTo(x + w - tr, y);   ctx.quadraticCurveTo(x + w, y, x + w, y + tr);
+  ctx.lineTo(x + w, y + h - br); ctx.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+  ctx.lineTo(x + bl, y + h);   ctx.quadraticCurveTo(x, y + h, x, y + h - bl);
+  ctx.lineTo(x, y + tl);       ctx.quadraticCurveTo(x, y, x + tl, y);
+  ctx.closePath();
+}
 
-  // Border
-  ctx.strokeStyle = selected ? "rgba(0,255,136,0.9)" : "rgba(255,58,58,0.5)";
-  ctx.lineWidth = selected ? 2 : 1;
-  ctx.setLineDash(selected ? [] : [5, 4]);
-  ctx.strokeRect(r.x, r.y, r.w, r.h);
+function drawObs(c, label, sel, idx) {
+  // Helper: local obstacle coords → world (post-rotation) coords
+  const l2w = (lx, ly) => {
+    if (!c.rot) return { x: lx, y: ly };
+    const dx = lx - c.cx, dy = ly - c.cy;
+    const cos = Math.cos(c.rot), sin = Math.sin(c.rot);
+    return { x: c.cx + dx * cos - dy * sin, y: c.cy + dx * sin + dy * cos };
+  };
+
+  // ---- Rotated context: body, hatching, handles ----
+  ctx.save();
+  if (c.rot) { ctx.translate(c.cx, c.cy); ctx.rotate(c.rot); ctx.translate(-c.cx, -c.cy); }
+
+  ctx.fillStyle = sel ? "rgba(0,255,136,0.12)" : "rgba(255,58,58,0.07)";
+  rrPath(ctx, c.x, c.y, c.w, c.h, c.r); ctx.fill();
+
+  ctx.strokeStyle = sel ? "rgba(0,255,136,0.9)" : "rgba(255,58,58,0.45)";
+  ctx.lineWidth = sel ? 2 : 1;
+  ctx.setLineDash(sel ? [] : [5, 4]);
+  rrPath(ctx, c.x, c.y, c.w, c.h, c.r); ctx.stroke();
   ctx.setLineDash([]);
 
-  // Diagonal hash fill for selected
-  if (selected) {
+  if (sel) {
     ctx.save();
-    ctx.beginPath();
-    ctx.rect(r.x, r.y, r.w, r.h);
-    ctx.clip();
-    ctx.strokeStyle = "rgba(0,255,136,0.06)";
-    ctx.lineWidth = 1;
-    const step = 12;
-    for (let d = -Math.max(r.w, r.h); d < Math.max(r.w, r.h) * 2; d += step) {
-      ctx.beginPath();
-      ctx.moveTo(r.x + d, r.y);
-      ctx.lineTo(r.x + d - r.h, r.y + r.h);
-      ctx.stroke();
+    rrPath(ctx, c.x, c.y, c.w, c.h, c.r); ctx.clip();
+    ctx.strokeStyle = "rgba(0,255,136,0.05)"; ctx.lineWidth = 1;
+    for (let d = -Math.max(c.w, c.h); d < Math.max(c.w, c.h) * 2; d += 12) {
+      ctx.beginPath(); ctx.moveTo(c.x + d, c.y); ctx.lineTo(c.x + d - c.h, c.y + c.h); ctx.stroke();
     }
     ctx.restore();
   }
 
-  // Label badge
-  const labelText = `${idx}: ${label || "unnamed"}`;
-  ctx.font = "bold 10px 'Share Tech Mono', Consolas, monospace";
-  const tw = ctx.measureText(labelText).width;
-  const badgeH = 16;
-  const badgeY = r.y - badgeH - 2;
-  const bgColor = selected ? "rgba(0,255,136,0.85)" : "rgba(255,58,58,0.75)";
-  const textColor = selected ? "#000" : "#fff";
-
-  if (badgeY > 0) {
-    // Draw badge above
-    ctx.fillStyle = bgColor;
-    roundRect(ctx, r.x, badgeY, tw + 10, badgeH, 3);
-    ctx.fill();
-    ctx.fillStyle = textColor;
-    ctx.fillText(labelText, r.x + 5, badgeY + 11);
-  } else {
-    // Inside top
-    ctx.fillStyle = bgColor;
-    roundRect(ctx, r.x + 2, r.y + 2, tw + 10, badgeH, 3);
-    ctx.fill();
-    ctx.fillStyle = textColor;
-    ctx.fillText(labelText, r.x + 7, r.y + 13);
-  }
-
-  // Resize handles
-  if (selected) {
-    const handles = getHandles(r);
-    for (const h of Object.values(handles)) {
-      // Outer glow
-      ctx.fillStyle = "rgba(0,255,136,0.2)";
-      ctx.beginPath();
-      ctx.arc(h.x, h.y, HANDLE_SIZE + 2, 0, Math.PI * 2);
-      ctx.fill();
-      // Handle
+  if (sel) {
+    // Resize handles (green circles — rotation doesn't affect circles visually)
+    for (const h of Object.values(getHandles(c))) {
+      ctx.fillStyle = "rgba(0,255,136,0.18)";
+      ctx.beginPath(); ctx.arc(h.x, h.y, HANDLE + 2, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = "#111";
-      ctx.beginPath();
-      ctx.arc(h.x, h.y, HANDLE_SIZE - 1, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(0,255,136,0.9)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(h.x, h.y, HANDLE_SIZE - 1, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.beginPath(); ctx.arc(h.x, h.y, HANDLE - 1, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "rgba(0,255,136,0.85)"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(h.x, h.y, HANDLE - 1, 0, Math.PI * 2); ctx.stroke();
     }
+
+    // Radius handles (cyan diamonds) — per corner
+    const rh = getRadiusHandles(c);
+    for (const p of rh) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = "rgba(68,212,255,0.18)";
+      ctx.fillRect(-(RAD_HANDLE + 1), -(RAD_HANDLE + 1), (RAD_HANDLE + 1) * 2, (RAD_HANDLE + 1) * 2);
+      ctx.fillStyle = "#0c1015";
+      ctx.fillRect(-(RAD_HANDLE - 1), -(RAD_HANDLE - 1), (RAD_HANDLE - 1) * 2, (RAD_HANDLE - 1) * 2);
+      ctx.strokeStyle = "rgba(68,212,255,0.9)"; ctx.lineWidth = 1.5;
+      ctx.strokeRect(-(RAD_HANDLE - 1), -(RAD_HANDLE - 1), (RAD_HANDLE - 1) * 2, (RAD_HANDLE - 1) * 2);
+      ctx.restore();
+    }
+
+    // Rotation handle (orange circle above top center)
+    const rotHx = c.cx, rotHy = c.y - ROT_HANDLE_DIST;
+    ctx.strokeStyle = "rgba(255,180,50,0.4)"; ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(c.cx, c.y); ctx.lineTo(rotHx, rotHy); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(255,180,50,0.15)";
+    ctx.beginPath(); ctx.arc(rotHx, rotHy, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(255,180,50,0.85)"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(rotHx, rotHy, 6, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = "rgba(255,180,50,0.85)";
+    ctx.font = "bold 9px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("\u21bb", rotHx, rotHy); ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
   }
 
-  // Dimension text for selected
-  if (selected) {
-    const dimText = `${Math.round(r.w)}x${Math.round(r.h)}`;
-    ctx.font = "9px 'Share Tech Mono', monospace";
-    ctx.fillStyle = "rgba(0,255,136,0.5)";
-    ctx.fillText(dimText, r.x + r.w / 2 - ctx.measureText(dimText).width / 2, r.y + r.h + 13);
+  ctx.restore(); // ---- End rotated context ----
+
+  // ---- World-space text (always horizontal & readable) ----
+  const anchor = l2w(c.x, c.y);
+  const lt = `${idx}: ${label || "unnamed"}`;
+  ctx.font = "bold 9px 'Share Tech Mono',monospace";
+  const tw = ctx.measureText(lt).width;
+  const bh = 14, by = anchor.y - bh - 2;
+  const bgC = sel ? "rgba(0,255,136,0.85)" : "rgba(255,58,58,0.7)";
+  const txC = sel ? "#000" : "#fff";
+  if (by > 0) {
+    ctx.fillStyle = bgC; rrPath(ctx, anchor.x, by, tw + 8, bh, 3); ctx.fill();
+    ctx.fillStyle = txC; ctx.fillText(lt, anchor.x + 4, by + 10);
+  } else {
+    ctx.fillStyle = bgC; rrPath(ctx, anchor.x + 2, anchor.y + 2, tw + 8, bh, 3); ctx.fill();
+    ctx.fillStyle = txC; ctx.fillText(lt, anchor.x + 6, anchor.y + 12);
+  }
+
+  if (sel) {
+    const hasR = c.r.some(v => v > 0.5);
+    const rotDeg = Math.round(c.rot * 180 / Math.PI);
+    let dt = `${Math.round(c.w)}\u00d7${Math.round(c.h)}`;
+    if (hasR) dt += `  r:${c.r.map(v => Math.round(v)).join(",")}`;
+    if (rotDeg) dt += `  \u2220${rotDeg}\u00b0`;
+    ctx.font = "8px 'Share Tech Mono',monospace";
+    ctx.fillStyle = "rgba(0,255,136,0.45)";
+    const dimAnchor = l2w(c.x + c.w / 2, c.y + c.h);
+    ctx.fillText(dt, dimAnchor.x - ctx.measureText(dt).width / 2, dimAnchor.y + 12);
   }
 }
 
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
-function getHandles(r) {
-  const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+// ===========================================================================
+//  Handles
+// ===========================================================================
+function getHandles(c) {
+  const cx = c.x + c.w / 2, cy = c.y + c.h / 2;
   return {
-    nw: { x: r.x, y: r.y }, n: { x: cx, y: r.y }, ne: { x: r.x + r.w, y: r.y },
-    w: { x: r.x, y: cy }, e: { x: r.x + r.w, y: cy },
-    sw: { x: r.x, y: r.y + r.h }, s: { x: cx, y: r.y + r.h }, se: { x: r.x + r.w, y: r.y + r.h },
+    nw: { x: c.x, y: c.y }, n: { x: cx, y: c.y }, ne: { x: c.x + c.w, y: c.y },
+    w: { x: c.x, y: cy },                           e: { x: c.x + c.w, y: cy },
+    sw: { x: c.x, y: c.y + c.h }, s: { x: cx, y: c.y + c.h }, se: { x: c.x + c.w, y: c.y + c.h },
   };
 }
 
-// ---- Hit test ----
+function getRadiusHandles(c) {
+  const [tl, tr, bl, br] = c.r;
+  return [
+    { x: c.x + tl, y: c.y + tl },
+    { x: c.x + c.w - tr, y: c.y + tr },
+    { x: c.x + bl, y: c.y + c.h - bl },
+    { x: c.x + c.w - br, y: c.y + c.h - br },
+  ];
+}
+
+function getRotHandleWorld(c) {
+  const lx = c.cx, ly = c.y - ROT_HANDLE_DIST;
+  if (!c.rot) return { x: lx, y: ly };
+  const dx = lx - c.cx, dy = ly - c.cy;
+  const cos = Math.cos(c.rot), sin = Math.sin(c.rot);
+  return { x: c.cx + dx * cos - dy * sin, y: c.cy + dx * sin + dy * cos };
+}
+
+// ===========================================================================
+//  Hit Testing
+// ===========================================================================
 function hitTest(mx, my) {
   if (selectedIdx >= 0) {
-    const r = normToCanvas(obstacles[selectedIdx]);
-    const handles = getHandles(r);
-    for (const [dir, h] of Object.entries(handles)) {
-      if (Math.abs(mx - h.x) < HANDLE_SIZE + 2 && Math.abs(my - h.y) < HANDLE_SIZE + 2) {
-        return { type: "handle", idx: selectedIdx, dir };
-      }
+    const c = n2c(obstacles[selectedIdx]);
+
+    // Rotation handle (check in world space)
+    const rth = getRotHandleWorld(c);
+    if (Math.hypot(mx - rth.x, my - rth.y) < 10)
+      return { type: "rotate", idx: selectedIdx };
+
+    // Un-rotate mouse into obstacle's local space for all other tests
+    const lm = toLocal(mx, my, c);
+
+    // Radius handles
+    const rh = getRadiusHandles(c);
+    for (let i = 0; i < rh.length; i++) {
+      if (Math.abs(lm.x - rh[i].x) < RAD_HANDLE + 3 && Math.abs(lm.y - rh[i].y) < RAD_HANDLE + 3)
+        return { type: "radius", idx: selectedIdx, corner: i };
     }
+
+    // Resize handles
+    const hs = getHandles(c);
+    for (const [dir, h] of Object.entries(hs)) {
+      if (Math.abs(lm.x - h.x) < HANDLE + 2 && Math.abs(lm.y - h.y) < HANDLE + 2)
+        return { type: "handle", idx: selectedIdx, dir };
+    }
+
+    // Edge proximity
     const ed = 6;
-    if (mx >= r.x - ed && mx <= r.x + r.w + ed && my >= r.y - ed && my <= r.y + r.h + ed) {
-      const nL = Math.abs(mx - r.x) < ed, nR = Math.abs(mx - (r.x + r.w)) < ed;
-      const nT = Math.abs(my - r.y) < ed, nB = Math.abs(my - (r.y + r.h)) < ed;
+    if (lm.x >= c.x - ed && lm.x <= c.x + c.w + ed && lm.y >= c.y - ed && lm.y <= c.y + c.h + ed) {
+      const nL = Math.abs(lm.x - c.x) < ed, nR = Math.abs(lm.x - (c.x + c.w)) < ed;
+      const nT = Math.abs(lm.y - c.y) < ed, nB = Math.abs(lm.y - (c.y + c.h)) < ed;
       if (nT && nL) return { type: "handle", idx: selectedIdx, dir: "nw" };
       if (nT && nR) return { type: "handle", idx: selectedIdx, dir: "ne" };
       if (nB && nL) return { type: "handle", idx: selectedIdx, dir: "sw" };
       if (nB && nR) return { type: "handle", idx: selectedIdx, dir: "se" };
-      if (nL && my > r.y && my < r.y + r.h) return { type: "handle", idx: selectedIdx, dir: "w" };
-      if (nR && my > r.y && my < r.y + r.h) return { type: "handle", idx: selectedIdx, dir: "e" };
-      if (nT && mx > r.x && mx < r.x + r.w) return { type: "handle", idx: selectedIdx, dir: "n" };
-      if (nB && mx > r.x && mx < r.x + r.w) return { type: "handle", idx: selectedIdx, dir: "s" };
+      if (nL && lm.y > c.y && lm.y < c.y + c.h) return { type: "handle", idx: selectedIdx, dir: "w" };
+      if (nR && lm.y > c.y && lm.y < c.y + c.h) return { type: "handle", idx: selectedIdx, dir: "e" };
+      if (nT && lm.x > c.x && lm.x < c.x + c.w) return { type: "handle", idx: selectedIdx, dir: "n" };
+      if (nB && lm.x > c.x && lm.x < c.x + c.w) return { type: "handle", idx: selectedIdx, dir: "s" };
     }
   }
   for (let i = obstacles.length - 1; i >= 0; i--) {
-    const r = normToCanvas(obstacles[i]);
-    if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
+    const c = n2c(obstacles[i]);
+    const lm = toLocal(mx, my, c);
+    if (lm.x >= c.x && lm.x <= c.x + c.w && lm.y >= c.y && lm.y <= c.y + c.h)
       return { type: "body", idx: i };
-    }
   }
   return null;
 }
@@ -892,252 +754,370 @@ function hitTest(mx, my) {
 function getCursor(hit) {
   if (!hit) return "crosshair";
   if (hit.type === "body") return "move";
+  if (hit.type === "radius") return "pointer";
+  if (hit.type === "rotate") return "grab";
   const d = hit.dir;
-  if (d === "n" || d === "s") return "ns-resize";
-  if (d === "e" || d === "w") return "ew-resize";
-  if (d === "nw" || d === "se") return "nwse-resize";
-  if (d === "ne" || d === "sw") return "nesw-resize";
-  return "crosshair";
+  const rot = (selectedIdx >= 0 && obstacles[selectedIdx].rot) || 0;
+  if (!rot) {
+    if (d === "n" || d === "s") return "ns-resize";
+    if (d === "e" || d === "w") return "ew-resize";
+    if (d === "nw" || d === "se") return "nwse-resize";
+    if (d === "ne" || d === "sw") return "nesw-resize";
+    return "crosshair";
+  }
+  // Rotate the handle's axis by the obstacle's rotation angle
+  const dirAxis = { n: 90, s: 90, e: 0, w: 0, ne: 45, sw: 45, nw: 135, se: 135 };
+  const axis = ((dirAxis[d] + rot) % 180 + 180) % 180;
+  const snapped = (Math.round(axis / 45) * 45) % 180;
+  return { 0: "ew-resize", 45: "nesw-resize", 90: "ns-resize", 135: "nwse-resize" }[snapped] || "pointer";
 }
 
-// ---- Mouse events ----
-function getMouse(e) {
-  const r = canvas.getBoundingClientRect();
-  return { x: e.clientX - r.left, y: e.clientY - r.top };
-}
+// ===========================================================================
+//  Mouse Events (Canvas)
+// ===========================================================================
+function getMouse(e) { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
 
 canvas.addEventListener("mousedown", (e) => {
+  if (fpDrag) return;
   const { x, y } = getMouse(e);
   const hit = hitTest(x, y);
   if (!hit) { selectedIdx = -1; draw(); updateList(); updateProps(); return; }
   selectedIdx = hit.idx;
-  const r = normToCanvas(obstacles[selectedIdx]);
-  dragMode = hit.type === "body" ? "move" : hit.dir;
-  dragStart = { mx: x, my: y, ox: r.x, oy: r.y, ow: r.w, oh: r.h };
+  const c = n2c(obstacles[selectedIdx]);
+
+  pushUndo();
+  if (hit.type === "radius") {
+    dragMode = "radius";
+    dragStart = { corner: hit.corner, cx: c.x, cy: c.y, cw: c.w, ch: c.h };
+  } else if (hit.type === "rotate") {
+    dragMode = "rotate";
+    dragStart = { ccx: c.cx, ccy: c.cy };
+  } else {
+    dragMode = hit.type === "body" ? "move" : hit.dir;
+    dragStart = { mx: x, my: y, ox: c.x, oy: c.y, ow: c.w, oh: c.h, rot: c.rot };
+  }
   draw(); updateList(); updateProps();
 });
 
 canvas.addEventListener("mousemove", (e) => {
+  if (fpDrag) return;
   const { x, y } = getMouse(e);
-
-  // Crosshairs
   crossH.style.display = "block"; crossH.style.top = y + "px";
   crossV.style.display = "block"; crossV.style.left = x + "px";
-
-  // Status bar mouse position
   document.getElementById("status-mouse").textContent = `X: ${Math.round(x)}  Y: ${Math.round(y)}`;
-  const bt = bgTransform;
-  if (bt.w > 0) {
-    const nx = r4((x - bt.x) / bt.w);
-    const ny = r4((y - bt.y) / bt.h);
-    document.getElementById("status-norm").textContent = `nX: ${nx}  nY: ${ny}`;
-  }
+  if (bgT.w > 0) document.getElementById("status-norm").textContent = `nX: ${r4((x - bgT.x) / bgT.w)}  nY: ${r4((y - bgT.y) / bgT.h)}`;
 
   if (dragMode && dragStart && selectedIdx >= 0) {
-    const dx = x - dragStart.mx, dy = y - dragStart.my;
-    let rx = dragStart.ox, ry = dragStart.oy, rw = dragStart.ow, rh = dragStart.oh;
-    if (dragMode === "move") { rx += dx; ry += dy; }
-    else {
-      if (dragMode.includes("w")) { rx += dx; rw -= dx; }
-      if (dragMode.includes("e")) { rw += dx; }
-      if (dragMode.includes("n")) { ry += dy; rh -= dy; }
-      if (dragMode.includes("s")) { rh += dy; }
-      if (rw < 10) rw = 10;
-      if (rh < 10) rh = 10;
-    }
-    const norm = canvasToNorm(rx, ry, rw, rh);
-    Object.assign(obstacles[selectedIdx], norm);
-    draw(); updateProps(); updateExport(); save();
-
-    // Status bar selection info
     const o = obstacles[selectedIdx];
-    document.getElementById("status-selected").textContent =
-      `${o.label}: ${o.nw.toFixed(3)} x ${o.nh.toFixed(3)}`;
+    if (dragMode === "rotate") {
+      const angle = Math.atan2(x - dragStart.ccx, -(y - dragStart.ccy));
+      o.rot = r4(((angle * 180 / Math.PI) % 360 + 360) % 360);
+    } else if (dragMode === "radius") {
+      const ds = dragStart;
+      const c = n2c(o);
+      const lm = toLocal(x, y, c);
+      const corners = [
+        { cx: ds.cx, cy: ds.cy },
+        { cx: ds.cx + ds.cw, cy: ds.cy },
+        { cx: ds.cx, cy: ds.cy + ds.ch },
+        { cx: ds.cx + ds.cw, cy: ds.cy + ds.ch },
+      ];
+      const cn = corners[ds.corner];
+      const dist = Math.min(Math.abs(lm.x - cn.cx), Math.abs(lm.y - cn.cy));
+      const maxR = Math.min(ds.cw, ds.ch) / 2;
+      const val = r4(Math.max(0, Math.min(dist, maxR)) / Math.min(ds.cw, ds.ch));
+      if (radiusLocked) {
+        o.nr = [val, val, val, val];
+      } else {
+        o.nr[ds.corner] = val;
+      }
+    } else {
+      let dx = x - dragStart.mx, dy = y - dragStart.my;
+      let rx = dragStart.ox, ry = dragStart.oy, rw = dragStart.ow, rh = dragStart.oh;
+      if (dragMode === "move") { rx += dx; ry += dy; }
+      else {
+        // Un-rotate delta into the obstacle's local frame
+        if (dragStart.rot) {
+          const cos = Math.cos(-dragStart.rot), sin = Math.sin(-dragStart.rot);
+          const ldx = dx * cos - dy * sin, ldy = dx * sin + dy * cos;
+          dx = ldx; dy = ldy;
+        }
+        if (dragMode.includes("w")) { rx += dx; rw -= dx; }
+        if (dragMode.includes("e")) { rw += dx; }
+        if (dragMode.includes("n")) { ry += dy; rh -= dy; }
+        if (dragMode.includes("s")) { rh += dy; }
+        if (rw < 10) rw = 10; if (rh < 10) rh = 10;
+      }
+      Object.assign(o, c2n(rx, ry, rw, rh));
+    }
+    draw(); updateProps(); updateExport(); save();
+    const hasR = o.nr.some(v => v > 0);
+    document.getElementById("status-sel").textContent =
+      `${o.label}: ${o.nw.toFixed(3)}×${o.nh.toFixed(3)}` + (hasR ? ` r:${o.nr.map(v => v.toFixed(2)).join(",")}` : "") + (o.rot ? ` ∠${Math.round(o.rot)}°` : "");
     return;
   }
-
   canvas.style.cursor = getCursor(hitTest(x, y));
 });
 
-canvas.addEventListener("mouseup", () => {
-  if (dragMode) { dragMode = null; dragStart = null; updateList(); updateExport(); save(); }
-});
-canvas.addEventListener("mouseleave", () => {
-  crossH.style.display = "none"; crossV.style.display = "none";
-  if (dragMode) { dragMode = null; dragStart = null; }
-});
+canvas.addEventListener("mouseup", () => { if (dragMode) { dragMode = null; dragStart = null; updateList(); updateExport(); save(); } });
+canvas.addEventListener("mouseleave", () => { crossH.style.display = "none"; crossV.style.display = "none"; if (dragMode) { dragMode = null; dragStart = null; } });
 
-// ---- Keyboard ----
+// ===========================================================================
+//  Keyboard
+// ===========================================================================
 document.addEventListener("keydown", (e) => {
   if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+  if (e.ctrlKey && e.key === "z") { e.preventDefault(); undo(); return; }
+  if (e.ctrlKey && e.key === "y") { e.preventDefault(); redo(); return; }
   if (e.key === "Delete" && selectedIdx >= 0) deleteSelected();
   if (e.ctrlKey && e.key === "d") { e.preventDefault(); duplicateSelected(); }
   if (e.ctrlKey && e.key === "a") { e.preventDefault(); addObstacle(); }
+  if (e.key === "1") togglePanel("fp-obstacles");
+  if (e.key === "2") togglePanel("fp-props");
+  if (e.key === "3") togglePanel("fp-export");
+  if (e.key === "h" || e.key === "H") toggleHelp();
+  if (selectedIdx >= 0 && ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) {
+    e.preventDefault();
+    const step = e.shiftKey ? 0.01 : 0.001;
+    const o = obstacles[selectedIdx];
+    pushUndo();
+    if (e.key === "ArrowUp") o.ny = r4(o.ny - step);
+    if (e.key === "ArrowDown") o.ny = r4(o.ny + step);
+    if (e.key === "ArrowLeft") o.nx = r4(o.nx - step);
+    if (e.key === "ArrowRight") o.nx = r4(o.nx + step);
+    refresh();
+  }
 });
 
-// ---- Actions ----
+// ===========================================================================
+//  Undo / Redo
+// ===========================================================================
+function pushUndo() {
+  undoStack.push({ obs: structuredClone(obstacles), sel: selectedIdx });
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+  redoStack.length = 0;
+}
+function undo() {
+  if (!undoStack.length) return;
+  redoStack.push({ obs: structuredClone(obstacles), sel: selectedIdx });
+  const snap = undoStack.pop();
+  obstacles = snap.obs; selectedIdx = snap.sel;
+  refresh(); showToast("Undo");
+}
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push({ obs: structuredClone(obstacles), sel: selectedIdx });
+  const snap = redoStack.pop();
+  obstacles = snap.obs; selectedIdx = snap.sel;
+  refresh(); showToast("Redo");
+}
+
+// ===========================================================================
+//  Actions
+// ===========================================================================
 function addObstacle() {
-  obstacles.push({ nx: 0.4, ny: 0.4, nw: 0.1, nh: 0.1, label: "New Obstacle" });
+  pushUndo();
+  obstacles.push({ nx: 0.4, ny: 0.4, nw: 0.1, nh: 0.1, nr: [0,0,0,0], rot: 0, label: "New Obstacle" });
   selectedIdx = obstacles.length - 1;
   refresh(); showToast("Obstacle added");
 }
-
 function duplicateSelected() {
   if (selectedIdx < 0) return;
+  pushUndo();
   const s = obstacles[selectedIdx];
-  obstacles.push({ nx: r4(s.nx + 0.02), ny: r4(s.ny + 0.02), nw: s.nw, nh: s.nh, label: s.label + " copy" });
+  obstacles.push({ nx: r4(s.nx + 0.02), ny: r4(s.ny + 0.02), nw: s.nw, nh: s.nh, nr: [...s.nr], rot: s.rot, label: s.label + " copy" });
   selectedIdx = obstacles.length - 1;
   refresh(); showToast("Duplicated");
 }
-
 function deleteSelected() {
   if (selectedIdx < 0) return;
-  const name = obstacles[selectedIdx].label;
-  obstacles.splice(selectedIdx, 1);
-  selectedIdx = -1;
-  refresh(); showToast(`Deleted "${name}"`);
+  pushUndo();
+  const n = obstacles[selectedIdx].label;
+  obstacles.splice(selectedIdx, 1); selectedIdx = -1;
+  refresh(); showToast(`Deleted "${n}"`);
 }
-
-function clearAll() {
-  if (!confirm("Delete ALL obstacles?")) return;
-  obstacles = []; selectedIdx = -1;
-  refresh(); showToast("All cleared");
+function clearAll() { if (!confirm("Delete ALL obstacles?")) return; pushUndo(); obstacles = []; selectedIdx = -1; refresh(); showToast("All cleared"); }
+function resetDefaults() { if (!confirm("Reset to default obstacles?")) return; pushUndo(); obstacles = structuredClone(DEFAULT_OBSTACLES); selectedIdx = -1; refresh(); showToast("Reset to defaults"); }
+function loadMapData() {
+  fetch("../js/map-data.json").then(r => r.json()).then(arr => {
+    for (const o of arr) {
+      if (typeof o.nr === "number") o.nr = [o.nr, o.nr, o.nr, o.nr];
+      if (!Array.isArray(o.nr)) o.nr = [0,0,0,0];
+      if (typeof o.rot !== "number") o.rot = 0;
+      o.label = o.label || "imported";
+    }
+    pushUndo();
+    obstacles = arr; selectedIdx = -1;
+    refresh(); showToast(`Loaded ${arr.length} obstacles from map-data.json`);
+  }).catch(err => alert("Load map-data failed: " + err.message));
 }
+function refresh() { draw(); updateList(); updateProps(); updateExport(); syncCounts(); save(); }
 
-function resetDefaults() {
-  if (!confirm("Reset to default obstacles?")) return;
-  obstacles = structuredClone(DEFAULT_OBSTACLES);
-  selectedIdx = -1;
-  refresh(); showToast("Reset to defaults");
-}
-
-function refresh() {
-  draw(); updateList(); updateProps(); updateExport(); syncCounts(); save();
-}
-
-// ---- Sidebar: list ----
+// ===========================================================================
+//  UI Updates
+// ===========================================================================
 function updateList() {
   const el = document.getElementById("obstacle-list");
   el.innerHTML = "";
   obstacles.forEach((o, i) => {
     const div = document.createElement("div");
     div.className = "obs-item" + (i === selectedIdx ? " selected" : "");
-    div.innerHTML = `
-      <div class="dot"></div>
-      <div class="lbl">${i}: ${o.label || "unnamed"}</div>
-      <div class="coords">${o.nx.toFixed(3)}, ${o.ny.toFixed(3)}</div>
-    `;
+    div.innerHTML = `<div class="dot"></div><div class="lbl">${i}: ${o.label || "unnamed"}</div><div class="coords">${o.nx.toFixed(3)}, ${o.ny.toFixed(3)}</div>`;
     div.addEventListener("click", () => { selectedIdx = i; draw(); updateList(); updateProps(); });
     el.appendChild(div);
   });
   syncCounts();
-  // Status bar
   if (selectedIdx >= 0) {
     const o = obstacles[selectedIdx];
-    document.getElementById("status-selected").textContent =
-      `${o.label}: ${o.nw.toFixed(3)} x ${o.nh.toFixed(3)}`;
+    const hasR = o.nr.some(v => v > 0);
+    document.getElementById("status-sel").textContent = `${o.label}: ${o.nw.toFixed(3)}×${o.nh.toFixed(3)}` + (hasR ? ` r:${o.nr.map(v => v.toFixed(2)).join(",")}` : "") + (o.rot ? ` ∠${Math.round(o.rot)}°` : "");
   } else {
-    document.getElementById("status-selected").textContent = "No selection";
+    document.getElementById("status-sel").textContent = "No selection";
   }
 }
 
 function syncCounts() {
   const n = obstacles.length;
   document.getElementById("panel-count").textContent = n;
-  document.getElementById("nav-obstacle-count").textContent = `${n} obstacle${n !== 1 ? "s" : ""}`;
+  document.getElementById("nav-count").textContent = n;
 }
 
-// ---- Sidebar: props ----
 function updateProps() {
   const el = document.getElementById("props-content");
-  if (selectedIdx < 0) {
-    el.innerHTML = '<div id="no-selection">Select an obstacle</div>';
-    return;
-  }
+  if (selectedIdx < 0) { el.innerHTML = '<div id="no-selection">Select an obstacle</div>'; return; }
   const o = obstacles[selectedIdx];
+  const nr = o.nr || [0,0,0,0];
   el.innerHTML = `
-    <div class="row">
-      <label>LBL</label>
-      <input type="text" id="prop-label" value="${escHtml(o.label || "")}" />
+    <div class="section-title">Properties</div>
+    <div class="row"><label>LBL</label><input type="text" id="prop-label" value="${escHtml(o.label || "")}"></div>
+    <div class="row"><label>nX</label><input type="number" id="prop-nx" step="0.001" value="${o.nx}"><label>nY</label><input type="number" id="prop-ny" step="0.001" value="${o.ny}"></div>
+    <div class="row"><label>nW</label><input type="number" id="prop-nw" step="0.001" value="${o.nw}"><label>nH</label><input type="number" id="prop-nh" step="0.001" value="${o.nh}"></div>
+    <div class="row"><label>ROT</label><input type="number" id="prop-rot" step="1" value="${o.rot || 0}"><span style="color:var(--text-3);font-size:9px;flex-shrink:0">&deg;</span></div>
+    <div class="section-title" style="margin-top:6px;display:flex;align-items:center;gap:6px">
+      Corner Radius
+      <button class="btn" id="btn-lock-radius" style="padding:1px 6px;font-size:9px;color:${radiusLocked ? 'var(--green)' : 'var(--cyan)'};border-color:${radiusLocked ? 'rgba(0,255,136,0.3)' : 'rgba(68,212,255,0.3)'}">${radiusLocked ? '\ud83d\udd12 All' : '\ud83d\udd13 Each'}</button>
     </div>
-    <div class="row">
-      <label>nX</label>
-      <input type="number" id="prop-nx" step="0.001" value="${o.nx}" />
-      <label>nY</label>
-      <input type="number" id="prop-ny" step="0.001" value="${o.ny}" />
-    </div>
-    <div class="row">
-      <label>nW</label>
-      <input type="number" id="prop-nw" step="0.001" value="${o.nw}" />
-      <label>nH</label>
-      <input type="number" id="prop-nh" step="0.001" value="${o.nh}" />
-    </div>
+    <div class="row"><label style="color:var(--cyan)">TL</label><input type="number" id="prop-nr0" step="0.01" min="0" max="0.5" value="${nr[0]}"><label style="color:var(--cyan)">TR</label><input type="number" id="prop-nr1" step="0.01" min="0" max="0.5" value="${nr[1]}"></div>
+    <div class="row"><label style="color:var(--cyan)">BL</label><input type="number" id="prop-nr2" step="0.01" min="0" max="0.5" value="${nr[2]}"><label style="color:var(--cyan)">BR</label><input type="number" id="prop-nr3" step="0.01" min="0" max="0.5" value="${nr[3]}"></div>
   `;
   const bind = (id, key, isNum) => {
-    document.getElementById(id).addEventListener("input", (ev) => {
+    const inp = document.getElementById(id);
+    inp.addEventListener("focus", pushUndo);
+    inp.addEventListener("input", (ev) => {
       obstacles[selectedIdx][key] = isNum ? parseFloat(ev.target.value) || 0 : ev.target.value;
       draw(); updateList(); updateExport(); save();
     });
   };
   bind("prop-label", "label", false);
-  bind("prop-nx", "nx", true);
-  bind("prop-ny", "ny", true);
-  bind("prop-nw", "nw", true);
-  bind("prop-nh", "nh", true);
+  bind("prop-nx", "nx", true); bind("prop-ny", "ny", true);
+  bind("prop-nw", "nw", true); bind("prop-nh", "nh", true);
+  bind("prop-rot", "rot", true);
+
+  // Per-corner radius inputs
+  for (let ci = 0; ci < 4; ci++) {
+    const nrInp = document.getElementById("prop-nr" + ci);
+    nrInp.addEventListener("focus", pushUndo);
+    nrInp.addEventListener("input", (ev) => {
+      const val = parseFloat(ev.target.value) || 0;
+      if (radiusLocked) {
+        obstacles[selectedIdx].nr = [val, val, val, val];
+        for (let j = 0; j < 4; j++) {
+          const inp = document.getElementById("prop-nr" + j);
+          if (inp && j !== ci) inp.value = val;
+        }
+      } else {
+        obstacles[selectedIdx].nr[ci] = val;
+      }
+      draw(); updateList(); updateExport(); save();
+    });
+  }
+
+  // Lock toggle
+  document.getElementById("btn-lock-radius").addEventListener("click", () => {
+    pushUndo();
+    radiusLocked = !radiusLocked;
+    if (radiusLocked) {
+      const avg = obstacles[selectedIdx].nr.reduce((a, b) => a + b, 0) / 4;
+      obstacles[selectedIdx].nr = [avg, avg, avg, avg];
+    }
+    draw(); updateProps(); updateExport(); save();
+    showToast(radiusLocked ? "Radius: All corners linked" : "Radius: Individual corners");
+  });
 }
 
 function escHtml(s) { return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
 
-// ---- Export ----
 function updateExport() {
   const box = document.getElementById("export-box");
-  const lines = obstacles.map(o => {
-    return `  { nx: ${o.nx}, ny: ${o.ny}, nw: ${o.nw}, nh: ${o.nh}, label: "${(o.label || "").replace(/"/g, '\\"')}" },`;
+  const jsonArr = obstacles.map(o => {
+    const nr = o.nr || [0,0,0,0];
+    const allSame = nr[0] === nr[1] && nr[1] === nr[2] && nr[2] === nr[3];
+    const entry = { nx: o.nx, ny: o.ny, nw: o.nw, nh: o.nh };
+    if (nr.some(v => v > 0)) entry.nr = allSame ? nr[0] : [...nr];
+    if (o.rot) entry.rot = o.rot;
+    entry.label = o.label || "";
+    return entry;
   });
-  box.value = `export const MAP_OBSTACLES = [\n${lines.join("\n")}\n];\n`;
+  box.value = JSON.stringify(jsonArr, null, 2) + "\n";
 }
 
-// ---- Import ----
 function doImport() {
   const raw = document.getElementById("export-box").value.trim();
   try {
-    let jsonStr = raw;
-    const arrMatch = raw.match(/\[[\s\S]*\]/);
-    if (arrMatch) jsonStr = arrMatch[0];
-    jsonStr = jsonStr.replace(/(\w+)\s*:/g, '"$1":');
-    jsonStr = jsonStr.replace(/,\s*([\]}])/g, '$1');
-    const arr = JSON.parse(jsonStr);
+    const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) throw new Error("Not an array");
     for (const o of arr) {
-      if (typeof o.nx !== "number" || typeof o.ny !== "number" ||
-          typeof o.nw !== "number" || typeof o.nh !== "number") throw new Error("Missing nx/ny/nw/nh");
+      if (typeof o.nx !== "number" || typeof o.ny !== "number" || typeof o.nw !== "number" || typeof o.nh !== "number") throw new Error("Missing nx/ny/nw/nh");
+      if (typeof o.nr === "number") o.nr = [o.nr, o.nr, o.nr, o.nr];
+      if (!Array.isArray(o.nr)) o.nr = [0,0,0,0];
+      if (typeof o.rot !== "number") o.rot = 0;
       o.label = o.label || "imported";
     }
+    pushUndo();
     obstacles = arr; selectedIdx = -1;
-    refresh();
-    showToast(`Imported ${arr.length} obstacles`);
-  } catch (err) {
-    alert("Import failed: " + err.message);
-  }
+    refresh(); showToast(`Imported ${arr.length} obstacles`);
+  } catch (err) { alert("Import failed: " + err.message); }
 }
 
-// ---- Persist ----
 function save() { localStorage.setItem("dv_editor_obstacles", JSON.stringify(obstacles)); }
 
-// ---- Button wiring ----
+// ===========================================================================
+//  Button Wiring
+// ===========================================================================
 document.getElementById("btn-add").addEventListener("click", addObstacle);
 document.getElementById("btn-dup").addEventListener("click", duplicateSelected);
 document.getElementById("btn-del").addEventListener("click", deleteSelected);
 document.getElementById("btn-clear").addEventListener("click", clearAll);
 document.getElementById("btn-reset").addEventListener("click", resetDefaults);
+document.getElementById("btn-load-map").addEventListener("click", loadMapData);
 document.getElementById("btn-copy").addEventListener("click", () => {
-  navigator.clipboard.writeText(document.getElementById("export-box").value).then(() => {
-    showToast("Copied to clipboard!");
-  });
+  navigator.clipboard.writeText(document.getElementById("export-box").value).then(() => showToast("Copied!"));
 });
 document.getElementById("btn-import").addEventListener("click", doImport);
 
-// ---- Start ----
+// ===========================================================================
+//  Tab Switching
+// ===========================================================================
+let activePage = "page-map";
+
+document.querySelectorAll(".nav-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    if (tab.dataset.page === activePage) return;
+    // Deactivate old
+    document.querySelector(".nav-tab.active").classList.remove("active");
+    document.getElementById(activePage).classList.remove("active");
+    // Activate new
+    activePage = tab.dataset.page;
+    tab.classList.add("active");
+    document.getElementById(activePage).classList.add("active");
+    // Show/hide map-specific nav controls
+    const isMap = activePage === "page-map";
+    document.getElementById("map-toggles").style.display = isMap ? "" : "none";
+    document.getElementById("map-status").style.display = isMap ? "" : "none";
+    if (isMap) { resizeCanvas(); draw(); }
+  });
+});
+
 init();
 </script>
 </body>

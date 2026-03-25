@@ -42,10 +42,62 @@ export const separateCircles = (a, b) => {
   b.y += ny * half;
 };
 
-// Push a circle out of an axis-aligned rectangle
+// Push a circle out of an axis-aligned (rounded) rectangle.
+// `rect` must have { x, y, w, h } and optionally `r` — an array [tl, tr, bl, br]
+// of pixel corner radii.  When no radii are provided, behaves as a plain AABB.
 export const resolveCircleRect = (circle, rect) => {
-  const closestX = clamp(circle.x, rect.x, rect.x + rect.w);
-  const closestY = clamp(circle.y, rect.y, rect.y + rect.h);
+  const rr = rect.r || [0, 0, 0, 0]; // [tl, tr, bl, br]
+
+  // --- 1. Quick check: is the circle completely outside the AABB expanded by its radius? ---
+  if (circle.x + circle.radius < rect.x || circle.x - circle.radius > rect.x + rect.w ||
+      circle.y + circle.radius < rect.y || circle.y - circle.radius > rect.y + rect.h) {
+    return false;
+  }
+
+  // --- 2. Determine the effective closest point, accounting for rounded corners. ---
+  let closestX = clamp(circle.x, rect.x, rect.x + rect.w);
+  let closestY = clamp(circle.y, rect.y, rect.y + rect.h);
+
+  // Check if the closest point falls inside one of the four corner rounding zones.
+  // Each corner zone is a square of side = cornerRadius at that corner.  Inside it the
+  // effective boundary is a quarter-circle arc rather than a right angle.
+  const cornerArc = getCornerArc(closestX, closestY, rect, rr);
+  if (cornerArc) {
+    // The closest point on the rounded boundary to the circle centre is on the arc.
+    const dxA = circle.x - cornerArc.cx;
+    const dyA = circle.y - cornerArc.cy;
+    const distToArc = Math.hypot(dxA, dyA);
+
+    // Is the circle centre inside the arc? (closer to corner centre than radius)
+    if (distToArc < cornerArc.r) {
+      // Centre inside the rounded region — push out along the arc normal.
+      if (distToArc === 0) {
+        // Degenerate: centre exactly on arc centre — push toward the nearest edge.
+        circle.x = cornerArc.cx + cornerArc.r + circle.radius;
+        return true;
+      }
+      const nx = dxA / distToArc;
+      const ny = dyA / distToArc;
+      circle.x = cornerArc.cx + nx * (cornerArc.r + circle.radius);
+      circle.y = cornerArc.cy + ny * (cornerArc.r + circle.radius);
+      return true;
+    }
+
+    // Circle is outside the arc but might still overlap it.
+    if (distToArc < cornerArc.r + circle.radius) {
+      const nx = dxA / distToArc;
+      const ny = dyA / distToArc;
+      const overlap = cornerArc.r + circle.radius - distToArc;
+      circle.x += nx * overlap;
+      circle.y += ny * overlap;
+      return true;
+    }
+
+    // No collision with the arc — the circle clips past the rounded corner.
+    return false;
+  }
+
+  // --- 3. Standard AABB circle-vs-rect resolution (no corner involved). ---
   const dx = circle.x - closestX;
   const dy = circle.y - closestY;
   const dist = Math.hypot(dx, dy);
@@ -72,6 +124,29 @@ export const resolveCircleRect = (circle, rect) => {
   return true;
 };
 
-// Check if a point is inside a rectangle
-export const pointInRect = (x, y, rect) =>
-  x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
+// Return the arc centre + radius if (px,py) is inside a rounded corner zone, else null.
+function getCornerArc(px, py, rect, rr) {
+  const [tl, tr, bl, br] = rr;
+  // Top-left
+  if (tl > 0 && px < rect.x + tl && py < rect.y + tl)
+    return { cx: rect.x + tl, cy: rect.y + tl, r: tl };
+  // Top-right
+  if (tr > 0 && px > rect.x + rect.w - tr && py < rect.y + tr)
+    return { cx: rect.x + rect.w - tr, cy: rect.y + tr, r: tr };
+  // Bottom-left
+  if (bl > 0 && px < rect.x + bl && py > rect.y + rect.h - bl)
+    return { cx: rect.x + bl, cy: rect.y + rect.h - bl, r: bl };
+  // Bottom-right
+  if (br > 0 && px > rect.x + rect.w - br && py > rect.y + rect.h - br)
+    return { cx: rect.x + rect.w - br, cy: rect.y + rect.h - br, r: br };
+  return null;
+}
+
+// Check if a point is inside a (rounded) rectangle
+export const pointInRect = (x, y, rect) => {
+  if (x < rect.x || x > rect.x + rect.w || y < rect.y || y > rect.y + rect.h) return false;
+  const rr = rect.r || [0, 0, 0, 0];
+  const arc = getCornerArc(x, y, rect, rr);
+  if (arc) return Math.hypot(x - arc.cx, y - arc.cy) <= arc.r;
+  return true;
+};
