@@ -593,11 +593,38 @@ export class Enemy {
     ctx.globalAlpha = this.opacity;
     ctx.translate(this.x, this.y);
 
-    // Drop shadow
-    ctx.fillStyle = "rgba(0,0,0,0.28)";
-    ctx.beginPath();
-    ctx.ellipse(2, this.radius + 6, this.radius * 0.9, this.radius * 0.4, 0, 0, Math.PI * 2);
-    ctx.fill();
+    // Drop shadow — follows body sway, bob and facing for a grounded look
+    {
+      const w = this.wobble;
+      const isDead = this.stateLabel === "DEAD";
+      const isChasing = this.stateLabel === "CHASE";
+
+      // Mirror the sway/bob from the zombie renderer
+      const swayAmp = isDead ? 0 : isChasing ? 0.06 : 0.035;
+      const sway = Math.sin(w * 0.5) * swayAmp;
+      const bobScale = this.radius / 16;
+      const bob = isDead ? 0 : Math.sin(w * 1.4) * 1.2 * bobScale;
+      const jx = isDead ? 0 : Math.sin(w * 7.1) * 0.3;
+
+      // Shadow shifts laterally with sway and slightly with facing
+      const bodyAngle = this.facing + Math.PI / 2 + sway;
+      const shadowOffX = 2 + Math.sin(bodyAngle) * this.radius * 0.12 + jx * 0.5;
+      const shadowOffY = this.radius + 6 - bob * 0.4;
+
+      // Shadow stretches when moving (chasing) and compresses with bob
+      const stretchX = this.radius * (isChasing ? 0.95 : 0.88) + Math.abs(Math.sin(w * 0.5)) * 1.5;
+      const stretchY = this.radius * 0.38 + bob * 0.08;
+
+      // Slight rotation to match body lean
+      ctx.save();
+      ctx.translate(shadowOffX, shadowOffY);
+      ctx.rotate(sway * 0.5);
+      ctx.fillStyle = "rgba(0,0,0,0.24)";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, stretchX, stretchY, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
 
     // State-specific effects
     if (this.stateLabel === "SPAWN") {
