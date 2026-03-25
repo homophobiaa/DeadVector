@@ -283,7 +283,8 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
+import { MAP_OBSTACLES } from "../js/map-data.js";
 // ===========================================================================
 //  DeadVector  —  Map Obstacle Editor
 // ===========================================================================
@@ -314,19 +315,9 @@ const mainEl = document.getElementById("main");
 const crossH = document.getElementById("crosshair-h");
 const crossV = document.getElementById("crosshair-v");
 
-const DEFAULT_OBSTACLES = [
-  { nx: 0.275, ny: -0.01, nw: 0.445, nh: 0.225, nr: [0,0,0,0], rot: 0, label: "Top Building" },
-  { nx: 0.245, ny: 0.79, nw: 0.48, nh: 0.22, nr: [0,0,0,0], rot: 0, label: "Bottom Building" },
-  { nx: -0.01, ny: -0.01, nw: 0.13, nh: 0.225, nr: [0,0,0,0], rot: 0, label: "TL Corner" },
-  { nx: 0.875, ny: -0.01, nw: 0.135, nh: 0.225, nr: [0,0,0,0], rot: 0, label: "TR Corner" },
-  { nx: -0.01, ny: 0.79, nw: 0.10, nh: 0.22, nr: [0,0,0,0], rot: 0, label: "BL Corner" },
-  { nx: 0.91, ny: 0.79, nw: 0.10, nh: 0.22, nr: [0,0,0,0], rot: 0, label: "BR Corner" },
-  { nx: 0.175, ny: 0.02, nw: 0.07, nh: 0.07, nr: [0,0,0,0], rot: 0, label: "Car TL" },
-  { nx: -0.005, ny: 0.30, nw: 0.05, nh: 0.12, nr: [0,0,0,0], rot: 0, label: "Car L1" },
-  { nx: -0.005, ny: 0.57, nw: 0.055, nh: 0.12, nr: [0,0,0,0], rot: 0, label: "Car L2" },
-  { nx: 0.075, ny: 0.845, nw: 0.06, nh: 0.06, nr: [0,0,0,0], rot: 0, label: "Car BL" },
-  { nx: 0.815, ny: 0.86, nw: 0.065, nh: 0.06, nr: [0,0,0,0], rot: 0, label: "Car BR" },
-];
+// Default obstacles come directly from map-data.js so the editor always starts
+// in sync with the live game collision data.
+const DEFAULT_OBSTACLES = MAP_OBSTACLES;
 
 // ===========================================================================
 //  Toast
