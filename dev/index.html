@@ -284,7 +284,6 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
 <div class="toast" id="toast"></div>
 
 <script type="module">
-import { MAP_OBSTACLES } from "../js/map-data.js";
 // ===========================================================================
 //  DeadVector  —  Map Obstacle Editor
 // ===========================================================================
@@ -315,9 +314,8 @@ const mainEl = document.getElementById("main");
 const crossH = document.getElementById("crosshair-h");
 const crossV = document.getElementById("crosshair-v");
 
-// Default obstacles come directly from map-data.js so the editor always starts
-// in sync with the live game collision data.
-const DEFAULT_OBSTACLES = MAP_OBSTACLES;
+// Default obstacles are loaded at startup from map-data.json.
+let DEFAULT_OBSTACLES = [];
 
 // ===========================================================================
 //  Toast
@@ -451,8 +449,17 @@ function toggleHelp() {
 // ===========================================================================
 //  Init
 // ===========================================================================
-function init() {
+async function init() {
   loadPanels();
+  try {
+    const raw = await fetch("../js/map-data.json").then(r => r.json());
+    for (const o of raw) {
+      if (typeof o.nr === "number") o.nr = [o.nr, o.nr, o.nr, o.nr];
+      if (!Array.isArray(o.nr)) o.nr = [0,0,0,0];
+      if (typeof o.rot !== "number") o.rot = 0;
+    }
+    DEFAULT_OBSTACLES = raw;
+  } catch { DEFAULT_OBSTACLES = []; }
   const saved = localStorage.getItem("dv_editor_obstacles");
   if (saved) {
     try { obstacles = JSON.parse(saved); } catch { obstacles = structuredClone(DEFAULT_OBSTACLES); }
@@ -558,6 +565,15 @@ function rrPath(ctx, x, y, w, h, r) {
 }
 
 function drawObs(c, label, sel, idx) {
+  // Helper: local obstacle coords → world (post-rotation) coords
+  const l2w = (lx, ly) => {
+    if (!c.rot) return { x: lx, y: ly };
+    const dx = lx - c.cx, dy = ly - c.cy;
+    const cos = Math.cos(c.rot), sin = Math.sin(c.rot);
+    return { x: c.cx + dx * cos - dy * sin, y: c.cy + dx * sin + dy * cos };
+  };
+
+  // ---- Rotated context: body, hatching, handles ----
   ctx.save();
   if (c.rot) { ctx.translate(c.cx, c.cy); ctx.rotate(c.rot); ctx.translate(-c.cx, -c.cy); }
 
@@ -580,73 +596,76 @@ function drawObs(c, label, sel, idx) {
     ctx.restore();
   }
 
-  // Label badge
+  if (sel) {
+    // Resize handles (green circles — rotation doesn't affect circles visually)
+    for (const h of Object.values(getHandles(c))) {
+      ctx.fillStyle = "rgba(0,255,136,0.18)";
+      ctx.beginPath(); ctx.arc(h.x, h.y, HANDLE + 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#111";
+      ctx.beginPath(); ctx.arc(h.x, h.y, HANDLE - 1, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "rgba(0,255,136,0.85)"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(h.x, h.y, HANDLE - 1, 0, Math.PI * 2); ctx.stroke();
+    }
+
+    // Radius handles (cyan diamonds) — per corner
+    const rh = getRadiusHandles(c);
+    for (const p of rh) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = "rgba(68,212,255,0.18)";
+      ctx.fillRect(-(RAD_HANDLE + 1), -(RAD_HANDLE + 1), (RAD_HANDLE + 1) * 2, (RAD_HANDLE + 1) * 2);
+      ctx.fillStyle = "#0c1015";
+      ctx.fillRect(-(RAD_HANDLE - 1), -(RAD_HANDLE - 1), (RAD_HANDLE - 1) * 2, (RAD_HANDLE - 1) * 2);
+      ctx.strokeStyle = "rgba(68,212,255,0.9)"; ctx.lineWidth = 1.5;
+      ctx.strokeRect(-(RAD_HANDLE - 1), -(RAD_HANDLE - 1), (RAD_HANDLE - 1) * 2, (RAD_HANDLE - 1) * 2);
+      ctx.restore();
+    }
+
+    // Rotation handle (orange circle above top center)
+    const rotHx = c.cx, rotHy = c.y - ROT_HANDLE_DIST;
+    ctx.strokeStyle = "rgba(255,180,50,0.4)"; ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(c.cx, c.y); ctx.lineTo(rotHx, rotHy); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(255,180,50,0.15)";
+    ctx.beginPath(); ctx.arc(rotHx, rotHy, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(255,180,50,0.85)"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(rotHx, rotHy, 6, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = "rgba(255,180,50,0.85)";
+    ctx.font = "bold 9px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("\u21bb", rotHx, rotHy); ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
+  }
+
+  ctx.restore(); // ---- End rotated context ----
+
+  // ---- World-space text (always horizontal & readable) ----
+  const anchor = l2w(c.x, c.y);
   const lt = `${idx}: ${label || "unnamed"}`;
   ctx.font = "bold 9px 'Share Tech Mono',monospace";
   const tw = ctx.measureText(lt).width;
-  const bh = 14, by = c.y - bh - 2;
+  const bh = 14, by = anchor.y - bh - 2;
   const bgC = sel ? "rgba(0,255,136,0.85)" : "rgba(255,58,58,0.7)";
   const txC = sel ? "#000" : "#fff";
   if (by > 0) {
-    ctx.fillStyle = bgC; rrPath(ctx, c.x, by, tw + 8, bh, 3); ctx.fill();
-    ctx.fillStyle = txC; ctx.fillText(lt, c.x + 4, by + 10);
+    ctx.fillStyle = bgC; rrPath(ctx, anchor.x, by, tw + 8, bh, 3); ctx.fill();
+    ctx.fillStyle = txC; ctx.fillText(lt, anchor.x + 4, by + 10);
   } else {
-    ctx.fillStyle = bgC; rrPath(ctx, c.x + 2, c.y + 2, tw + 8, bh, 3); ctx.fill();
-    ctx.fillStyle = txC; ctx.fillText(lt, c.x + 6, c.y + 12);
+    ctx.fillStyle = bgC; rrPath(ctx, anchor.x + 2, anchor.y + 2, tw + 8, bh, 3); ctx.fill();
+    ctx.fillStyle = txC; ctx.fillText(lt, anchor.x + 6, anchor.y + 12);
   }
 
-  if (!sel) { ctx.restore(); return; }
-
-  // Resize handles (green circles)
-  for (const h of Object.values(getHandles(c))) {
-    ctx.fillStyle = "rgba(0,255,136,0.18)";
-    ctx.beginPath(); ctx.arc(h.x, h.y, HANDLE + 2, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#111";
-    ctx.beginPath(); ctx.arc(h.x, h.y, HANDLE - 1, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "rgba(0,255,136,0.85)"; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(h.x, h.y, HANDLE - 1, 0, Math.PI * 2); ctx.stroke();
+  if (sel) {
+    const hasR = c.r.some(v => v > 0.5);
+    const rotDeg = Math.round(c.rot * 180 / Math.PI);
+    let dt = `${Math.round(c.w)}\u00d7${Math.round(c.h)}`;
+    if (hasR) dt += `  r:${c.r.map(v => Math.round(v)).join(",")}`;
+    if (rotDeg) dt += `  \u2220${rotDeg}\u00b0`;
+    ctx.font = "8px 'Share Tech Mono',monospace";
+    ctx.fillStyle = "rgba(0,255,136,0.45)";
+    const dimAnchor = l2w(c.x + c.w / 2, c.y + c.h);
+    ctx.fillText(dt, dimAnchor.x - ctx.measureText(dt).width / 2, dimAnchor.y + 12);
   }
-
-  // Radius handles (cyan diamonds) — per corner
-  const rh = getRadiusHandles(c);
-  for (const p of rh) {
-    ctx.save();
-    ctx.translate(p.x, p.y);
-    ctx.rotate(Math.PI / 4);
-    ctx.fillStyle = "rgba(68,212,255,0.18)";
-    ctx.fillRect(-(RAD_HANDLE + 1), -(RAD_HANDLE + 1), (RAD_HANDLE + 1) * 2, (RAD_HANDLE + 1) * 2);
-    ctx.fillStyle = "#0c1015";
-    ctx.fillRect(-(RAD_HANDLE - 1), -(RAD_HANDLE - 1), (RAD_HANDLE - 1) * 2, (RAD_HANDLE - 1) * 2);
-    ctx.strokeStyle = "rgba(68,212,255,0.9)"; ctx.lineWidth = 1.5;
-    ctx.strokeRect(-(RAD_HANDLE - 1), -(RAD_HANDLE - 1), (RAD_HANDLE - 1) * 2, (RAD_HANDLE - 1) * 2);
-    ctx.restore();
-  }
-
-  // Rotation handle (orange circle above top center)
-  const rotHx = c.cx, rotHy = c.y - ROT_HANDLE_DIST;
-  ctx.strokeStyle = "rgba(255,180,50,0.4)"; ctx.lineWidth = 1;
-  ctx.setLineDash([3, 3]);
-  ctx.beginPath(); ctx.moveTo(c.cx, c.y); ctx.lineTo(rotHx, rotHy); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = "rgba(255,180,50,0.15)";
-  ctx.beginPath(); ctx.arc(rotHx, rotHy, 6, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = "rgba(255,180,50,0.85)"; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.arc(rotHx, rotHy, 6, 0, Math.PI * 2); ctx.stroke();
-  ctx.fillStyle = "rgba(255,180,50,0.85)";
-  ctx.font = "bold 9px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("\u21bb", rotHx, rotHy); ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
-
-  // Dimension text
-  const hasR = c.r.some(v => v > 0.5);
-  const rotDeg = Math.round(c.rot * 180 / Math.PI);
-  let dt = `${Math.round(c.w)}\u00d7${Math.round(c.h)}`;
-  if (hasR) dt += `  r:${c.r.map(v => Math.round(v)).join(",")}`;
-  if (rotDeg) dt += `  \u2220${rotDeg}\u00b0`;
-  ctx.font = "8px 'Share Tech Mono',monospace";
-  ctx.fillStyle = "rgba(0,255,136,0.45)";
-  ctx.fillText(dt, c.x + c.w / 2 - ctx.measureText(dt).width / 2, c.y + c.h + 12);
-
-  ctx.restore();
 }
 
 // ===========================================================================
@@ -738,11 +757,19 @@ function getCursor(hit) {
   if (hit.type === "radius") return "pointer";
   if (hit.type === "rotate") return "grab";
   const d = hit.dir;
-  if (d === "n" || d === "s") return "ns-resize";
-  if (d === "e" || d === "w") return "ew-resize";
-  if (d === "nw" || d === "se") return "nwse-resize";
-  if (d === "ne" || d === "sw") return "nesw-resize";
-  return "crosshair";
+  const rot = (selectedIdx >= 0 && obstacles[selectedIdx].rot) || 0;
+  if (!rot) {
+    if (d === "n" || d === "s") return "ns-resize";
+    if (d === "e" || d === "w") return "ew-resize";
+    if (d === "nw" || d === "se") return "nwse-resize";
+    if (d === "ne" || d === "sw") return "nesw-resize";
+    return "crosshair";
+  }
+  // Rotate the handle's axis by the obstacle's rotation angle
+  const dirAxis = { n: 90, s: 90, e: 0, w: 0, ne: 45, sw: 45, nw: 135, se: 135 };
+  const axis = ((dirAxis[d] + rot) % 180 + 180) % 180;
+  const snapped = (Math.round(axis / 45) * 45) % 180;
+  return { 0: "ew-resize", 45: "nesw-resize", 90: "ns-resize", 135: "nwse-resize" }[snapped] || "pointer";
 }
 
 // ===========================================================================
@@ -767,7 +794,7 @@ canvas.addEventListener("mousedown", (e) => {
     dragStart = { ccx: c.cx, ccy: c.cy };
   } else {
     dragMode = hit.type === "body" ? "move" : hit.dir;
-    dragStart = { mx: x, my: y, ox: c.x, oy: c.y, ow: c.w, oh: c.h };
+    dragStart = { mx: x, my: y, ox: c.x, oy: c.y, ow: c.w, oh: c.h, rot: c.rot };
   }
   draw(); updateList(); updateProps();
 });
@@ -805,10 +832,16 @@ canvas.addEventListener("mousemove", (e) => {
         o.nr[ds.corner] = val;
       }
     } else {
-      const dx = x - dragStart.mx, dy = y - dragStart.my;
+      let dx = x - dragStart.mx, dy = y - dragStart.my;
       let rx = dragStart.ox, ry = dragStart.oy, rw = dragStart.ow, rh = dragStart.oh;
       if (dragMode === "move") { rx += dx; ry += dy; }
       else {
+        // Un-rotate delta into the obstacle's local frame
+        if (dragStart.rot) {
+          const cos = Math.cos(-dragStart.rot), sin = Math.sin(-dragStart.rot);
+          const ldx = dx * cos - dy * sin, ldy = dx * sin + dy * cos;
+          dx = ldx; dy = ldy;
+        }
         if (dragMode.includes("w")) { rx += dx; rw -= dx; }
         if (dragMode.includes("e")) { rw += dx; }
         if (dragMode.includes("n")) { ry += dy; rh -= dy; }
@@ -906,11 +939,7 @@ function deleteSelected() {
 function clearAll() { if (!confirm("Delete ALL obstacles?")) return; pushUndo(); obstacles = []; selectedIdx = -1; refresh(); showToast("All cleared"); }
 function resetDefaults() { if (!confirm("Reset to default obstacles?")) return; pushUndo(); obstacles = structuredClone(DEFAULT_OBSTACLES); selectedIdx = -1; refresh(); showToast("Reset to defaults"); }
 function loadMapData() {
-  fetch("../js/map-data.js").then(r => r.text()).then(src => {
-    const m = src.match(/\[[\s\S]*\]/);
-    if (!m) throw new Error("Could not find array in map-data.js");
-    let js = m[0].replace(/(\w+)\s*:/g, '"$1":').replace(/,\s*([\]}])/g, "$1");
-    const arr = JSON.parse(js);
+  fetch("../js/map-data.json").then(r => r.json()).then(arr => {
     for (const o of arr) {
       if (typeof o.nr === "number") o.nr = [o.nr, o.nr, o.nr, o.nr];
       if (!Array.isArray(o.nr)) o.nr = [0,0,0,0];
@@ -919,7 +948,7 @@ function loadMapData() {
     }
     pushUndo();
     obstacles = arr; selectedIdx = -1;
-    refresh(); showToast(`Loaded ${arr.length} obstacles from map-data.js`);
+    refresh(); showToast(`Loaded ${arr.length} obstacles from map-data.json`);
   }).catch(err => alert("Load map-data failed: " + err.message));
 }
 function refresh() { draw(); updateList(); updateProps(); updateExport(); syncCounts(); save(); }
@@ -1020,27 +1049,22 @@ function escHtml(s) { return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").re
 
 function updateExport() {
   const box = document.getElementById("export-box");
-  const lines = obstacles.map(o => {
+  const jsonArr = obstacles.map(o => {
     const nr = o.nr || [0,0,0,0];
     const allSame = nr[0] === nr[1] && nr[1] === nr[2] && nr[2] === nr[3];
-    const hasR = nr.some(v => v > 0);
-    let nrStr = "";
-    if (hasR) nrStr = allSame ? `, nr: ${nr[0]}` : `, nr: [${nr.join(", ")}]`;
-    const rotStr = o.rot ? `, rot: ${o.rot}` : "";
-    return `  { nx: ${o.nx}, ny: ${o.ny}, nw: ${o.nw}, nh: ${o.nh}${nrStr}${rotStr}, label: "${(o.label || "").replace(/"/g, '\\"')}" },`;
+    const entry = { nx: o.nx, ny: o.ny, nw: o.nw, nh: o.nh };
+    if (nr.some(v => v > 0)) entry.nr = allSame ? nr[0] : [...nr];
+    if (o.rot) entry.rot = o.rot;
+    entry.label = o.label || "";
+    return entry;
   });
-  box.value = `export const MAP_OBSTACLES = [\n${lines.join("\n")}\n];\n`;
+  box.value = JSON.stringify(jsonArr, null, 2) + "\n";
 }
 
 function doImport() {
   const raw = document.getElementById("export-box").value.trim();
   try {
-    let js = raw;
-    const m = raw.match(/\[[\s\S]*\]/);
-    if (m) js = m[0];
-    js = js.replace(/(\w+)\s*:/g, '"$1":');
-    js = js.replace(/,\s*([\]}])/g, "$1");
-    const arr = JSON.parse(js);
+    const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) throw new Error("Not an array");
     for (const o of arr) {
       if (typeof o.nx !== "number" || typeof o.ny !== "number" || typeof o.nw !== "number" || typeof o.nh !== "number") throw new Error("Missing nx/ny/nw/nh");

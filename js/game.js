@@ -1,10 +1,9 @@
 import { Player } from "./entities/player.js";
 import { circlesOverlap, clamp, keepCircleInBounds, randomRange, separateCircles, resolveCircleRect, pointInRect } from "./systems/collision.js";
 import { WaveSpawner } from "./systems/spawner.js";
-import { MAP_OBSTACLES } from "./map-data.js";
 
 export class Game {
-  constructor({ canvas, input, ui, audio, settings }) {
+  constructor({ canvas, input, ui, audio, settings, mapObstacles = [] }) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
     this.input = input;
@@ -52,7 +51,7 @@ export class Game {
     this.bgTransform = { x: 0, y: 0, w: 1280, h: 720 };
 
     // Map obstacles — normalized to background image dimensions (0-1)
-    this.mapObstaclesNorm = MAP_OBSTACLES;
+    this.mapObstaclesNorm = mapObstacles;
     this.obstacles = [];
 
     // Ambient dust particles

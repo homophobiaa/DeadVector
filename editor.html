@@ -272,23 +272,14 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const wrap = document.getElementById("canvas-wrap");
 
-// ====== Default obstacles (matches map-data.js) ======
-const DEFAULT_OBSTACLES = [
-  { nx: 0.275, ny: -0.01, nw: 0.445, nh: 0.225, label: "Top Building" },
-  { nx: 0.245, ny: 0.79, nw: 0.48, nh: 0.22, label: "Bottom Building" },
-  { nx: -0.01, ny: -0.01, nw: 0.13, nh: 0.225, label: "TL Corner" },
-  { nx: 0.875, ny: -0.01, nw: 0.135, nh: 0.225, label: "TR Corner" },
-  { nx: -0.01, ny: 0.79, nw: 0.10, nh: 0.22, label: "BL Corner" },
-  { nx: 0.91, ny: 0.79, nw: 0.10, nh: 0.22, label: "BR Corner" },
-  { nx: 0.175, ny: 0.02, nw: 0.07, nh: 0.07, label: "Car TL" },
-  { nx: -0.005, ny: 0.30, nw: 0.05, nh: 0.12, label: "Car L1" },
-  { nx: -0.005, ny: 0.57, nw: 0.055, nh: 0.12, label: "Car L2" },
-  { nx: 0.075, ny: 0.845, nw: 0.06, nh: 0.06, label: "Car BL" },
-  { nx: 0.815, ny: 0.86, nw: 0.065, nh: 0.06, label: "Car BR" },
-];
+// Default obstacles are loaded at startup from map-data.json.
+let DEFAULT_OBSTACLES = [];
 
 // ====== Init ======
-function init() {
+async function init() {
+  try {
+    DEFAULT_OBSTACLES = await fetch("js/map-data.json").then(r => r.json());
+  } catch { DEFAULT_OBSTACLES = []; }
   // Try to load from localStorage, fall back to defaults
   const saved = localStorage.getItem("dv_editor_obstacles");
   if (saved) {
@@ -722,16 +713,12 @@ function escHtml(s) {
 // ====== Export ======
 function updateExport() {
   const box = document.getElementById("export-box");
-  const lines = obstacles.map(o => {
-    const parts = [];
-    parts.push(`nx: ${o.nx}`);
-    parts.push(`ny: ${o.ny}`);
-    parts.push(`nw: ${o.nw}`);
-    parts.push(`nh: ${o.nh}`);
-    parts.push(`label: "${(o.label || "").replace(/"/g, '\\"')}"`);
-    return `  { ${parts.join(", ")} },`;
+  const jsonArr = obstacles.map(o => {
+    const entry = { nx: o.nx, ny: o.ny, nw: o.nw, nh: o.nh };
+    entry.label = o.label || "";
+    return entry;
   });
-  box.value = `export const MAP_OBSTACLES = [\n${lines.join("\n")}\n];\n`;
+  box.value = JSON.stringify(jsonArr, null, 2) + "\n";
 }
 
 // ====== Import ======
@@ -739,16 +726,7 @@ function doImport() {
   const box = document.getElementById("export-box");
   const raw = box.value.trim();
   try {
-    // Try to parse as JS-like array — extract the array portion
-    let jsonStr = raw;
-    // Strip "export const MAP_OBSTACLES = " prefix if present
-    const arrMatch = raw.match(/\[[\s\S]*\]/);
-    if (arrMatch) jsonStr = arrMatch[0];
-    // Convert JS object notation to JSON: unquoted keys -> quoted keys
-    jsonStr = jsonStr.replace(/(\w+)\s*:/g, '"$1":');
-    // Allow trailing commas
-    jsonStr = jsonStr.replace(/,\s*([\]}])/g, '$1');
-    const arr = JSON.parse(jsonStr);
+    const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) throw new Error("Not an array");
     // Validate
     for (const o of arr) {
@@ -767,7 +745,7 @@ function doImport() {
     save();
     alert(`Imported ${arr.length} obstacles.`);
   } catch (err) {
-    alert("Import failed: " + err.message + "\n\nPaste the full export string or a valid JSON array.");
+    alert("Import failed: " + err.message + "\n\nPaste a valid JSON array.");
   }
 }
 
