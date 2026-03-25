@@ -178,6 +178,7 @@ export class Game {
     this.audio.sfxVolumePref = s.get("sfxVolume");
     this.audio.syncLoopVolumes();
     this.player.setDevMode(s.get("devMode"));
+    this.player.setDevInvincible(s.get("devMode") && s.get("devInvincible"));
   }
 
   queueNextWave(delayMs) {
@@ -396,7 +397,9 @@ export class Game {
     }
 
     this.player.update(delta, this.input, this.bounds);
-    this.resolveEntityObstacles(this.player);
+    if (!this.settings.get("devMode") || !this.settings.get("devNoclip")) {
+      this.resolveEntityObstacles(this.player);
+    }
     this.screenShake = Math.max(0, this.screenShake - delta * 24);
     this.damageVignette = Math.max(0, this.damageVignette - delta * 1.8);
 
@@ -419,14 +422,9 @@ export class Game {
     this.enemies.push(...spawnedEnemies);
     for (const e of spawnedEnemies) this.resolveEntityObstacles(e);
 
-    // Update bullets — kill on obstacle hit
+    // Update bullets — pass through obstacles
     for (const b of this.bullets) {
       b.update(delta, this.bounds);
-      if (b.alive) {
-        for (const obs of this.obstacles) {
-          if (this.pointInObstacle(b.x, b.y, obs)) { b.alive = false; break; }
-        }
-      }
     }
     for (const p of this.enemyProjectiles) {
       p.update(delta, this.bounds);
@@ -1423,7 +1421,7 @@ export class Game {
     this.renderToasts();
 
     // Debug obstacle overlay (dev mode only)
-    if (this.settings.get("devMode")) {
+    if (this.settings.get("devMode") && this.settings.get("devShowObstacles")) {
       ctx.save();
       for (const obs of this.obstacles) {
         const r = obs.r || [0,0,0,0];

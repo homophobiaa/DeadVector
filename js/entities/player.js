@@ -60,12 +60,14 @@ export class Player {
     this.radius = 17;
     this.speed = 280;
     this.devMode = false;
+    this.devInvincible = false;
     this.weapons = [...BASE_WEAPONS];
     this.reset(x, y);
   }
 
   setDevMode(enabled) {
     this.devMode = enabled;
+    if (!enabled) this.devInvincible = false;
     if (enabled) {
       if (!this.weapons.includes(DEV_WEAPON)) {
         this.weapons = [...BASE_WEAPONS, DEV_WEAPON];
@@ -207,8 +209,13 @@ export class Player {
     this.health = clamp(this.health + amount, 0, this.maxHealth);
   }
 
+  setDevInvincible(enabled) {
+    this.devInvincible = enabled;
+  }
+
   takeDamage(amount) {
     if (this.invulnerability > 0) return false;
+    if (this.devInvincible) return false;
     this.health = clamp(this.health - amount, 0, this.maxHealth);
     this.invulnerability = 0.42;
     this.damageFlash = 1;

@@ -190,6 +190,41 @@
   color: rgba(255, 0, 255, 0.5);
 }
 
+/* ---- dev sub-options ---- */
+.dev-sub-options {
+  margin-top: 4px;
+  margin-left: 10px;
+  padding: 6px 10px 4px;
+  border-left: 2px solid rgba(255, 0, 255, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dev-sub-options.hidden {
+  display: none;
+}
+
+.setting-row-sub {
+  opacity: 0.9;
+}
+
+.setting-row-sub .setting-label {
+  font-size: 0.72rem;
+  color: rgba(255, 180, 255, 0.85);
+}
+
+.setting-row-sub .setting-toggle:checked + .toggle-track {
+  background: rgba(255, 0, 255, 0.18);
+  border-color: rgba(255, 0, 255, 0.7);
+}
+
+.setting-row-sub .setting-toggle:checked + .toggle-track .toggle-thumb {
+  transform: translateX(18px);
+  background: #ff66ff;
+  box-shadow: 0 0 6px rgba(255, 0, 255, 0.6);
+}
+
 /* ---- settings back button center ---- */
 .settings-panel .btn-primary {
   display: block;

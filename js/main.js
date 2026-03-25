@@ -37,6 +37,10 @@ const bootstrap = async () => {
     setBlood: document.getElementById("set-blood"),
     setShowFps: document.getElementById("set-show-fps"),
     setDevMode: document.getElementById("set-dev-mode"),
+    devSubOptions: document.getElementById("dev-sub-options"),
+    setDevInvincible: document.getElementById("set-dev-invincible"),
+    setDevNoclip: document.getElementById("set-dev-noclip"),
+    setDevObstacles: document.getElementById("set-dev-obstacles"),
   });
 
   const input = new InputManager(canvas);
