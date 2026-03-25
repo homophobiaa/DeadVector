@@ -5,6 +5,7 @@ import {
   distanceBetween,
   keepCircleInBounds,
   normalize,
+  pointInRect,
   randomRange,
 } from "../systems/collision.js";
 
@@ -189,12 +190,12 @@ export class Enemy {
         enter: (owner, context) => {
           owner.stateLabel = "WANDER";
           owner.wanderTimer = randomRange(0.9, 1.8);
-          owner.pickWanderTarget(context.bounds);
+          owner.pickWanderTarget(context.bounds, context.obstacles);
         },
         update: (owner, context, delta) => {
           owner.wanderTimer -= delta;
           if (owner.wanderTimer <= 0 || owner.distanceTo(owner.wanderTarget) < 12) {
-            owner.pickWanderTarget(context.bounds);
+            owner.pickWanderTarget(context.bounds, context.obstacles);
             owner.wanderTimer = randomRange(0.9, 1.8);
           }
           owner.moveToward(owner.wanderTarget.x, owner.wanderTarget.y, owner.speed * 0.52, delta, context.bounds);
@@ -422,8 +423,22 @@ export class Enemy {
     this.facing = Math.atan2(player.y - this.y, player.x - this.x);
   }
 
-  pickWanderTarget(bounds) {
+  pickWanderTarget(bounds, obstacles) {
     const m = 56;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const tx = randomRange(m, bounds.width - m);
+      const ty = randomRange(m, bounds.height - m);
+      let blocked = false;
+      if (obstacles) {
+        for (const obs of obstacles) {
+          if (pointInRect(tx, ty, obs)) { blocked = true; break; }
+        }
+      }
+      if (!blocked) {
+        this.wanderTarget = { x: tx, y: ty };
+        return;
+      }
+    }
     this.wanderTarget = {
       x: randomRange(m, bounds.width - m),
       y: randomRange(m, bounds.height - m),
