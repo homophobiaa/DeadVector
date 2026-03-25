@@ -47,7 +47,25 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
 
 /* ---- Main ---- */
 #main { flex: 1; position: relative; overflow: hidden; background: var(--bg-0); }
-#main canvas { position: absolute; top: 0; left: 0; }
+
+/* ---- Pages ---- */
+.dev-page { position: absolute; inset: 0; display: none; }
+.dev-page.active { display: block; }
+.dev-page canvas { position: absolute; top: 0; left: 0; }
+
+/* ---- Tabs ---- */
+.nav-tabs { display: flex; gap: 2px; margin-left: 8px; }
+.nav-tab { padding: 5px 14px; background: transparent; color: var(--text-2); border: 1px solid transparent; border-bottom: none; border-radius: var(--radius-sm) var(--radius-sm) 0 0; font-family: var(--font-ui); font-size: 10px; font-weight: 600; cursor: pointer; transition: all var(--transition); letter-spacing: 0.3px; }
+.nav-tab:hover { color: var(--text-0); background: var(--bg-2); }
+.nav-tab.active { color: var(--accent); background: var(--bg-0); border-color: var(--border); position: relative; }
+.nav-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px; background: var(--bg-0); }
+
+/* ---- Placeholder Pages ---- */
+.page-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 14px; text-align: center; }
+.page-placeholder .ph-icon { font-size: 48px; opacity: 0.3; filter: grayscale(0.5); }
+.page-placeholder h2 { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--text-1); letter-spacing: 2px; text-transform: uppercase; }
+.page-placeholder p { font-size: 12px; color: var(--text-3); max-width: 300px; line-height: 1.6; }
+.page-placeholder .ph-badge { padding: 4px 14px; border: 1px solid var(--border); border-radius: 20px; font-family: var(--font-mono); font-size: 10px; color: var(--text-3); letter-spacing: 1px; text-transform: uppercase; }
 
 /* ---- Floating Panels ---- */
 .fp { position: absolute; z-index: 30; display: flex; flex-direction: column; background: rgba(10,12,16,0.88); backdrop-filter: blur(14px); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: 0 6px 28px rgba(0,0,0,0.45); }
@@ -112,7 +130,7 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ---- Scanline + crosshair ---- */
-#main::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.02) 2px, rgba(0,0,0,0.02) 4px); pointer-events: none; z-index: 5; }
+#page-map::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.02) 2px, rgba(0,0,0,0.02) 4px); pointer-events: none; z-index: 5; }
 #crosshair-h, #crosshair-v { position: absolute; background: rgba(0,255,136,0.07); pointer-events: none; z-index: 4; display: none; }
 #crosshair-h { height: 1px; left: 0; right: 0; }
 #crosshair-v { width: 1px; top: 0; bottom: 0; }
@@ -126,14 +144,20 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
     <span class="divider"></span>
     <span class="subtitle">Dev Panel</span>
   </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-page="page-map">Map Editor</button>
+    <button class="nav-tab" data-page="page-enemies">Enemies</button>
+    <button class="nav-tab" data-page="page-weapons">Weapons</button>
+    <button class="nav-tab" data-page="page-settings">Settings</button>
+  </div>
   <div class="nav-spacer"></div>
-  <div class="nav-toggles">
+  <div class="nav-toggles" id="map-toggles">
     <button class="nav-toggle active" data-panel="fp-obstacles" title="Obstacles (1)">Obstacles</button>
     <button class="nav-toggle active" data-panel="fp-props" title="Properties (2)">Properties</button>
     <button class="nav-toggle active" data-panel="fp-export" title="Export (3)">Export</button>
     <button class="nav-toggle" id="btn-toggle-help" title="Help (H)">Help</button>
   </div>
-  <div class="nav-status">
+  <div class="nav-status" id="map-status">
     <div class="status-dot"></div>
     <span id="nav-count">11</span>
   </div>
@@ -141,6 +165,8 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
 </nav>
 
 <div id="main">
+  <!-- ===== Map Editor Page ===== -->
+  <div class="dev-page active" id="page-map">
   <canvas id="canvas"></canvas>
   <div id="crosshair-h"></div>
   <div id="crosshair-v"></div>
@@ -218,7 +244,38 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
     <div class="sep"></div>
     <span id="status-sel">No selection</span>
     <div class="sep"></div>
-    <span id="status-zoom">Zoom: 1.12x</span>
+    <span id="status-zoom">Zoom: 0.88x</span>
+  </div>
+  </div><!-- /page-map -->
+
+  <!-- ===== Enemies Page ===== -->
+  <div class="dev-page" id="page-enemies">
+    <div class="page-placeholder">
+      <div class="ph-icon">&#128128;</div>
+      <h2>Enemy Tuner</h2>
+      <p>Tune enemy types, FSM states, speed, health, and spawn rates.</p>
+      <span class="ph-badge">Coming Soon</span>
+    </div>
+  </div>
+
+  <!-- ===== Weapons Page ===== -->
+  <div class="dev-page" id="page-weapons">
+    <div class="page-placeholder">
+      <div class="ph-icon">&#9876;</div>
+      <h2>Weapon Stats</h2>
+      <p>Adjust weapon damage, fire rate, spread, and projectile properties.</p>
+      <span class="ph-badge">Coming Soon</span>
+    </div>
+  </div>
+
+  <!-- ===== Settings Page ===== -->
+  <div class="dev-page" id="page-settings">
+    <div class="page-placeholder">
+      <div class="ph-icon">&#9881;</div>
+      <h2>Game Settings</h2>
+      <p>Configure game rules, difficulty scaling, and debug options.</p>
+      <span class="ph-badge">Coming Soon</span>
+    </div>
   </div>
 </div>
 
@@ -231,7 +288,7 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
 
 const BG_SRC = "../assets/images/background.png";
 const HANDLE = 7;
-const ZOOM = 1.12;
+const ZOOM = 0.88;
 const RAD_HANDLE = 5;
 const MIN_PW = 180;
 const MIN_PH = 90;
@@ -835,6 +892,29 @@ document.getElementById("btn-copy").addEventListener("click", () => {
   navigator.clipboard.writeText(document.getElementById("export-box").value).then(() => showToast("Copied!"));
 });
 document.getElementById("btn-import").addEventListener("click", doImport);
+
+// ===========================================================================
+//  Tab Switching
+// ===========================================================================
+let activePage = "page-map";
+
+document.querySelectorAll(".nav-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    if (tab.dataset.page === activePage) return;
+    // Deactivate old
+    document.querySelector(".nav-tab.active").classList.remove("active");
+    document.getElementById(activePage).classList.remove("active");
+    // Activate new
+    activePage = tab.dataset.page;
+    tab.classList.add("active");
+    document.getElementById(activePage).classList.add("active");
+    // Show/hide map-specific nav controls
+    const isMap = activePage === "page-map";
+    document.getElementById("map-toggles").style.display = isMap ? "" : "none";
+    document.getElementById("map-status").style.display = isMap ? "" : "none";
+    if (isMap) { resizeCanvas(); draw(); }
+  });
+});
 
 init();
 </script>
