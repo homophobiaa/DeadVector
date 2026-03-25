@@ -34,11 +34,12 @@
           <kbd>Mouse</kbd><span>Aim</span>
           <kbd>LMB</kbd><span>Shoot</span>
           <kbd>RMB</kbd><span>Dash</span>
-          <kbd>1 2 3</kbd><span>Weapon</span>
+          <kbd>1 2 3 4</kbd><span>Weapon</span>
           <kbd>Esc</kbd><span>Pause</span>
         </div>
 
         <button id="play-button" class="btn-primary" type="button">START GAME</button>
+        <button id="settings-button" class="btn-secondary" type="button">SETTINGS</button>
         <p class="menu-hint">or press <kbd>R</kbd></p>
       </div>
     </section>
@@ -57,6 +58,61 @@
         <p id="final-summary" class="overlay-text">Score: 0 &bull; Wave: 0 &bull; Kills: 0</p>
         <button id="restart-button" class="btn-primary" type="button">TRY AGAIN</button>
         <p class="menu-hint">or press <kbd>R</kbd></p>
+      </div>
+    </section>
+
+    <section id="settings-screen" class="overlay hidden">
+      <div class="overlay-inner settings-panel">
+        <h2 class="overlay-title">SETTINGS</h2>
+
+        <div class="settings-group">
+          <label class="setting-row">
+            <span class="setting-label">Master Volume</span>
+            <input id="set-master-vol" type="range" class="setting-slider" min="0" max="100" step="1" value="80">
+          </label>
+          <label class="setting-row">
+            <span class="setting-label">Music Volume</span>
+            <input id="set-music-vol" type="range" class="setting-slider" min="0" max="100" step="1" value="50">
+          </label>
+          <label class="setting-row">
+            <span class="setting-label">SFX Volume</span>
+            <input id="set-sfx-vol" type="range" class="setting-slider" min="0" max="100" step="1" value="80">
+          </label>
+        </div>
+
+        <div class="settings-group">
+          <label class="setting-row">
+            <span class="setting-label">Screen Shake</span>
+            <input id="set-screen-shake" type="checkbox" class="setting-toggle" checked>
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+          <label class="setting-row">
+            <span class="setting-label">Damage Numbers</span>
+            <input id="set-damage-numbers" type="checkbox" class="setting-toggle" checked>
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+          <label class="setting-row">
+            <span class="setting-label">Blood &amp; Gore</span>
+            <input id="set-blood" type="checkbox" class="setting-toggle" checked>
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+          <label class="setting-row">
+            <span class="setting-label">Show FPS</span>
+            <input id="set-show-fps" type="checkbox" class="setting-toggle">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+        </div>
+
+        <div class="settings-group settings-dev">
+          <label class="setting-row">
+            <span class="setting-label">Developer Mode <span class="dev-tag">DEV</span></span>
+            <input id="set-dev-mode" type="checkbox" class="setting-toggle">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+          <p class="setting-hint">Unlocks the DEV Laser &mdash; an overpowered auto rifle. Disables leaderboard.</p>
+        </div>
+
+        <button id="settings-back" class="btn-primary" type="button">BACK</button>
       </div>
     </section>
   </div>

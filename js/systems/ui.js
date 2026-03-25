@@ -2,6 +2,7 @@ export class UIManager {
   constructor(elements) {
     this.elements = elements;
     this.game = null;
+    this.settings = null;
     this.toasts = [];
     this.maxToasts = 4;
 
@@ -36,6 +37,63 @@ export class UIManager {
       const muted = this.game.toggleMute();
       this.setMuteLabel(muted);
     });
+
+    this.elements.settingsButton.addEventListener("click", () => {
+      this.showMenu(false);
+      this.showSettings(true);
+    });
+
+    this.elements.settingsBack.addEventListener("click", () => {
+      this.showSettings(false);
+      this.showMenu(true);
+    });
+  }
+
+  bindSettings(settings) {
+    this.settings = settings;
+    const el = this.elements;
+
+    // Initialize controls from saved settings
+    el.setMasterVol.value = Math.round(settings.get("masterVolume") * 100);
+    el.setMusicVol.value = Math.round(settings.get("musicVolume") * 100);
+    el.setSfxVol.value = Math.round(settings.get("sfxVolume") * 100);
+    el.setScreenShake.checked = settings.get("screenShake");
+    el.setDamageNumbers.checked = settings.get("damageNumbers");
+    el.setBlood.checked = settings.get("blood");
+    el.setShowFps.checked = settings.get("showFps");
+    el.setDevMode.checked = settings.get("devMode");
+
+    // Slider handlers
+    el.setMasterVol.addEventListener("input", () => {
+      settings.set("masterVolume", el.setMasterVol.value / 100);
+      if (this.game) this.game.applySettings();
+    });
+    el.setMusicVol.addEventListener("input", () => {
+      settings.set("musicVolume", el.setMusicVol.value / 100);
+      if (this.game) this.game.applySettings();
+    });
+    el.setSfxVol.addEventListener("input", () => {
+      settings.set("sfxVolume", el.setSfxVol.value / 100);
+      if (this.game) this.game.applySettings();
+    });
+
+    // Toggle handlers
+    el.setScreenShake.addEventListener("change", () => {
+      settings.set("screenShake", el.setScreenShake.checked);
+    });
+    el.setDamageNumbers.addEventListener("change", () => {
+      settings.set("damageNumbers", el.setDamageNumbers.checked);
+    });
+    el.setBlood.addEventListener("change", () => {
+      settings.set("blood", el.setBlood.checked);
+    });
+    el.setShowFps.addEventListener("change", () => {
+      settings.set("showFps", el.setShowFps.checked);
+    });
+    el.setDevMode.addEventListener("change", () => {
+      settings.set("devMode", el.setDevMode.checked);
+      if (this.game) this.game.applySettings();
+    });
   }
 
   setMuteLabel(muted) {
@@ -47,6 +105,7 @@ export class UIManager {
 
   showMenu(visible) { this.toggleElement(this.elements.menuScreen, visible); }
   showPause(visible) { this.toggleElement(this.elements.pauseScreen, visible); }
+  showSettings(visible) { this.toggleElement(this.elements.settingsScreen, visible); }
 
   showGameOver(visible, summary = "") {
     this.toggleElement(this.elements.gameOverScreen, visible);

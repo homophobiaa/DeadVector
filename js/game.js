@@ -3,16 +3,20 @@ import { circlesOverlap, clamp, keepCircleInBounds, randomRange, separateCircles
 import { WaveSpawner } from "./systems/spawner.js";
 
 export class Game {
-  constructor({ canvas, input, ui, audio }) {
+  constructor({ canvas, input, ui, audio, settings }) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
     this.input = input;
     this.ui = ui;
     this.audio = audio;
+    this.settings = settings;
     this.bounds = { width: 1280, height: 720 };
     this.dpr = 1;
     this.state = "menu";
     this.lastFrameTime = 0;
+    this.fpsFrames = 0;
+    this.fpsTime = 0;
+    this.fpsDisplay = 0;
     this.waveSpawner = new WaveSpawner();
     this.player = new Player(this.bounds.width / 2, this.bounds.height / 2);
     this.bullets = [];
@@ -108,6 +112,9 @@ export class Game {
     this.ui.showMenu(false);
     this.ui.showPause(false);
     this.ui.showGameOver(false);
+    this.ui.showSettings(false);
+
+    this.applySettings();
 
     // setInterval event: periodic stats sync
     this.statsInterval = setInterval(() => {
@@ -145,6 +152,15 @@ export class Game {
     return this.audio.toggleMute();
   }
 
+  applySettings() {
+    const s = this.settings;
+    this.audio.masterVolume = s.get("masterVolume");
+    this.audio.musicVolumePref = s.get("musicVolume");
+    this.audio.sfxVolumePref = s.get("sfxVolume");
+    this.audio.syncLoopVolumes();
+    this.player.setDevMode(s.get("devMode"));
+  }
+
   queueNextWave(delayMs) {
     this.awaitingWaveStart = true;
     window.clearTimeout(this.nextWaveTimer);
@@ -179,6 +195,15 @@ export class Game {
     if (!this.lastFrameTime) this.lastFrameTime = timestamp;
     const delta = clamp((timestamp - this.lastFrameTime) / 1000, 0, 0.033);
     this.lastFrameTime = timestamp;
+
+    // FPS counter
+    this.fpsFrames++;
+    this.fpsTime += delta;
+    if (this.fpsTime >= 0.5) {
+      this.fpsDisplay = Math.round(this.fpsFrames / this.fpsTime);
+      this.fpsFrames = 0;
+      this.fpsTime = 0;
+    }
 
     this.handleInput();
     if (this.state === "playing") this.update(delta);
@@ -240,7 +265,7 @@ export class Game {
   }
 
   handleKeyPress(key) {
-    if (key === "1" || key === "2" || key === "3") {
+    if (key === "1" || key === "2" || key === "3" || key === "4") {
       const weapon = this.player.selectWeapon(Number(key) - 1);
       this.ui.pushEvent(`${weapon.name} selected.`);
       return;
@@ -458,6 +483,7 @@ export class Game {
   }
 
   spawnDamageNumber(x, y, text, color) {
+    if (!this.settings.get("damageNumbers")) return;
     this.damageNumbers.push({
       x, y,
       text: typeof text === "number" ? text.toString() : text,
@@ -525,6 +551,7 @@ export class Game {
   }
 
   leaveBlood(x, y, radius) {
+    if (!this.settings.get("blood")) return;
     this.bloodPools.push({
       x, y, radius,
       alpha: 0.15 + Math.random() * 0.12,
@@ -621,11 +648,13 @@ export class Game {
     }
 
     // Blood pools
-    for (const pool of this.bloodPools) {
-      ctx.fillStyle = `rgba(110,14,18,${pool.alpha})`;
-      ctx.beginPath();
-      ctx.arc(pool.x, pool.y, pool.radius, 0, Math.PI * 2);
-      ctx.fill();
+    if (this.settings.get("blood")) {
+      for (const pool of this.bloodPools) {
+        ctx.fillStyle = `rgba(110,14,18,${pool.alpha})`;
+        ctx.beginPath();
+        ctx.arc(pool.x, pool.y, pool.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     // Ambient dust
@@ -846,9 +875,9 @@ export class Game {
     ctx.fillStyle = "rgba(255,255,255,0.6)";
     ctx.fillText(`${Math.ceil(this.player.health)} / ${this.player.maxHealth}`, bounds.width / 2, barY - 5);
 
-    // ---- Top-left: Score + Wave ----
-    const tlX = 56;
-    const tlY = 18;
+    // ---- Top-left: Score + Wave (below brand corner) ----
+    const tlX = 16;
+    const tlY = 46;
 
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
@@ -892,6 +921,24 @@ export class Game {
     ctx.fillStyle = "rgba(255,255,255,0.4)";
     ctx.fillText(`${this.player.kills} KILLS`, bounds.width - 22, bounds.height - 18);
 
+    // ---- FPS counter (top-right) ----
+    if (this.settings.get("showFps")) {
+      ctx.textAlign = "right";
+      ctx.textBaseline = "top";
+      ctx.font = '600 11px "Share Tech Mono", monospace';
+      ctx.fillStyle = "rgba(0,255,136,0.45)";
+      ctx.fillText(`${this.fpsDisplay} FPS`, bounds.width - 16, 16);
+    }
+
+    // ---- Dev mode indicator ----
+    if (this.settings.get("devMode")) {
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      ctx.font = 'bold 10px "Share Tech Mono", monospace';
+      ctx.fillStyle = "rgba(255,0,255,0.6)";
+      ctx.fillText("DEV MODE", 16, bounds.height - 58);
+    }
+
     ctx.restore();
   }
 
@@ -920,8 +967,9 @@ export class Game {
 
   render() {
     const { ctx, bounds } = this;
-    const shakeX = (Math.random() - 0.5) * this.screenShake;
-    const shakeY = (Math.random() - 0.5) * this.screenShake;
+    const shakeMag = this.settings.get("screenShake") ? this.screenShake : 0;
+    const shakeX = (Math.random() - 0.5) * shakeMag;
+    const shakeY = (Math.random() - 0.5) * shakeMag;
 
     ctx.setTransform(this.dpr, 0, 0, this.dpr, shakeX * this.dpr, shakeY * this.dpr);
     ctx.clearRect(-10, -10, bounds.width + 20, bounds.height + 20);

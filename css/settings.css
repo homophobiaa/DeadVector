@@ -1,0 +1,197 @@
+/* ============================================================
+   settings.css — Settings panel: sliders, toggles, layout
+   ============================================================ */
+
+/* ---- secondary button (settings link) ---- */
+.btn-secondary {
+  appearance: none;
+  display: inline-block;
+  margin-top: 0.6rem;
+  padding: 0.5rem 1.8rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-soft);
+  font-family: 'Orbitron', monospace;
+  font-weight: 600;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    color 0.2s var(--ease-out),
+    border-color 0.2s var(--ease-out),
+    background 0.2s var(--ease-out);
+}
+
+.btn-secondary:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(0, 255, 136, 0.06);
+}
+
+.btn-secondary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* ---- settings panel ---- */
+.settings-panel {
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  text-align: left;
+}
+
+.settings-group {
+  margin-bottom: 1.2rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-group:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0.8rem;
+}
+
+/* ---- individual setting row ---- */
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0;
+  cursor: pointer;
+}
+
+.setting-label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-main);
+  letter-spacing: 0.02em;
+}
+
+.setting-hint {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin-top: -0.2rem;
+  padding-left: 0.1rem;
+}
+
+/* ---- range slider ---- */
+.setting-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 120px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-raised);
+  outline: none;
+  cursor: pointer;
+}
+
+.setting-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-deep);
+  box-shadow: 0 0 8px var(--accent-glow);
+  cursor: pointer;
+  transition: transform 0.15s var(--ease-out);
+}
+
+.setting-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.setting-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-deep);
+  box-shadow: 0 0 8px var(--accent-glow);
+  cursor: pointer;
+}
+
+.setting-slider:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- toggle switch ---- */
+.setting-toggle {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.toggle-track {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line-strong);
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: transform 0.2s var(--ease-out), background 0.2s;
+}
+
+.setting-toggle:checked + .toggle-track {
+  background: rgba(0, 255, 136, 0.18);
+  border-color: var(--accent);
+}
+
+.setting-toggle:checked + .toggle-track .toggle-thumb {
+  transform: translateX(18px);
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+.setting-toggle:focus-visible + .toggle-track {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- dev badge ---- */
+.dev-tag {
+  display: inline-block;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  margin-left: 0.4rem;
+  border-radius: 3px;
+  background: rgba(255, 0, 255, 0.15);
+  color: #ff00ff;
+  border: 1px solid rgba(255, 0, 255, 0.3);
+  vertical-align: middle;
+  letter-spacing: 0.08em;
+}
+
+.settings-dev .setting-hint {
+  color: rgba(255, 0, 255, 0.5);
+}
+
+/* ---- settings back button center ---- */
+.settings-panel .btn-primary {
+  display: block;
+  margin: 0.6rem auto 0;
+}

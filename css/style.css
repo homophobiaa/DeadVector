@@ -6,6 +6,7 @@
 @import url("layout.css");       /* game wrapper, canvas, brand   */
 @import url("overlays.css");     /* overlay backdrop & panels      */
 @import url("components.css");   /* buttons, kbd, stats, controls */
+@import url("settings.css");     /* settings panel UI             */
 
 /* ---- overlay responsive (cross-module) ---- */
 @media (max-width: 520px) {

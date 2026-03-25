@@ -21,6 +21,9 @@ export class AudioManager {
     this.soundEnabled = false;
     this.buffers = new Map();
     this.activeLoops = new Map();
+    this.masterVolume = 0.8;
+    this.musicVolumePref = 0.5;
+    this.sfxVolumePref = 0.8;
   }
 
   installUnlockHandlers() {
@@ -65,11 +68,13 @@ export class AudioManager {
 
   getVolume(key) {
     if (this.muted) return 0;
-    if (key === "backgroundMusic") return 0.24;
-    if (key === "smg" || key === "smgBurst") return 0.42;
-    if (key === "confirm") return 0.55;
-    if (key === "dash") return 0.9;
-    return 0.5;
+    const master = this.masterVolume;
+    if (key === "backgroundMusic") return 0.24 * master * this.musicVolumePref;
+    const sfx = this.sfxVolumePref;
+    if (key === "smg" || key === "smgBurst") return 0.42 * master * sfx;
+    if (key === "confirm") return 0.55 * master * sfx;
+    if (key === "dash") return 0.9 * master * sfx;
+    return 0.5 * master * sfx;
   }
 
   syncLoopVolumes() {
