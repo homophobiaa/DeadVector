@@ -232,11 +232,15 @@ export class Game {
 
     this.obstacles = this.mapObstaclesNorm.map(o => {
       const w = o.nw * dw, h = o.nh * dh;
+      const x = dx + o.nx * dw, y = dy + o.ny * dh;
+      const nr = Array.isArray(o.nr) ? o.nr : (o.nr ? [o.nr, o.nr, o.nr, o.nr] : [0,0,0,0]);
+      const m = Math.min(w, h);
       return {
-        x: dx + o.nx * dw,
-        y: dy + o.ny * dh,
-        w, h,
-        r: (o.nr || 0) * Math.min(w, h),
+        x, y, w, h,
+        r: nr.map(v => v * m),
+        rot: (o.rot || 0) * Math.PI / 180,
+        cx: x + w / 2,
+        cy: y + h / 2,
         label: o.label,
       };
     });
@@ -244,8 +248,35 @@ export class Game {
 
   resolveEntityObstacles(entity) {
     for (const obs of this.obstacles) {
-      resolveCircleRect(entity, obs);
+      if (obs.rot) {
+        const cos = Math.cos(-obs.rot), sin = Math.sin(-obs.rot);
+        const edx = entity.x - obs.cx, edy = entity.y - obs.cy;
+        const savedX = entity.x, savedY = entity.y;
+        entity.x = obs.cx + edx * cos - edy * sin;
+        entity.y = obs.cy + edx * sin + edy * cos;
+        const hit = resolveCircleRect(entity, obs);
+        if (hit) {
+          const ldx = entity.x - (obs.cx + edx * cos - edy * sin);
+          const ldy = entity.y - (obs.cy + edx * sin + edy * cos);
+          const wcos = Math.cos(obs.rot), wsin = Math.sin(obs.rot);
+          entity.x = savedX + ldx * wcos - ldy * wsin;
+          entity.y = savedY + ldx * wsin + ldy * wcos;
+        } else {
+          entity.x = savedX; entity.y = savedY;
+        }
+      } else {
+        resolveCircleRect(entity, obs);
+      }
     }
+  }
+
+  pointInObstacle(px, py, obs) {
+    if (obs.rot) {
+      const cos = Math.cos(-obs.rot), sin = Math.sin(-obs.rot);
+      const ddx = px - obs.cx, ddy = py - obs.cy;
+      return pointInRect(obs.cx + ddx * cos - ddy * sin, obs.cy + ddx * sin + ddy * cos, obs);
+    }
+    return pointInRect(px, py, obs);
   }
 
   loop(timestamp) {
@@ -382,7 +413,7 @@ export class Game {
       b.update(delta, this.bounds);
       if (b.alive) {
         for (const obs of this.obstacles) {
-          if (pointInRect(b.x, b.y, obs)) { b.alive = false; break; }
+          if (this.pointInObstacle(b.x, b.y, obs)) { b.alive = false; break; }
         }
       }
     }
@@ -390,7 +421,7 @@ export class Game {
       p.update(delta, this.bounds);
       if (p.alive) {
         for (const obs of this.obstacles) {
-          if (pointInRect(p.x, p.y, obs)) { p.alive = false; break; }
+          if (this.pointInObstacle(p.x, p.y, obs)) { p.alive = false; break; }
         }
       }
     }
@@ -1384,21 +1415,25 @@ export class Game {
     if (this.settings.get("devMode")) {
       ctx.save();
       for (const obs of this.obstacles) {
-        const r = obs.r || 0;
+        const r = obs.r || [0,0,0,0];
+        ctx.save();
+        if (obs.rot) { ctx.translate(obs.cx, obs.cy); ctx.rotate(obs.rot); ctx.translate(-obs.cx, -obs.cy); }
         ctx.strokeStyle = "rgba(255,0,0,0.6)";
         ctx.lineWidth = 2;
         ctx.setLineDash([6, 4]);
-        if (r > 0.5) {
+        const hasR = Array.isArray(r) ? r.some(v => v > 0.5) : r > 0.5;
+        if (hasR) {
+          let tl, tr, bl, br;
+          if (Array.isArray(r)) { [tl, tr, bl, br] = r; } else { tl = tr = bl = br = r; }
+          const hw = obs.w / 2, hh = obs.h / 2;
+          tl = Math.min(tl, hw, hh); tr = Math.min(tr, hw, hh);
+          bl = Math.min(bl, hw, hh); br = Math.min(br, hw, hh);
           ctx.beginPath();
-          ctx.moveTo(obs.x + r, obs.y);
-          ctx.lineTo(obs.x + obs.w - r, obs.y);
-          ctx.quadraticCurveTo(obs.x + obs.w, obs.y, obs.x + obs.w, obs.y + r);
-          ctx.lineTo(obs.x + obs.w, obs.y + obs.h - r);
-          ctx.quadraticCurveTo(obs.x + obs.w, obs.y + obs.h, obs.x + obs.w - r, obs.y + obs.h);
-          ctx.lineTo(obs.x + r, obs.y + obs.h);
-          ctx.quadraticCurveTo(obs.x, obs.y + obs.h, obs.x, obs.y + obs.h - r);
-          ctx.lineTo(obs.x, obs.y + r);
-          ctx.quadraticCurveTo(obs.x, obs.y, obs.x + r, obs.y);
+          ctx.moveTo(obs.x + tl, obs.y);
+          ctx.lineTo(obs.x + obs.w - tr, obs.y); ctx.quadraticCurveTo(obs.x + obs.w, obs.y, obs.x + obs.w, obs.y + tr);
+          ctx.lineTo(obs.x + obs.w, obs.y + obs.h - br); ctx.quadraticCurveTo(obs.x + obs.w, obs.y + obs.h, obs.x + obs.w - br, obs.y + obs.h);
+          ctx.lineTo(obs.x + bl, obs.y + obs.h); ctx.quadraticCurveTo(obs.x, obs.y + obs.h, obs.x, obs.y + obs.h - bl);
+          ctx.lineTo(obs.x, obs.y + tl); ctx.quadraticCurveTo(obs.x, obs.y, obs.x + tl, obs.y);
           ctx.closePath();
           ctx.stroke();
           ctx.fillStyle = "rgba(255,0,0,0.08)";
@@ -1414,6 +1449,7 @@ export class Game {
           ctx.fillStyle = "rgba(255,100,100,0.8)";
           ctx.fillText(obs.label, obs.x + 4, obs.y + 12);
         }
+        ctx.restore();
       }
       ctx.restore();
     }
