@@ -3,6 +3,7 @@ export class UIManager {
     this.elements = elements;
     this.game = null;
     this.settings = null;
+    this.settingsOrigin = "menu";
     this.toasts = [];
     this.maxToasts = 4;
 
@@ -39,13 +40,24 @@ export class UIManager {
     });
 
     this.elements.settingsButton.addEventListener("click", () => {
+      this.settingsOrigin = "menu";
       this.showMenu(false);
+      this.showSettings(true);
+    });
+
+    this.elements.pauseSettingsButton.addEventListener("click", () => {
+      this.settingsOrigin = "pause";
+      this.showPause(false);
       this.showSettings(true);
     });
 
     this.elements.settingsBack.addEventListener("click", () => {
       this.showSettings(false);
-      this.showMenu(true);
+      if (this.settingsOrigin === "pause") {
+        this.showPause(true);
+      } else {
+        this.showMenu(true);
+      }
     });
   }
 

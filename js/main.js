@@ -18,6 +18,7 @@ const bootstrap = () => {
     restartButton: document.getElementById("restart-button"),
     muteButton: document.getElementById("mute-button"),
     settingsButton: document.getElementById("settings-button"),
+    pauseSettingsButton: document.getElementById("pause-settings-button"),
     settingsBack: document.getElementById("settings-back"),
     setMasterVol: document.getElementById("set-master-vol"),
     setMusicVol: document.getElementById("set-music-vol"),
