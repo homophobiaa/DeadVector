@@ -230,13 +230,16 @@ export class Game {
     const dy = (bounds.height - dh) / 2;
     this.bgTransform = { x: dx, y: dy, w: dw, h: dh };
 
-    this.obstacles = this.mapObstaclesNorm.map(o => ({
-      x: dx + o.nx * dw,
-      y: dy + o.ny * dh,
-      w: o.nw * dw,
-      h: o.nh * dh,
-      label: o.label,
-    }));
+    this.obstacles = this.mapObstaclesNorm.map(o => {
+      const w = o.nw * dw, h = o.nh * dh;
+      return {
+        x: dx + o.nx * dw,
+        y: dy + o.ny * dh,
+        w, h,
+        r: (o.nr || 0) * Math.min(w, h),
+        label: o.label,
+      };
+    });
   }
 
   resolveEntityObstacles(entity) {
@@ -1381,12 +1384,30 @@ export class Game {
     if (this.settings.get("devMode")) {
       ctx.save();
       for (const obs of this.obstacles) {
+        const r = obs.r || 0;
         ctx.strokeStyle = "rgba(255,0,0,0.6)";
         ctx.lineWidth = 2;
         ctx.setLineDash([6, 4]);
-        ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
-        ctx.fillStyle = "rgba(255,0,0,0.08)";
-        ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+        if (r > 0.5) {
+          ctx.beginPath();
+          ctx.moveTo(obs.x + r, obs.y);
+          ctx.lineTo(obs.x + obs.w - r, obs.y);
+          ctx.quadraticCurveTo(obs.x + obs.w, obs.y, obs.x + obs.w, obs.y + r);
+          ctx.lineTo(obs.x + obs.w, obs.y + obs.h - r);
+          ctx.quadraticCurveTo(obs.x + obs.w, obs.y + obs.h, obs.x + obs.w - r, obs.y + obs.h);
+          ctx.lineTo(obs.x + r, obs.y + obs.h);
+          ctx.quadraticCurveTo(obs.x, obs.y + obs.h, obs.x, obs.y + obs.h - r);
+          ctx.lineTo(obs.x, obs.y + r);
+          ctx.quadraticCurveTo(obs.x, obs.y, obs.x + r, obs.y);
+          ctx.closePath();
+          ctx.stroke();
+          ctx.fillStyle = "rgba(255,0,0,0.08)";
+          ctx.fill();
+        } else {
+          ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+          ctx.fillStyle = "rgba(255,0,0,0.08)";
+          ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+        }
         if (obs.label) {
           ctx.setLineDash([]);
           ctx.font = "10px monospace";
