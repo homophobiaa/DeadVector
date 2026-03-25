@@ -8,6 +8,7 @@ import {
   pointInRect,
   randomRange,
 } from "../systems/collision.js";
+import { renderZombieParts } from "./zombie-renderer.js";
 
 // Five enemy types for FSM AI variety
 const ENEMY_TYPES = {
@@ -148,6 +149,8 @@ export class Enemy {
     this.hasDeathBurst = false;
     this.facing = 0;
     this.wobble = Math.random() * Math.PI * 2;
+    this.wobbleRate = 4;
+    this.strafeDir = Math.random() > 0.5 ? 1 : -1;
     this.buffed = false;
 
     this.fsm = new FiniteStateMachine({
@@ -347,7 +350,9 @@ export class Enemy {
     this.attackCooldown = Math.max(0, this.attackCooldown - delta);
     this.damageFlash = Math.max(0, this.damageFlash - delta * 4);
     this.retreatCooldown = Math.max(0, this.retreatCooldown - delta);
-    this.wobble += delta * (this.stateLabel === "CHASE" ? 8 : 4);
+    const targetWobbleRate = this.stateLabel === "CHASE" ? 8 : 4;
+    this.wobbleRate += (targetWobbleRate - this.wobbleRate) * Math.min(1, delta * 3);
+    this.wobble += delta * this.wobbleRate;
 
     // Wounded blood dripping — enemies below 55% HP leave heavy blood trails
     if (this.fsm.currentState !== "DEAD" && this.health / this.maxHealth < 0.55) {
@@ -391,8 +396,25 @@ export class Enemy {
     const speedMult = this.buffed ? 1.18 : 1;
     this._effectiveSpeed = this.speed * speedMult;
     this.buffed = false;
+    const isChase = this.stateLabel === "CHASE";
 
     this.fsm.update(delta, context);
+
+    // Smooth facing interpolation (angular lerp with wrapping)
+    if (this._faceTarget !== undefined) {
+      let diff = this._faceTarget - this.facing;
+      // Wrap to [-PI, PI]
+      diff = ((diff + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      const turnSpeed = isChase ? 8 : 5; // rad/s
+      const step = turnSpeed * delta;
+      if (Math.abs(diff) < step) {
+        this.facing = this._faceTarget;
+      } else {
+        this.facing += Math.sign(diff) * step;
+      }
+      // Keep facing in [-PI, PI]
+      this.facing = ((this.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+    }
   }
 
   takeDamage(amount) {
@@ -420,7 +442,7 @@ export class Enemy {
   }
 
   facePlayer(player) {
-    this.facing = Math.atan2(player.y - this.y, player.x - this.x);
+    this._faceTarget = Math.atan2(player.y - this.y, player.x - this.x);
   }
 
   pickWanderTarget(bounds, obstacles) {
@@ -476,15 +498,16 @@ export class Enemy {
 
   strafe(player, speed, delta, bounds) {
     const away = normalize(this.x - player.x, this.y - player.y);
-    const lateral = Math.random() > 0.5 ? 1 : -1;
-    this.x += (-away.y * lateral + away.x * 0.25) * speed * delta;
-    this.y += (away.x * lateral + away.y * 0.25) * speed * delta;
+    // Occasionally flip strafe direction for unpredictability
+    if (Math.random() < delta * 0.4) this.strafeDir *= -1;
+    this.x += (-away.y * this.strafeDir + away.x * 0.25) * speed * delta;
+    this.y += (away.x * this.strafeDir + away.y * 0.25) * speed * delta;
     this.facePlayer(player);
     keepCircleInBounds(this, bounds);
   }
 
   facePoint(tx, ty) {
-    this.facing = Math.atan2(ty - this.y, tx - this.x);
+    this._faceTarget = Math.atan2(ty - this.y, tx - this.x);
   }
 
   performAttack(context) {
@@ -604,153 +627,14 @@ export class Enemy {
       ctx.stroke();
     }
 
-    // Body glow
-    ctx.shadowBlur = 18;
-    ctx.shadowColor = c.glowColor;
-
-    // Type-specific body rendering
-    const bodyCol = isFlash ? "#fff0df" : c.bodyColor;
-
-    if (this.type === "brute") {
-      // Brute: large irregular body with armor ridges
-      ctx.fillStyle = bodyCol;
+    // Zombie body — PNG parts with procedural animation
+    if (!renderZombieParts(ctx, this)) {
+      // Fallback: simple coloured circle when images haven't loaded
+      ctx.fillStyle = isFlash ? "#fff0df" : c.bodyColor;
       ctx.beginPath();
       ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
       ctx.fill();
-
-      // Armor plates
-      ctx.fillStyle = isFlash ? "#eee" : "#5a2030";
-      ctx.beginPath();
-      ctx.arc(-this.radius * 0.5, -this.radius * 0.5, 7, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(this.radius * 0.5, -this.radius * 0.5, 7, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(0, -this.radius * 0.6, 5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Thick border
-      ctx.strokeStyle = isFlash ? "#ddd" : "#4a1828";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-      ctx.stroke();
-
-    } else if (this.type === "sprinter") {
-      // Sprinter: elongated body facing movement direction
-      ctx.save();
-      ctx.rotate(this.facing);
-      ctx.fillStyle = bodyCol;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, this.radius * 1.3, this.radius * 0.85, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Speed streaks
-      if (this.stateLabel === "CHASE") {
-        ctx.globalAlpha = 0.2;
-        ctx.fillStyle = c.accentColor;
-        for (let i = 1; i <= 3; i++) {
-          ctx.beginPath();
-          ctx.ellipse(-this.radius * 0.8 * i, 0, 3, 2, 0, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.globalAlpha = this.opacity;
-      }
-      ctx.restore();
-
-    } else if (this.type === "spitter") {
-      // Spitter: bloated round body with drips
-      ctx.fillStyle = bodyCol;
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Bloated belly
-      ctx.fillStyle = isFlash ? "#dfd" : "#4a8a48";
-      ctx.beginPath();
-      ctx.arc(0, 2, this.radius * 0.7, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Acid drip
-      const dripY = this.radius + 2 + Math.sin(t * 4) * 3;
-      ctx.fillStyle = "#a7ff7c";
-      ctx.globalAlpha = 0.5 * this.opacity;
-      ctx.beginPath();
-      ctx.arc(0, dripY, 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = this.opacity;
-
-    } else if (this.type === "screamer") {
-      // Screamer: thin body with pulsing rings
-      ctx.fillStyle = bodyCol;
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Inner energy
-      const pulse = 0.4 + Math.sin(t * 5) * 0.2;
-      ctx.fillStyle = `rgba(200,140,255,${pulse})`;
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius * 0.6, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Sound wave rings
-      ctx.strokeStyle = `rgba(200,140,255,${0.15 + Math.sin(t * 4) * 0.1})`;
-      ctx.lineWidth = 1;
-      for (let i = 0; i < 2; i++) {
-        const r = this.radius + 6 + ((t * 20 + i * 15) % 30);
-        const a = Math.max(0, 0.3 - (r - this.radius) / 50);
-        ctx.globalAlpha = a * this.opacity;
-        ctx.beginPath();
-        ctx.arc(0, 0, r, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = this.opacity;
-
-    } else {
-      // Shambler: classic zombie body
-      ctx.fillStyle = bodyCol;
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Shamble wobble arms
-      const armAngle = Math.sin(this.wobble) * 0.3;
-      ctx.save();
-      ctx.rotate(this.facing + armAngle);
-      ctx.fillStyle = isFlash ? "#eee" : c.accentColor;
-      ctx.fillRect(this.radius - 2, -3, 10, 6);
-      ctx.restore();
-      ctx.save();
-      ctx.rotate(this.facing - armAngle);
-      ctx.fillStyle = isFlash ? "#eee" : c.accentColor;
-      ctx.fillRect(this.radius - 2, -3, 10, 6);
-      ctx.restore();
     }
-
-    // Inner face darkness
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "rgba(15,10,8,0.6)";
-    ctx.beginPath();
-    ctx.arc(0, 2, this.radius * 0.55, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Eyes (face toward player)
-    const eyeSpread = this.radius * 0.32;
-    const eyeSize = this.type === "brute" ? 4 : this.type === "sprinter" ? 2.5 : 3;
-    ctx.save();
-    ctx.rotate(this.facing);
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = c.eyeColor;
-    ctx.fillStyle = c.eyeColor;
-    ctx.beginPath();
-    ctx.arc(this.radius * 0.3, -eyeSpread, eyeSize, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(this.radius * 0.3, eyeSpread, eyeSize, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
 
     // Health bar above
     ctx.shadowBlur = 0;

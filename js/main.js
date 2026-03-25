@@ -3,9 +3,13 @@ import { InputManager } from "./input.js";
 import { AudioManager } from "./systems/audio.js";
 import { Settings } from "./systems/settings.js";
 import { UIManager } from "./systems/ui.js";
+import { preloadZombieParts } from "./entities/zombie-renderer.js";
 
 const bootstrap = async () => {
-  const mapObstacles = await fetch("./js/map-data.json").then(r => r.json());
+  const [mapObstacles] = await Promise.all([
+    fetch("./js/map-data.json").then(r => r.json()),
+    preloadZombieParts(),
+  ]);
 
   const canvas = document.getElementById("game-canvas");
 
