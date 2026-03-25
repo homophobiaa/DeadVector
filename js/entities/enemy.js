@@ -312,17 +312,30 @@ export class Enemy {
       DEAD: {
         enter: (owner, context) => {
           owner.stateLabel = "DEAD";
-          owner.deathTimer = 1.1;
+          owner.deathTimer = 1.8;
           if (!owner.hasDeathBurst) {
             owner.hasDeathBurst = true;
-            context.spawnBurst(owner.x, owner.y, owner.config.bodyColor, 14, 40, 140);
-            context.spawnBurst(owner.x, owner.y, "#330808", 8, 20, 60);
-            context.leaveBlood(owner.x, owner.y, owner.radius * 1.1);
+            // Massive body-color explosion
+            context.spawnBurst(owner.x, owner.y, owner.config.bodyColor, 35, 60, 220);
+            // Dark blood bursts — multi-layer
+            context.spawnBurst(owner.x, owner.y, "#330808", 22, 25, 100);
+            context.spawnBurst(owner.x, owner.y, "#6e0a0a", 16, 30, 130);
+            context.spawnBurst(owner.x, owner.y, "#4a0000", 12, 20, 70);
+            context.spawnBurst(owner.x, owner.y, "#8b1a1a", 8, 40, 150);
+            // Splatter blood pools at multiple offset positions
+            context.leaveBlood(owner.x, owner.y, owner.radius * 1.8);
+            for (let i = 0; i < 3; i++) {
+              context.leaveBlood(
+                owner.x + (Math.random() - 0.5) * owner.radius * 1.6,
+                owner.y + (Math.random() - 0.5) * owner.radius * 1.6,
+                owner.radius * (0.5 + Math.random() * 0.6)
+              );
+            }
           }
         },
         update: (owner, _ctx, delta) => {
           owner.deathTimer -= delta;
-          owner.opacity = clamp(owner.deathTimer / 1.1, 0, 0.8);
+          owner.opacity = clamp(owner.deathTimer / 1.8, 0, 0.8);
           if (owner.deathTimer <= 0) owner.expired = true;
         },
       },
@@ -334,6 +347,34 @@ export class Enemy {
     this.damageFlash = Math.max(0, this.damageFlash - delta * 4);
     this.retreatCooldown = Math.max(0, this.retreatCooldown - delta);
     this.wobble += delta * (this.stateLabel === "CHASE" ? 8 : 4);
+
+    // Wounded blood dripping — enemies below 55% HP leave heavy blood trails
+    if (this.fsm.currentState !== "DEAD" && this.health / this.maxHealth < 0.55) {
+      this.woundDripTimer = (this.woundDripTimer || 0) - delta;
+      const severity = 1 - this.health / this.maxHealth; // 0.45 to 1.0
+      const dripInterval = 0.08 + Math.random() * 0.12 * (1 - severity);
+      if (this.woundDripTimer <= 0) {
+        this.woundDripTimer = dripInterval;
+        // Main drip pool
+        context.leaveBlood(
+          this.x + (Math.random() - 0.5) * this.radius * 0.8,
+          this.y + (Math.random() - 0.5) * this.radius * 0.8,
+          2 + Math.random() * 3.5 + severity * 2
+        );
+        // Extra splatter at low health
+        if (severity > 0.6 && Math.random() < 0.4) {
+          context.leaveBlood(
+            this.x + (Math.random() - 0.5) * this.radius,
+            this.y + (Math.random() - 0.5) * this.radius,
+            1 + Math.random() * 2
+          );
+        }
+        // Blood particle drips
+        if (Math.random() < 0.3 + severity * 0.3) {
+          context.spawnBurst(this.x, this.y, "#6e0a0a", 2 + Math.floor(Math.random() * 3), 10, 40);
+        }
+      }
+    }
 
     // Screamer aura: buff nearby allies
     if (this.type === "screamer" && this.fsm.currentState !== "DEAD") {
@@ -456,7 +497,19 @@ export class Enemy {
 
     if (this.distanceToPlayer(context.player) <= this.config.attackRange + context.player.radius + 4) {
       context.damagePlayer(this.config.damage);
-      context.spawnBurst(context.player.x, context.player.y, "#ffd1b0", 10, 25, 90);
+      // Skin/flesh spray
+      context.spawnBurst(context.player.x, context.player.y, "#ffd1b0", 16, 30, 120);
+      context.spawnBurst(context.player.x, context.player.y, "#e8b090", 8, 20, 80);
+      // Blood spray
+      context.spawnBurst(context.player.x, context.player.y, "#8b0000", 14, 25, 100);
+      context.spawnBurst(context.player.x, context.player.y, "#4a0000", 6, 15, 60);
+      // Blood pools at impact
+      context.leaveBlood(context.player.x, context.player.y, 8 + Math.random() * 8);
+      context.leaveBlood(
+        context.player.x + (Math.random() - 0.5) * 16,
+        context.player.y + (Math.random() - 0.5) * 16,
+        4 + Math.random() * 5
+      );
     }
   }
 

@@ -24,6 +24,9 @@ export class Game {
     this.enemies = [];
     this.particles = [];
     this.bloodPools = [];
+    this.gibs = [];
+    this.bloodMist = [];
+    this.bloodTrails = [];
     this.pickups = [];
     this.damageNumbers = [];
     this.score = 0;
@@ -106,6 +109,9 @@ export class Game {
     this.enemies = [];
     this.particles = [];
     this.bloodPools = [];
+    this.gibs = [];
+    this.bloodMist = [];
+    this.bloodTrails = [];
     this.pickups = [];
     this.damageNumbers = [];
 
@@ -336,6 +342,10 @@ export class Game {
     this.updateParticles(delta);
     this.updateDamageNumbers(delta);
 
+    // Update gore systems
+    this.updateGibs(delta);
+    this.updateBloodMist(delta);
+
     // Update ambient dust
     this.updateAmbientDust(delta);
 
@@ -351,8 +361,9 @@ export class Game {
     this.enemies = this.enemies.filter((e) => !e.expired);
     this.pickups = this.pickups.filter((p) => p.life > 0);
 
-    // Limit blood pools
-    if (this.bloodPools.length > 60) this.bloodPools.splice(0, this.bloodPools.length - 60);
+    // Limit blood pools and trails
+    if (this.bloodPools.length > 400) this.bloodPools.splice(0, this.bloodPools.length - 400);
+    if (this.bloodTrails.length > 800) this.bloodTrails.splice(0, this.bloodTrails.length - 800);
 
     // Wave completion
     if (!this.awaitingWaveStart && this.waveSpawner.remaining === 0 && this.enemies.length === 0) {
@@ -389,8 +400,31 @@ export class Game {
 
         if (result.hit) {
           this.audio.playEnemyHit();
-          this.spawnBurst(bullet.x, bullet.y, bullet.color, 5, 20, 70);
-          this.spawnBurst(bullet.x, bullet.y, "#550808", 3, 10, 40);
+          this.spawnBurst(bullet.x, bullet.y, bullet.color, 6, 20, 80);
+          this.spawnBurst(bullet.x, bullet.y, "#550808", 5, 15, 55);
+
+          // Directional blood spray in bullet travel direction
+          const bulletAngle = Math.atan2(bullet.vy, bullet.vx);
+          this.spawnDirectionalBlood(bullet.x, bullet.y, bulletAngle, 14, 70, 220);
+
+          // Blood splatter at impact point
+          if (Math.random() < 0.6) {
+            this.bloodTrails.push({
+              x: bullet.x + (Math.random() - 0.5) * 10,
+              y: bullet.y + (Math.random() - 0.5) * 10,
+              radius: 2 + Math.random() * 5,
+              alpha: 0.12 + Math.random() * 0.10,
+            });
+          }
+
+          // Occasional exit wound blood spray (opposite direction)
+          if (Math.random() < 0.3) {
+            this.spawnDirectionalBlood(
+              enemy.x + Math.cos(bulletAngle) * enemy.radius * 0.5,
+              enemy.y + Math.sin(bulletAngle) * enemy.radius * 0.5,
+              bulletAngle, 5, 40, 120
+            );
+          }
 
           // Damage number
           this.spawnDamageNumber(enemy.x, enemy.y - enemy.radius - 8, bullet.damage, bullet.color);
@@ -408,7 +442,27 @@ export class Game {
           this.player.kills += 1;
 
           this.audio.playEnemyKill();
-          this.screenShake = Math.max(this.screenShake, 12);
+          this.screenShake = Math.max(this.screenShake, 20);
+
+          // Massive gore explosion on kill
+          const killAngle = Math.atan2(bullet.vy, bullet.vx);
+          this.spawnDirectionalBlood(enemy.x, enemy.y, killAngle, 24, 90, 320);
+          // Backspray
+          this.spawnDirectionalBlood(enemy.x, enemy.y, killAngle + Math.PI, 10, 40, 140);
+          // Omnidirectional blood burst
+          this.spawnDirectionalBlood(enemy.x, enemy.y, Math.random() * Math.PI * 2, 12, 50, 180);
+          // Gibs — more for bigger enemies
+          const gibCount = enemy.type === "brute" ? 10 + Math.floor(Math.random() * 6) : 5 + Math.floor(Math.random() * 5);
+          this.spawnGibs(enemy.x, enemy.y, enemy.radius, enemy.config.bodyColor, gibCount);
+          // Multiple blood mist clouds
+          this.spawnBloodMist(enemy.x, enemy.y, enemy.radius);
+          this.spawnBloodMist(enemy.x, enemy.y, enemy.radius * 0.6);
+
+          // Wall splatter — blood that flies toward arena edges
+          const edgeDist = Math.min(enemy.x, enemy.y, this.bounds.width - enemy.x, this.bounds.height - enemy.y);
+          if (edgeDist < 120) {
+            this.leaveBlood(enemy.x, enemy.y, enemy.radius * 2.0);
+          }
 
           // Combo text
           if (this.combo > 1) {
@@ -444,6 +498,8 @@ export class Game {
       p.alive = false;
       this.damagePlayer(p.damage);
       this.spawnBurst(p.x, p.y, p.color, 8, 20, 90);
+      const hitAngle = Math.atan2(p.vy, p.vx);
+      this.spawnDirectionalBlood(this.player.x, this.player.y, hitAngle, 6, 40, 120);
     }
 
     // Enemy-enemy and enemy-player separation
@@ -519,8 +575,8 @@ export class Game {
         x, y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        life: 0.25 + Math.random() * 0.45,
-        size: 2 + Math.random() * 4,
+        life: 0.3 + Math.random() * 0.6,
+        size: 2 + Math.random() * 5,
         color,
       });
     }
@@ -534,7 +590,17 @@ export class Game {
       p.life -= delta;
       p.vx *= 0.94;
       p.vy *= 0.94;
-      if (p.life <= 0) this.particles.splice(i, 1);
+      if (p.life <= 0) {
+        // Blood particles leave tiny ground stains
+        if (p.isBlood && this.settings.get("blood")) {
+          this.bloodTrails.push({
+            x: p.x, y: p.y,
+            radius: p.size * 0.6,
+            alpha: 0.08 + Math.random() * 0.06,
+          });
+        }
+        this.particles.splice(i, 1);
+      }
     }
   }
 
@@ -552,10 +618,122 @@ export class Game {
 
   leaveBlood(x, y, radius) {
     if (!this.settings.get("blood")) return;
+    // Main pool — irregular splatter with sub-splatters
+    const baseAlpha = 0.18 + Math.random() * 0.14;
     this.bloodPools.push({
-      x, y, radius,
-      alpha: 0.15 + Math.random() * 0.12,
+      x, y, radius: radius * (0.9 + Math.random() * 0.4),
+      alpha: baseAlpha,
+      angle: Math.random() * Math.PI * 2,
+      stretch: 0.7 + Math.random() * 0.6,
     });
+    // Sub-splatters around main pool
+    const splats = 2 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < splats; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const dist = radius * (0.6 + Math.random() * 1.0);
+      this.bloodPools.push({
+        x: x + Math.cos(a) * dist,
+        y: y + Math.sin(a) * dist,
+        radius: 3 + Math.random() * (radius * 0.5),
+        alpha: baseAlpha * (0.5 + Math.random() * 0.5),
+        angle: Math.random() * Math.PI * 2,
+        stretch: 0.6 + Math.random() * 0.8,
+      });
+    }
+  }
+
+  spawnDirectionalBlood(x, y, angle, count, speedMin, speedMax) {
+    if (!this.settings.get("blood")) return;
+    const BLOOD_COLORS = ["#8b0000", "#6e0a0a", "#550808", "#3d0000", "#7a1010", "#920000", "#a01515", "#4a0000"];
+    for (let i = 0; i < count; i++) {
+      const spread = (Math.random() - 0.5) * 1.4;
+      const a = angle + spread;
+      const speed = speedMin + Math.random() * (speedMax - speedMin);
+      const big = Math.random() < 0.15;
+      this.particles.push({
+        x, y,
+        vx: Math.cos(a) * speed * (big ? 1.4 : 1),
+        vy: Math.sin(a) * speed * (big ? 1.4 : 1),
+        life: 0.35 + Math.random() * 0.65,
+        size: big ? (5 + Math.random() * 7) : (2 + Math.random() * 5),
+        color: BLOOD_COLORS[Math.floor(Math.random() * BLOOD_COLORS.length)],
+        isBlood: true,
+      });
+    }
+  }
+
+  spawnGibs(x, y, radius, color, count) {
+    if (!this.settings.get("blood")) return;
+    const GIB_COLORS = ["#8b0000", "#6e0a0a", "#4a0505", "#3a0303", color, "#5c1010"];
+    const GIB_SHAPES = ["chunk", "shard", "round", "strip"];
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 100 + Math.random() * 280;
+      this.gibs.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 18,
+        size: 3 + Math.random() * (radius * 0.55),
+        life: 1.5 + Math.random() * 2.0,
+        color: GIB_COLORS[Math.floor(Math.random() * GIB_COLORS.length)],
+        shape: GIB_SHAPES[Math.floor(Math.random() * GIB_SHAPES.length)],
+        trailTimer: 0,
+      });
+    }
+  }
+
+  spawnBloodMist(x, y, radius) {
+    if (!this.settings.get("blood")) return;
+    const count = 2 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < count; i++) {
+      this.bloodMist.push({
+        x: x + (Math.random() - 0.5) * radius * 2,
+        y: y + (Math.random() - 0.5) * radius * 2,
+        radius: radius * (1.5 + Math.random() * 2.0),
+        alpha: 0.25 + Math.random() * 0.15,
+        life: 1.8 + Math.random() * 1.2,
+        maxLife: 3.0,
+      });
+    }
+  }
+
+  updateGibs(delta) {
+    for (let i = this.gibs.length - 1; i >= 0; i--) {
+      const g = this.gibs[i];
+      g.x += g.vx * delta;
+      g.y += g.vy * delta;
+      g.vx *= 0.92;
+      g.vy *= 0.92;
+      g.rotation += g.rotSpeed * delta;
+      g.life -= delta;
+      // Leave tiny blood drops along gib path
+      g.trailTimer -= delta;
+      if (g.trailTimer <= 0 && this.settings.get("blood")) {
+        g.trailTimer = 0.06;
+        this.bloodTrails.push({
+          x: g.x, y: g.y,
+          radius: 1 + Math.random() * 2,
+          alpha: 0.12 + Math.random() * 0.08,
+        });
+      }
+      if (g.life <= 0) {
+        // Leave small blood splat where gib lands
+        this.leaveBlood(g.x, g.y, g.size * 0.6);
+        this.gibs.splice(i, 1);
+      }
+    }
+  }
+
+  updateBloodMist(delta) {
+    for (let i = this.bloodMist.length - 1; i >= 0; i--) {
+      const m = this.bloodMist[i];
+      m.life -= delta;
+      m.radius += delta * 15;
+      m.alpha = Math.max(0, m.alpha * (m.life / m.maxLife));
+      if (m.life <= 0) this.bloodMist.splice(i, 1);
+    }
   }
 
   finishRun() {
@@ -647,13 +825,33 @@ export class Game {
       ctx.stroke();
     }
 
-    // Blood pools
+    // Blood trails (tiny drips from gibs and blood particles)
+    if (this.settings.get("blood")) {
+      for (const t of this.bloodTrails) {
+        ctx.fillStyle = `rgba(90,10,12,${t.alpha})`;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, t.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Blood pools (irregular splatters)
     if (this.settings.get("blood")) {
       for (const pool of this.bloodPools) {
+        ctx.save();
+        ctx.translate(pool.x, pool.y);
+        ctx.rotate(pool.angle || 0);
+        ctx.scale(pool.stretch || 1, 1);
         ctx.fillStyle = `rgba(110,14,18,${pool.alpha})`;
         ctx.beginPath();
-        ctx.arc(pool.x, pool.y, pool.radius, 0, Math.PI * 2);
+        ctx.arc(0, 0, pool.radius, 0, Math.PI * 2);
         ctx.fill();
+        // Darker inner core
+        ctx.fillStyle = `rgba(60,6,8,${pool.alpha * 0.7})`;
+        ctx.beginPath();
+        ctx.arc(0, 0, pool.radius * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
     }
 
@@ -662,6 +860,129 @@ export class Game {
       ctx.fillStyle = `rgba(180,255,200,${d.alpha * 0.5})`;
       ctx.beginPath();
       ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  renderGibs() {
+    if (!this.settings.get("blood") || this.gibs.length === 0) return;
+    const { ctx } = this;
+
+    for (const g of this.gibs) {
+      const alpha = clamp(g.life / 0.8, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(g.x, g.y);
+      ctx.rotate(g.rotation);
+
+      ctx.fillStyle = g.color;
+      const s = g.size;
+
+      if (g.shape === "shard") {
+        // Sharp bone-like shard
+        ctx.beginPath();
+        ctx.moveTo(0, -s);
+        ctx.lineTo(s * 0.4, 0);
+        ctx.lineTo(0, s * 1.2);
+        ctx.lineTo(-s * 0.3, 0);
+        ctx.closePath();
+        ctx.fill();
+      } else if (g.shape === "round") {
+        // Fleshy round chunk
+        ctx.beginPath();
+        ctx.arc(0, 0, s * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(180,30,30,0.5)";
+        ctx.beginPath();
+        ctx.arc(s * 0.15, -s * 0.1, s * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (g.shape === "strip") {
+        // Elongated meat strip
+        ctx.beginPath();
+        ctx.moveTo(-s * 1.2, -s * 0.2);
+        ctx.quadraticCurveTo(0, -s * 0.5, s * 1.0, -s * 0.15);
+        ctx.lineTo(s * 0.8, s * 0.25);
+        ctx.quadraticCurveTo(0, s * 0.4, -s * 1.0, s * 0.2);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        // Default irregular chunk
+        ctx.beginPath();
+        ctx.moveTo(-s, -s * 0.6);
+        ctx.lineTo(s * 0.7, -s * 0.4);
+        ctx.lineTo(s, s * 0.5);
+        ctx.lineTo(-s * 0.3, s * 0.8);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Wet blood sheen on all gibs
+      ctx.fillStyle = "rgba(160,20,20,0.45)";
+      ctx.beginPath();
+      ctx.arc(0, 0, s * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Trailing blood drip from gib
+      const speed = Math.hypot(g.vx, g.vy);
+      if (speed > 30) {
+        const trailAngle = Math.atan2(-g.vy, -g.vx);
+        ctx.globalAlpha = alpha * 0.3;
+        ctx.fillStyle = "#6e0a0a";
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(
+          Math.cos(trailAngle - 0.2) * s * 1.5,
+          Math.sin(trailAngle - 0.2) * s * 0.5
+        );
+        ctx.lineTo(
+          Math.cos(trailAngle) * s * 2.5,
+          Math.sin(trailAngle) * s * 0.3
+        );
+        ctx.lineTo(
+          Math.cos(trailAngle + 0.2) * s * 1.5,
+          Math.sin(trailAngle + 0.2) * s * 0.5
+        );
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+  }
+
+  renderBloodMist() {
+    if (!this.settings.get("blood") || this.bloodMist.length === 0) return;
+    const { ctx } = this;
+
+    for (const m of this.bloodMist) {
+      // Outer haze layer
+      const outerGrad = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.radius * 1.4);
+      outerGrad.addColorStop(0, `rgba(90,5,5,${m.alpha * 0.4})`);
+      outerGrad.addColorStop(0.6, `rgba(50,2,2,${m.alpha * 0.15})`);
+      outerGrad.addColorStop(1, "rgba(30,0,0,0)");
+      ctx.fillStyle = outerGrad;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.radius * 1.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Core blood cloud
+      const grad = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.radius);
+      grad.addColorStop(0, `rgba(150,20,20,${m.alpha * 1.2})`);
+      grad.addColorStop(0.3, `rgba(120,15,15,${m.alpha * 0.8})`);
+      grad.addColorStop(0.7, `rgba(80,8,8,${m.alpha * 0.35})`);
+      grad.addColorStop(1, "rgba(60,5,5,0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Hot center spot
+      const hotGrad = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.radius * 0.3);
+      hotGrad.addColorStop(0, `rgba(200,40,40,${m.alpha * 0.5})`);
+      hotGrad.addColorStop(1, "rgba(150,20,20,0)");
+      ctx.fillStyle = hotGrad;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.radius * 0.3, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -997,6 +1318,12 @@ export class Game {
 
     // Particles (on top of everything)
     this.renderParticles();
+
+    // Gibs (flying body chunks)
+    this.renderGibs();
+
+    // Blood mist (death clouds)
+    this.renderBloodMist();
 
     // Damage numbers
     this.renderDamageNumbers();
