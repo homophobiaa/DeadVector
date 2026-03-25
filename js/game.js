@@ -3,7 +3,7 @@ import { circlesOverlap, clamp, keepCircleInBounds, randomRange, separateCircles
 import { WaveSpawner } from "./systems/spawner.js";
 
 export class Game {
-  constructor({ canvas, input, ui, audio, settings, mapObstacles = [] }) {
+  constructor({ canvas, input, ui, audio, settings, mapObstacles = [], mapSpawnZones = [] }) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
     this.input = input;
@@ -53,6 +53,10 @@ export class Game {
     // Map obstacles — normalized to background image dimensions (0-1)
     this.mapObstaclesNorm = mapObstacles;
     this.obstacles = [];
+
+    // Spawn zones — normalized, converted to pixel coords on resize
+    this.mapSpawnZonesNorm = mapSpawnZones;
+    this.spawnZones = [];
 
     // Ambient dust particles
     this.ambientDust = [];
@@ -181,7 +185,7 @@ export class Game {
     window.clearTimeout(this.nextWaveTimer);
 
     this.nextWaveTimer = window.setTimeout(() => {
-      this.waveSpawner.startWave(this.bounds);
+      this.waveSpawner.startWave(this.bounds, this.spawnZones);
       this.awaitingWaveStart = false;
       this.audio.playWaveStart();
 
@@ -243,6 +247,14 @@ export class Game {
         label: o.label,
       };
     });
+
+    this.spawnZones = this.mapSpawnZonesNorm.map(z => ({
+      x: dx + z.nx * dw,
+      y: dy + z.ny * dh,
+      w: z.nw * dw,
+      h: z.nh * dh,
+      label: z.label,
+    }));
   }
 
   resolveEntityObstacles(entity) {

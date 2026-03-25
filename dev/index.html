@@ -100,6 +100,15 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
 .obs-item.selected .lbl { color: var(--text-0); }
 .obs-item .coords { font-size: 9px; font-family: var(--font-mono); color: var(--text-3); }
 
+/* Zone items in list */
+.obs-item.zone .dot { background: var(--cyan); }
+.obs-item.zone .lbl { color: rgba(68,212,255,0.75); }
+.obs-item.zone.selected { background: rgba(68,212,255,0.06); border-left-color: var(--cyan); }
+.obs-item.zone.selected .dot { background: var(--cyan); box-shadow: 0 0 3px var(--cyan); }
+.obs-item.zone.selected .lbl { color: var(--cyan); }
+.list-section-title { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-3); padding: 5px 10px 2px; border-top: 1px solid var(--border); margin-top: 2px; }
+.list-section-title.zone { color: rgba(68,212,255,0.6); border-top-color: rgba(68,212,255,0.15); }
+
 .props-inner { padding: 10px 10px 8px; }
 .props-inner .section-title { font-size: 9px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px; }
 .props-inner .row { display: flex; gap: 6px; margin-bottom: 5px; align-items: center; }
@@ -186,6 +195,11 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
       <button class="btn danger" id="btn-clear">Clear</button>
       <button class="btn" id="btn-reset">Reset</button>
       <button class="btn" id="btn-load-map" style="color:var(--cyan);border-color:rgba(68,212,255,0.3)">Load Map</button>
+    </div>
+    <div class="fp-toolbar" style="border-top:none;padding-top:2px">
+      <button class="btn" id="btn-add-zone" style="color:var(--cyan);border-color:rgba(68,212,255,0.3)">+ Zone</button>
+      <button class="btn" id="btn-dup-zone" style="color:var(--cyan);border-color:rgba(68,212,255,0.2)">Dup Z</button>
+      <button class="btn danger" id="btn-del-zone">Del Z</button>
     </div>
     <div class="fp-body" id="obstacle-list"></div>
     <div class="fp-grip" data-resize="fp-obstacles"></div>
@@ -299,7 +313,9 @@ const MIN_PH = 90;
 // ---- State ----
 let radiusLocked = true;
 let obstacles = [];
+let spawnZones = [];
 let selectedIdx = -1;
+let selectedZoneIdx = -1;
 const undoStack = [];
 const redoStack = [];
 const MAX_UNDO = 60;
@@ -453,18 +469,29 @@ async function init() {
   loadPanels();
   try {
     const raw = await fetch("../js/map-data.json").then(r => r.json());
-    for (const o of raw) {
+    const obsRaw = Array.isArray(raw) ? raw : (raw.obstacles || []);
+    for (const o of obsRaw) {
       if (typeof o.nr === "number") o.nr = [o.nr, o.nr, o.nr, o.nr];
       if (!Array.isArray(o.nr)) o.nr = [0,0,0,0];
       if (typeof o.rot !== "number") o.rot = 0;
     }
-    DEFAULT_OBSTACLES = raw;
+    DEFAULT_OBSTACLES = obsRaw;
+    if (!Array.isArray(raw) && Array.isArray(raw.spawnZones)) spawnZones = raw.spawnZones;
   } catch { DEFAULT_OBSTACLES = []; }
-  const saved = localStorage.getItem("dv_editor_obstacles");
-  if (saved) {
-    try { obstacles = JSON.parse(saved); } catch { obstacles = structuredClone(DEFAULT_OBSTACLES); }
+  const savedState = localStorage.getItem("dv_editor_state");
+  if (savedState) {
+    try {
+      const s = JSON.parse(savedState);
+      obstacles = s.obstacles || structuredClone(DEFAULT_OBSTACLES);
+      spawnZones = s.spawnZones || spawnZones;
+    } catch { obstacles = structuredClone(DEFAULT_OBSTACLES); }
   } else {
-    obstacles = structuredClone(DEFAULT_OBSTACLES);
+    const saved = localStorage.getItem("dv_editor_obstacles");
+    if (saved) {
+      try { obstacles = JSON.parse(saved); } catch { obstacles = structuredClone(DEFAULT_OBSTACLES); }
+    } else {
+      obstacles = structuredClone(DEFAULT_OBSTACLES);
+    }
   }
   for (const o of obstacles) {
     if (typeof o.nr === "number") o.nr = [o.nr, o.nr, o.nr, o.nr];
@@ -520,6 +547,11 @@ function toLocal(mx, my, c) {
 function c2n(x, y, w, h) {
   return { nx: r4((x - bgT.x) / bgT.w), ny: r4((y - bgT.y) / bgT.h), nw: r4(w / bgT.w), nh: r4(h / bgT.h) };
 }
+function n2cZone(z) {
+  const w = z.nw * bgT.w, h = z.nh * bgT.h;
+  const x = bgT.x + z.nx * bgT.w, y = bgT.y + z.ny * bgT.h;
+  return { x, y, w, h, cx: x + w / 2, cy: y + h / 2 };
+}
 function r4(v) { return Math.round(v * 10000) / 10000; }
 
 // ===========================================================================
@@ -546,6 +578,7 @@ function draw() {
   for (let y = bgT.y % gs; y < ch; y += gs) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cw, y); ctx.stroke(); }
 
   for (let i = 0; i < obstacles.length; i++) drawObs(n2c(obstacles[i]), obstacles[i].label, i === selectedIdx, i);
+  for (let i = 0; i < spawnZones.length; i++) drawZone(n2cZone(spawnZones[i]), spawnZones[i].label, i === selectedZoneIdx, i);
 }
 
 function rrPath(ctx, x, y, w, h, r) {
@@ -699,6 +732,64 @@ function getRotHandleWorld(c) {
 }
 
 // ===========================================================================
+//  Spawn Zone Drawing
+// ===========================================================================
+const ZONE_HANDLE = 5;
+function drawZone(c, label, sel, idx) {
+  const { x, y, w, h } = c;
+  ctx.save();
+  // Fill
+  ctx.fillStyle = sel ? "rgba(0,200,255,0.18)" : "rgba(0,200,255,0.07)";
+  ctx.fillRect(x, y, w, h);
+  // Stroke
+  ctx.strokeStyle = sel ? "rgba(0,200,255,0.95)" : "rgba(0,200,255,0.45)";
+  ctx.lineWidth = sel ? 2 : 1;
+  ctx.setLineDash([8, 4]);
+  ctx.strokeRect(x, y, w, h);
+  ctx.setLineDash([]);
+
+  if (sel) {
+    // Hatching
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    ctx.strokeStyle = "rgba(0,200,255,0.05)"; ctx.lineWidth = 1;
+    for (let d = -Math.max(w, h); d < Math.max(w, h) * 2; d += 12) {
+      ctx.beginPath(); ctx.moveTo(x + d, y); ctx.lineTo(x + d - h, y + h); ctx.stroke();
+    }
+    ctx.restore();
+    // Resize handles
+    const hs = getZoneHandles(c);
+    for (const [, hp] of Object.entries(hs)) {
+      ctx.fillStyle = "rgba(0,200,255,0.18)";
+      ctx.beginPath(); ctx.arc(hp.x, hp.y, ZONE_HANDLE + 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#111";
+      ctx.beginPath(); ctx.arc(hp.x, hp.y, ZONE_HANDLE - 1, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "rgba(0,200,255,0.85)"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(hp.x, hp.y, ZONE_HANDLE - 1, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+
+  // Label badge
+  const badge = (label || `Zone ${idx + 1}`);
+  ctx.font = "bold 11px Inter,sans-serif";
+  const tw = ctx.measureText(badge).width;
+  const bx = x + 6, by = y + 6, bw = tw + 10, bh = 18;
+  ctx.fillStyle = sel ? "rgba(0,200,255,0.9)" : "rgba(0,200,255,0.65)";
+  ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 3); ctx.fill();
+  ctx.fillStyle = "#001820";
+  ctx.fillText(badge, bx + 5, by + 13);
+  ctx.restore();
+}
+function getZoneHandles(c) {
+  const { x, y, w, h } = c;
+  return {
+    nw: { x, y }, n: { x: x + w/2, y }, ne: { x: x + w, y },
+    w:  { x, y: y + h/2 },               e:  { x: x + w, y: y + h/2 },
+    sw: { x, y: y + h }, s: { x: x + w/2, y: y + h }, se: { x: x + w, y: y + h }
+  };
+}
+
+// ===========================================================================
 //  Hit Testing
 // ===========================================================================
 function hitTest(mx, my) {
@@ -748,12 +839,35 @@ function hitTest(mx, my) {
     if (lm.x >= c.x && lm.x <= c.x + c.w && lm.y >= c.y && lm.y <= c.y + c.h)
       return { type: "body", idx: i };
   }
+  // Zone hit test: selected zone handles first
+  if (selectedZoneIdx >= 0) {
+    const c = n2cZone(spawnZones[selectedZoneIdx]);
+    const hs = getZoneHandles(c);
+    for (const [dir, hp] of Object.entries(hs)) {
+      if (Math.hypot(mx - hp.x, my - hp.y) <= ZONE_HANDLE + 4)
+        return { type: "zone_handle", idx: selectedZoneIdx, dir };
+    }
+  }
+  for (let i = spawnZones.length - 1; i >= 0; i--) {
+    const c = n2cZone(spawnZones[i]);
+    if (mx >= c.x && mx <= c.x + c.w && my >= c.y && my <= c.y + c.h)
+      return { type: "zone_body", idx: i };
+  }
   return null;
 }
 
 function getCursor(hit) {
   if (!hit) return "crosshair";
   if (hit.type === "body") return "move";
+  if (hit.type === "zone_body") return "move";
+  if (hit.type === "zone_handle") {
+    const d = hit.dir;
+    if (d === "n" || d === "s") return "ns-resize";
+    if (d === "e" || d === "w") return "ew-resize";
+    if (d === "nw" || d === "se") return "nwse-resize";
+    if (d === "ne" || d === "sw") return "nesw-resize";
+    return "crosshair";
+  }
   if (hit.type === "radius") return "pointer";
   if (hit.type === "rotate") return "grab";
   const d = hit.dir;
@@ -781,7 +895,17 @@ canvas.addEventListener("mousedown", (e) => {
   if (fpDrag) return;
   const { x, y } = getMouse(e);
   const hit = hitTest(x, y);
-  if (!hit) { selectedIdx = -1; draw(); updateList(); updateProps(); return; }
+  if (!hit) { selectedIdx = -1; selectedZoneIdx = -1; draw(); updateList(); updateProps(); return; }
+  // Zone interactions
+  if (hit.type === "zone_body" || hit.type === "zone_handle") {
+    selectedIdx = -1; selectedZoneIdx = hit.idx;
+    const c = n2cZone(spawnZones[selectedZoneIdx]);
+    pushUndo();
+    dragMode = hit.type === "zone_body" ? "zone_move" : "zone_" + hit.dir;
+    dragStart = { mx: x, my: y, ox: c.x, oy: c.y, ow: c.w, oh: c.h };
+    draw(); updateList(); updateProps(); return;
+  }
+  selectedZoneIdx = -1;
   selectedIdx = hit.idx;
   const c = n2c(obstacles[selectedIdx]);
 
@@ -807,6 +931,25 @@ canvas.addEventListener("mousemove", (e) => {
   document.getElementById("status-mouse").textContent = `X: ${Math.round(x)}  Y: ${Math.round(y)}`;
   if (bgT.w > 0) document.getElementById("status-norm").textContent = `nX: ${r4((x - bgT.x) / bgT.w)}  nY: ${r4((y - bgT.y) / bgT.h)}`;
 
+  if (dragMode && dragStart && selectedZoneIdx >= 0 && dragMode.startsWith("zone_")) {
+    const z = spawnZones[selectedZoneIdx];
+    const dir = dragMode.slice(5); // "move", "n", "ne", etc.
+    let dx = x - dragStart.mx, dy = y - dragStart.my;
+    let rx = dragStart.ox, ry = dragStart.oy, rw = dragStart.ow, rh = dragStart.oh;
+    if (dir === "move") { rx += dx; ry += dy; }
+    else {
+      if (dir.includes("w")) { rx += dx; rw -= dx; }
+      if (dir.includes("e")) { rw += dx; }
+      if (dir.includes("n")) { ry += dy; rh -= dy; }
+      if (dir.includes("s")) { rh += dy; }
+      if (rw < 10) rw = 10; if (rh < 10) rh = 10;
+    }
+    Object.assign(z, c2n(rx, ry, rw, rh));
+    draw(); updateProps(); updateExport(); save();
+    document.getElementById("status-sel").textContent =
+      `${z.label || "Zone"}: ${z.nw.toFixed(3)}×${z.nh.toFixed(3)}`;
+    return;
+  }
   if (dragMode && dragStart && selectedIdx >= 0) {
     const o = obstacles[selectedIdx];
     if (dragMode === "rotate") {
@@ -869,8 +1012,8 @@ document.addEventListener("keydown", (e) => {
   if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
   if (e.ctrlKey && e.key === "z") { e.preventDefault(); undo(); return; }
   if (e.ctrlKey && e.key === "y") { e.preventDefault(); redo(); return; }
-  if (e.key === "Delete" && selectedIdx >= 0) deleteSelected();
-  if (e.ctrlKey && e.key === "d") { e.preventDefault(); duplicateSelected(); }
+  if (e.key === "Delete") { if (selectedIdx >= 0) deleteSelected(); else if (selectedZoneIdx >= 0) deleteZone(); }
+  if (e.ctrlKey && e.key === "d") { e.preventDefault(); if (selectedIdx >= 0) duplicateSelected(); else if (selectedZoneIdx >= 0) duplicateZone(); }
   if (e.ctrlKey && e.key === "a") { e.preventDefault(); addObstacle(); }
   if (e.key === "1") togglePanel("fp-obstacles");
   if (e.key === "2") togglePanel("fp-props");
@@ -887,28 +1030,41 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "ArrowRight") o.nx = r4(o.nx + step);
     refresh();
   }
+  if (selectedZoneIdx >= 0 && ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) {
+    e.preventDefault();
+    const step = e.shiftKey ? 0.01 : 0.001;
+    const z = spawnZones[selectedZoneIdx];
+    pushUndo();
+    if (e.key === "ArrowUp") z.ny = r4(z.ny - step);
+    if (e.key === "ArrowDown") z.ny = r4(z.ny + step);
+    if (e.key === "ArrowLeft") z.nx = r4(z.nx - step);
+    if (e.key === "ArrowRight") z.nx = r4(z.nx + step);
+    refresh();
+  }
 });
 
 // ===========================================================================
 //  Undo / Redo
 // ===========================================================================
 function pushUndo() {
-  undoStack.push({ obs: structuredClone(obstacles), sel: selectedIdx });
+  undoStack.push({ obs: structuredClone(obstacles), sel: selectedIdx, zones: structuredClone(spawnZones), zsel: selectedZoneIdx });
   if (undoStack.length > MAX_UNDO) undoStack.shift();
   redoStack.length = 0;
 }
 function undo() {
   if (!undoStack.length) return;
-  redoStack.push({ obs: structuredClone(obstacles), sel: selectedIdx });
+  redoStack.push({ obs: structuredClone(obstacles), sel: selectedIdx, zones: structuredClone(spawnZones), zsel: selectedZoneIdx });
   const snap = undoStack.pop();
   obstacles = snap.obs; selectedIdx = snap.sel;
+  spawnZones = snap.zones || []; selectedZoneIdx = snap.zsel ?? -1;
   refresh(); showToast("Undo");
 }
 function redo() {
   if (!redoStack.length) return;
-  undoStack.push({ obs: structuredClone(obstacles), sel: selectedIdx });
+  undoStack.push({ obs: structuredClone(obstacles), sel: selectedIdx, zones: structuredClone(spawnZones), zsel: selectedZoneIdx });
   const snap = redoStack.pop();
   obstacles = snap.obs; selectedIdx = snap.sel;
+  spawnZones = snap.zones || []; selectedZoneIdx = snap.zsel ?? -1;
   refresh(); showToast("Redo");
 }
 
@@ -936,10 +1092,33 @@ function deleteSelected() {
   obstacles.splice(selectedIdx, 1); selectedIdx = -1;
   refresh(); showToast(`Deleted "${n}"`);
 }
+function addZone() {
+  pushUndo();
+  spawnZones.push({ nx: 0.35, ny: 0.35, nw: 0.15, nh: 0.15, label: `Spawn Zone ${spawnZones.length + 1}` });
+  selectedZoneIdx = spawnZones.length - 1; selectedIdx = -1;
+  refresh(); showToast("Zone added");
+}
+function duplicateZone() {
+  if (selectedZoneIdx < 0) return;
+  pushUndo();
+  const z = spawnZones[selectedZoneIdx];
+  spawnZones.push({ ...z, nx: r4(z.nx + 0.02), ny: r4(z.ny + 0.02), label: z.label + " copy" });
+  selectedZoneIdx = spawnZones.length - 1;
+  refresh(); showToast("Zone duplicated");
+}
+function deleteZone() {
+  if (selectedZoneIdx < 0) return;
+  pushUndo();
+  const n = spawnZones[selectedZoneIdx].label;
+  spawnZones.splice(selectedZoneIdx, 1); selectedZoneIdx = -1;
+  refresh(); showToast(`Deleted "${n}"`);
+}
 function clearAll() { if (!confirm("Delete ALL obstacles?")) return; pushUndo(); obstacles = []; selectedIdx = -1; refresh(); showToast("All cleared"); }
 function resetDefaults() { if (!confirm("Reset to default obstacles?")) return; pushUndo(); obstacles = structuredClone(DEFAULT_OBSTACLES); selectedIdx = -1; refresh(); showToast("Reset to defaults"); }
 function loadMapData() {
-  fetch("../js/map-data.json").then(r => r.json()).then(arr => {
+  fetch("../js/map-data.json").then(r => r.json()).then(raw => {
+    const arr = Array.isArray(raw) ? raw : (raw.obstacles || []);
+    const zones = Array.isArray(raw) ? [] : (raw.spawnZones || []);
     for (const o of arr) {
       if (typeof o.nr === "number") o.nr = [o.nr, o.nr, o.nr, o.nr];
       if (!Array.isArray(o.nr)) o.nr = [0,0,0,0];
@@ -947,8 +1126,8 @@ function loadMapData() {
       o.label = o.label || "imported";
     }
     pushUndo();
-    obstacles = arr; selectedIdx = -1;
-    refresh(); showToast(`Loaded ${arr.length} obstacles from map-data.json`);
+    obstacles = arr; spawnZones = zones; selectedIdx = -1; selectedZoneIdx = -1;
+    refresh(); showToast(`Loaded ${arr.length} obstacles + ${zones.length} zones from map-data.json`);
   }).catch(err => alert("Load map-data failed: " + err.message));
 }
 function refresh() { draw(); updateList(); updateProps(); updateExport(); syncCounts(); save(); }
@@ -959,11 +1138,26 @@ function refresh() { draw(); updateList(); updateProps(); updateExport(); syncCo
 function updateList() {
   const el = document.getElementById("obstacle-list");
   el.innerHTML = "";
+  // Section: Obstacles
+  const obsTitle = document.createElement("div");
+  obsTitle.className = "list-section-title"; obsTitle.textContent = "OBSTACLES";
+  el.appendChild(obsTitle);
   obstacles.forEach((o, i) => {
     const div = document.createElement("div");
     div.className = "obs-item" + (i === selectedIdx ? " selected" : "");
     div.innerHTML = `<div class="dot"></div><div class="lbl">${i}: ${o.label || "unnamed"}</div><div class="coords">${o.nx.toFixed(3)}, ${o.ny.toFixed(3)}</div>`;
-    div.addEventListener("click", () => { selectedIdx = i; draw(); updateList(); updateProps(); });
+    div.addEventListener("click", () => { selectedIdx = i; selectedZoneIdx = -1; draw(); updateList(); updateProps(); });
+    el.appendChild(div);
+  });
+  // Section: Spawn Zones
+  const zoneTitle = document.createElement("div");
+  zoneTitle.className = "list-section-title zone"; zoneTitle.textContent = "SPAWN ZONES";
+  el.appendChild(zoneTitle);
+  spawnZones.forEach((z, i) => {
+    const div = document.createElement("div");
+    div.className = "obs-item zone" + (i === selectedZoneIdx ? " selected" : "");
+    div.innerHTML = `<div class="dot"></div><div class="lbl">${i}: ${z.label || "zone"}</div><div class="coords">${z.nx.toFixed(3)}, ${z.ny.toFixed(3)}</div>`;
+    div.addEventListener("click", () => { selectedZoneIdx = i; selectedIdx = -1; draw(); updateList(); updateProps(); });
     el.appendChild(div);
   });
   syncCounts();
@@ -971,6 +1165,9 @@ function updateList() {
     const o = obstacles[selectedIdx];
     const hasR = o.nr.some(v => v > 0);
     document.getElementById("status-sel").textContent = `${o.label}: ${o.nw.toFixed(3)}×${o.nh.toFixed(3)}` + (hasR ? ` r:${o.nr.map(v => v.toFixed(2)).join(",")}` : "") + (o.rot ? ` ∠${Math.round(o.rot)}°` : "");
+  } else if (selectedZoneIdx >= 0) {
+    const z = spawnZones[selectedZoneIdx];
+    document.getElementById("status-sel").textContent = `${z.label || "Zone"}: ${z.nw.toFixed(3)}×${z.nh.toFixed(3)}`;
   } else {
     document.getElementById("status-sel").textContent = "No selection";
   }
@@ -978,13 +1175,34 @@ function updateList() {
 
 function syncCounts() {
   const n = obstacles.length;
-  document.getElementById("panel-count").textContent = n;
-  document.getElementById("nav-count").textContent = n;
+  document.getElementById("panel-count").textContent = `${n}+${spawnZones.length}`;
+  document.getElementById("nav-count").textContent = n + spawnZones.length;
 }
 
 function updateProps() {
   const el = document.getElementById("props-content");
-  if (selectedIdx < 0) { el.innerHTML = '<div id="no-selection">Select an obstacle</div>'; return; }
+  if (selectedZoneIdx >= 0) {
+    const z = spawnZones[selectedZoneIdx];
+    el.innerHTML = `
+      <div class="section-title" style="color:var(--cyan)">Spawn Zone</div>
+      <div class="row"><label>LBL</label><input type="text" id="zprop-label" value="${escHtml(z.label || "")}"></div>
+      <div class="row"><label>nX</label><input type="number" id="zprop-nx" step="0.001" value="${z.nx}"><label>nY</label><input type="number" id="zprop-ny" step="0.001" value="${z.ny}"></div>
+      <div class="row"><label>nW</label><input type="number" id="zprop-nw" step="0.001" value="${z.nw}"><label>nH</label><input type="number" id="zprop-nh" step="0.001" value="${z.nh}"></div>
+    `;
+    const zbind = (id, key, isNum) => {
+      const inp = document.getElementById(id);
+      inp.addEventListener("focus", pushUndo);
+      inp.addEventListener("input", (ev) => {
+        spawnZones[selectedZoneIdx][key] = isNum ? parseFloat(ev.target.value) || 0 : ev.target.value;
+        draw(); updateList(); updateExport(); save();
+      });
+    };
+    zbind("zprop-label", "label", false);
+    zbind("zprop-nx", "nx", true); zbind("zprop-ny", "ny", true);
+    zbind("zprop-nw", "nw", true); zbind("zprop-nh", "nh", true);
+    return;
+  }
+  if (selectedIdx < 0) { el.innerHTML = '<div id="no-selection">Select an obstacle or zone</div>'; return; }
   const o = obstacles[selectedIdx];
   const nr = o.nr || [0,0,0,0];
   el.innerHTML = `
@@ -1049,7 +1267,7 @@ function escHtml(s) { return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").re
 
 function updateExport() {
   const box = document.getElementById("export-box");
-  const jsonArr = obstacles.map(o => {
+  const obsOut = obstacles.map(o => {
     const nr = o.nr || [0,0,0,0];
     const allSame = nr[0] === nr[1] && nr[1] === nr[2] && nr[2] === nr[3];
     const entry = { nx: o.nx, ny: o.ny, nw: o.nw, nh: o.nh };
@@ -1058,14 +1276,17 @@ function updateExport() {
     entry.label = o.label || "";
     return entry;
   });
-  box.value = JSON.stringify(jsonArr, null, 2) + "\n";
+  const zonesOut = spawnZones.map(z => ({ nx: z.nx, ny: z.ny, nw: z.nw, nh: z.nh, label: z.label || "" }));
+  box.value = JSON.stringify({ obstacles: obsOut, spawnZones: zonesOut }, null, 2) + "\n";
 }
 
 function doImport() {
   const raw = document.getElementById("export-box").value.trim();
   try {
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) throw new Error("Not an array");
+    const parsed = JSON.parse(raw);
+    const arr = Array.isArray(parsed) ? parsed : (parsed.obstacles || []);
+    const zones = Array.isArray(parsed) ? [] : (parsed.spawnZones || []);
+    if (!Array.isArray(arr)) throw new Error("obstacles must be an array");
     for (const o of arr) {
       if (typeof o.nx !== "number" || typeof o.ny !== "number" || typeof o.nw !== "number" || typeof o.nh !== "number") throw new Error("Missing nx/ny/nw/nh");
       if (typeof o.nr === "number") o.nr = [o.nr, o.nr, o.nr, o.nr];
@@ -1074,12 +1295,12 @@ function doImport() {
       o.label = o.label || "imported";
     }
     pushUndo();
-    obstacles = arr; selectedIdx = -1;
-    refresh(); showToast(`Imported ${arr.length} obstacles`);
+    obstacles = arr; spawnZones = zones; selectedIdx = -1; selectedZoneIdx = -1;
+    refresh(); showToast(`Imported ${arr.length} obstacles + ${zones.length} zones`);
   } catch (err) { alert("Import failed: " + err.message); }
 }
 
-function save() { localStorage.setItem("dv_editor_obstacles", JSON.stringify(obstacles)); }
+function save() { localStorage.setItem("dv_editor_state", JSON.stringify({ obstacles, spawnZones })); }
 
 // ===========================================================================
 //  Button Wiring
@@ -1087,6 +1308,9 @@ function save() { localStorage.setItem("dv_editor_obstacles", JSON.stringify(obs
 document.getElementById("btn-add").addEventListener("click", addObstacle);
 document.getElementById("btn-dup").addEventListener("click", duplicateSelected);
 document.getElementById("btn-del").addEventListener("click", deleteSelected);
+document.getElementById("btn-add-zone").addEventListener("click", addZone);
+document.getElementById("btn-dup-zone").addEventListener("click", duplicateZone);
+document.getElementById("btn-del-zone").addEventListener("click", deleteZone);
 document.getElementById("btn-clear").addEventListener("click", clearAll);
 document.getElementById("btn-reset").addEventListener("click", resetDefaults);
 document.getElementById("btn-load-map").addEventListener("click", loadMapData);

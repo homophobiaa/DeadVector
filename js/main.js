@@ -6,8 +6,11 @@ import { UIManager } from "./systems/ui.js";
 import { preloadZombieParts } from "./entities/zombie-renderer.js";
 
 const bootstrap = async () => {
-  const [mapObstacles] = await Promise.all([
-    fetch("./js/map-data.json").then(r => r.json()),
+  const mapData = await fetch("./js/map-data.json").then(r => r.json());
+  const mapObstacles = Array.isArray(mapData) ? mapData : (mapData.obstacles || []);
+  const mapSpawnZones = Array.isArray(mapData) ? [] : (mapData.spawnZones || []);
+  const [,] = await Promise.all([
+    Promise.resolve(),
     preloadZombieParts(),
   ]);
 
@@ -40,7 +43,7 @@ const bootstrap = async () => {
   const audio = new AudioManager();
   const settings = new Settings();
   audio.installUnlockHandlers();
-  const game = new Game({ canvas, input, ui, audio, settings, mapObstacles });
+  const game = new Game({ canvas, input, ui, audio, settings, mapObstacles, mapSpawnZones });
 
   ui.bindGame(game);
   ui.bindSettings(settings);

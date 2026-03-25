@@ -12,8 +12,9 @@ export class WaveSpawner {
     this.spawnTimer = 0;
   }
 
-  startWave(bounds) {
+  startWave(bounds, spawnZones = []) {
     this.wave += 1;
+    this.spawnZones = spawnZones;
     this.queue = this.buildWave(this.wave, bounds);
     this.spawnTimer = 0.2;
   }
@@ -57,6 +58,16 @@ export class WaveSpawner {
   }
 
   pickSpawnPoint(bounds) {
+    // Use a random spawn zone rectangle if any are defined
+    if (this.spawnZones && this.spawnZones.length > 0) {
+      const zone = this.spawnZones[Math.floor(Math.random() * this.spawnZones.length)];
+      const pad = 6;
+      return {
+        x: zone.x + pad + Math.random() * Math.max(0, zone.w - pad * 2),
+        y: zone.y + pad + Math.random() * Math.max(0, zone.h - pad * 2),
+      };
+    }
+    // Fallback: edge spawn
     const side = Math.floor(Math.random() * 4);
     const p = 30;
     if (side === 0) return { x: randomRange(p, bounds.width - p), y: p };
