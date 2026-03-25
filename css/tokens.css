@@ -1,0 +1,81 @@
+/* ============================================================
+   tokens.css — Design tokens, reset & base styles
+   ============================================================ */
+
+:root {
+  /* --- surfaces --- */
+  --bg-deep:    #060a06;
+  --bg-base:    #0c120c;
+  --bg-surface: #141e14;
+  --bg-raised:  #1a281a;
+
+  /* --- panels --- */
+  --panel:        rgba(10, 18, 10, 0.82);
+  --panel-strong: rgba(12, 22, 12, 0.92);
+
+  /* --- borders --- */
+  --line:        rgba(0, 255, 136, 0.10);
+  --line-strong: rgba(0, 255, 136, 0.22);
+
+  /* --- accent --- */
+  --accent:      #00ff88;
+  --accent-dim:  #00cc6a;
+  --accent-glow: rgba(0, 255, 136, 0.35);
+
+  /* --- semantic --- */
+  --danger:      #ff3355;
+
+  /* --- text --- */
+  --text-main: #e8f0e8;
+  --text-soft: #9ab09a;
+  --text-dim:  #5a6f5a;
+
+  /* --- depth --- */
+  --shadow: rgba(0, 0, 0, 0.55);
+
+  /* --- timing --- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ---- reset ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---- base ---- */
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-deep);
+  color: var(--text-main);
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---- selection ---- */
+::selection {
+  background: rgba(0, 255, 136, 0.2);
+  color: var(--text-main);
+}
+
+/* ---- user-select lockdown ---- */
+#brand-corner,
+.overlay,
+.btn-primary,
+.btn-secondary,
+.icon-btn,
+#game-canvas,
+kbd {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ---- utility ---- */
+.hidden  { display: none !important; }
+.visible { display: grid !important; }

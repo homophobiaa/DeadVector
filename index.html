@@ -3,131 +3,119 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DeadVector | Zombie Survival Arena</title>
+  <title>DeadVector</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
-  <div class="page-shell">
-    <header class="brand-bar">
-      <div class="brand-copy">
-        <p class="eyebrow">Browser Game with Finite State Machine AI</p>
-        <h1>DeadVector</h1>
-        <p class="brand-summary">Containment arena / adaptive undead AI / survival protocol build</p>
-      </div>
-      <div class="brand-side">
-        <span class="signal-chip">Live Build</span>
-        <button id="mute-button" class="ghost-button" type="button">Sound: On</button>
-      </div>
-    </header>
+  <div id="game-wrapper">
+    <canvas id="game-canvas" aria-label="DeadVector game arena"></canvas>
 
-    <main class="game-layout">
-      <aside class="hud-panel">
-        <div class="hud-grid">
-          <article class="hud-card hud-card--health">
-            <span class="hud-label">Health</span>
-            <strong id="hud-health">100 / 100</strong>
-            <div class="health-bar"><div class="health-bar-fill" id="health-bar-fill"></div></div>
-          </article>
-          <article class="hud-card">
-            <span class="hud-label">Score</span>
-            <strong id="hud-score">0</strong>
-          </article>
-          <article class="hud-card">
-            <span class="hud-label">Wave</span>
-            <strong id="hud-wave">0</strong>
-          </article>
-          <article class="hud-card">
-            <span class="hud-label">Weapon</span>
-            <strong id="hud-weapon">Service Pistol</strong>
-          </article>
-          <article class="hud-card">
-            <span class="hud-label">Kills</span>
-            <strong id="hud-kills">0</strong>
-          </article>
-          <article class="hud-card">
-            <span class="hud-label">Combo</span>
-            <strong id="hud-combo">---</strong>
-          </article>
-          <article class="hud-card">
-            <span class="hud-label">Threat</span>
-            <strong id="hud-zombies">0 active</strong>
-          </article>
-          <article class="hud-card">
-            <span class="hud-label">Status</span>
-            <strong id="hud-state">Menu</strong>
-          </article>
+    <div id="brand-corner">
+      <span class="brand-title">DEADV<span class="brand-accent">X</span>CTOR</span>
+      <button id="mute-button" class="icon-btn" type="button" title="Toggle sound">&#9834;</button>
+    </div>
+
+    <section id="menu-screen" class="overlay visible">
+      <div class="overlay-inner">
+        <h1 class="menu-title">DEAD<span class="brand-accent">V</span>ECTOR</h1>
+        <p class="menu-sub">Top-down zombie survival &mdash; FSM-driven AI</p>
+
+        <div class="menu-stats-row">
+          <div class="menu-stat"><span class="stat-val">3</span><span class="stat-lbl">Weapons</span></div>
+          <div class="menu-stat"><span class="stat-val">5</span><span class="stat-lbl">Enemy Types</span></div>
+          <div class="menu-stat"><span class="stat-val">6</span><span class="stat-lbl">AI States</span></div>
         </div>
 
-        <section class="status-panel">
-          <div class="status-header">
-            <p class="status-label">Arena Feed</p>
-            <span class="status-chip">System Online</span>
-          </div>
-          <ul id="event-feed" class="event-feed">
-            <li>Assignment-ready canvas arena initialized.</li>
-            <li>Play with mouse and keyboard. Right click to dash.</li>
-          </ul>
-        </section>
-      </aside>
+        <div class="controls-grid">
+          <kbd>WASD</kbd><span>Move</span>
+          <kbd>Mouse</kbd><span>Aim</span>
+          <kbd>LMB</kbd><span>Shoot</span>
+          <kbd>RMB</kbd><span>Dash</span>
+          <kbd>1 2 3 4</kbd><span>Weapon</span>
+          <kbd>Esc</kbd><span>Pause</span>
+        </div>
 
-      <section class="arena-shell">
-        <canvas id="game-canvas" aria-label="DeadVector game arena"></canvas>
+        <button id="play-button" class="btn-primary" type="button">START GAME</button>
+        <button id="settings-button" class="btn-secondary" type="button">SETTINGS</button>
+        <p class="menu-hint">or press <kbd>R</kbd></p>
+      </div>
+    </section>
 
-        <section id="menu-screen" class="overlay-card visible">
-          <p class="overlay-kicker">Top-down survival shooter</p>
-          <h2>DeadVector</h2>
-          <p>
-            Survive escalating zombie waves, chain kills for combo multipliers, collect health pickups, and exploit the undead FSM:
-            <span class="accent-copy">SPAWN → WANDER → CHASE → ATTACK → RETREAT → DEAD</span>
-          </p>
-          <div class="menu-highlights">
-            <article>
-              <span>Loadout</span>
-              <strong>3 Weapons</strong>
-            </article>
-            <article>
-              <span>Enemies</span>
-              <strong>5 Variants</strong>
-            </article>
-            <article>
-              <span>State Logic</span>
-              <strong>6-State FSM</strong>
-            </article>
-          </div>
-          <div class="controls-list">
-            <p><span>Move</span><strong>WASD</strong></p>
-            <p><span>Aim</span><strong>Mouse Move</strong></p>
-            <p><span>Shoot</span><strong>Click / Hold</strong></p>
-            <p><span>Switch</span><strong>Wheel or 1 2 3</strong></p>
-            <p><span>Dash</span><strong>Right Click</strong></p>
-            <p><span>Pause</span><strong>Esc</strong></p>
-          </div>
-          <div class="button-row">
-            <button id="play-button" class="solid-button" type="button">Play</button>
-          </div>
-        </section>
+    <section id="pause-screen" class="overlay hidden">
+      <div class="overlay-inner overlay-compact">
+        <h2 class="overlay-title">PAUSED</h2>
+        <p class="overlay-text">Game paused. Focus loss auto-pauses.</p>
+        <button id="resume-button" class="btn-primary" type="button">RESUME</button>
+        <button id="pause-settings-button" class="btn-secondary" type="button">SETTINGS</button>
+      </div>
+    </section>
 
-        <section id="pause-screen" class="overlay-card hidden">
-          <p class="overlay-kicker">System hold</p>
-          <h2>Paused</h2>
-          <p>The quarantine breach is frozen. Resume when you are ready.</p>
-          <p class="overlay-note">Focus loss and tab hiding also trigger an automatic pause.</p>
-          <div class="button-row">
-            <button id="resume-button" class="solid-button" type="button">Resume</button>
-          </div>
-        </section>
+    <section id="game-over-screen" class="overlay hidden">
+      <div class="overlay-inner overlay-compact">
+        <h2 class="overlay-title game-over-title">DEAD</h2>
+        <p id="final-summary" class="overlay-text">Score: 0 &bull; Wave: 0 &bull; Kills: 0</p>
+        <button id="restart-button" class="btn-primary" type="button">TRY AGAIN</button>
+        <p class="menu-hint">or press <kbd>R</kbd></p>
+      </div>
+    </section>
 
-        <section id="game-over-screen" class="overlay-card hidden">
-          <p class="overlay-kicker">Signal lost</p>
-          <h2>Operator Down</h2>
-          <p id="final-summary">Score: 0 | Wave: 0 | Kills: 0</p>
-          <p class="overlay-note">Chain combos, collect health pickups, keep moving. Try again.</p>
-          <div class="button-row">
-            <button id="restart-button" class="solid-button" type="button">Restart</button>
-          </div>
-        </section>
-      </section>
-    </main>
+    <section id="settings-screen" class="overlay hidden">
+      <div class="overlay-inner settings-panel">
+        <h2 class="overlay-title">SETTINGS</h2>
+
+        <div class="settings-group">
+          <label class="setting-row">
+            <span class="setting-label">Master Volume</span>
+            <input id="set-master-vol" type="range" class="setting-slider" min="0" max="100" step="1" value="80">
+          </label>
+          <label class="setting-row">
+            <span class="setting-label">Music Volume</span>
+            <input id="set-music-vol" type="range" class="setting-slider" min="0" max="100" step="1" value="50">
+          </label>
+          <label class="setting-row">
+            <span class="setting-label">SFX Volume</span>
+            <input id="set-sfx-vol" type="range" class="setting-slider" min="0" max="100" step="1" value="80">
+          </label>
+        </div>
+
+        <div class="settings-group">
+          <label class="setting-row">
+            <span class="setting-label">Screen Shake</span>
+            <input id="set-screen-shake" type="checkbox" class="setting-toggle" checked>
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+          <label class="setting-row">
+            <span class="setting-label">Damage Numbers</span>
+            <input id="set-damage-numbers" type="checkbox" class="setting-toggle" checked>
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+          <label class="setting-row">
+            <span class="setting-label">Blood &amp; Gore</span>
+            <input id="set-blood" type="checkbox" class="setting-toggle" checked>
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+          <label class="setting-row">
+            <span class="setting-label">Show FPS</span>
+            <input id="set-show-fps" type="checkbox" class="setting-toggle">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+        </div>
+
+        <div class="settings-group settings-dev">
+          <label class="setting-row">
+            <span class="setting-label">Developer Mode <span class="dev-tag">DEV</span></span>
+            <input id="set-dev-mode" type="checkbox" class="setting-toggle">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+          <p class="setting-hint">Unlocks the DEV Laser &mdash; an overpowered auto rifle. Disables leaderboard.</p>
+        </div>
+
+        <button id="settings-back" class="btn-primary" type="button">BACK</button>
+      </div>
+    </section>
   </div>
 
   <script type="module" src="./js/main.js"></script>

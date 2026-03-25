@@ -1,7 +1,7 @@
 import { Bullet } from "./bullet.js";
 import { clamp, keepCircleInBounds, normalize } from "../systems/collision.js";
 
-const WEAPONS = [
+const BASE_WEAPONS = [
   {
     name: "Service Pistol",
     auto: false,
@@ -40,13 +40,46 @@ const WEAPONS = [
   },
 ];
 
+export const DEV_WEAPON = {
+  name: "DEV Laser",
+  auto: true,
+  cooldown: 0.025,
+  projectileSpeed: 2000,
+  damage: 300,
+  radius: 5,
+  pellets: 3,
+  spread: 0.12,
+  color: "#ff00ff",
+  recoil: 2,
+  pierce: true,
+};
+
 export class Player {
   constructor(x, y) {
     this.maxHealth = 100;
     this.radius = 17;
     this.speed = 280;
-    this.weapons = WEAPONS;
+    this.devMode = false;
+    this.weapons = [...BASE_WEAPONS];
     this.reset(x, y);
+  }
+
+  setDevMode(enabled) {
+    this.devMode = enabled;
+    if (enabled) {
+      if (!this.weapons.includes(DEV_WEAPON)) {
+        this.weapons = [...BASE_WEAPONS, DEV_WEAPON];
+      }
+      this.maxHealth = 10000;
+      this.health = this.maxHealth;
+    } else {
+      this.weapons = [...BASE_WEAPONS];
+      this.maxHealth = 100;
+      this.health = Math.min(this.health, this.maxHealth);
+    }
+    if (this.weaponIndex >= this.weapons.length) {
+      this.weaponIndex = 0;
+    }
   }
 
   reset(x, y) {

@@ -2,17 +2,20 @@ export class UIManager {
   constructor(elements) {
     this.elements = elements;
     this.game = null;
-    this.maxFeedItems = 6;
+    this.settings = null;
+    this.settingsOrigin = "menu";
+    this.toasts = [];
+    this.maxToasts = 4;
 
-    window.addEventListener("gameStart", () => this.pushEvent("Containment breach opened. First wave inbound."));
+    window.addEventListener("gameStart", () => this.pushEvent("First wave inbound."));
     window.addEventListener("waveComplete", (e) =>
-      this.pushEvent(`Wave ${e.detail.wave} cleared. Med-kit delivered.`),
+      this.pushEvent(`Wave ${e.detail.wave} cleared.`),
     );
     window.addEventListener("levelUp", (e) =>
-      this.pushEvent(`Wave ${e.detail.wave} engaged. Threat level rising.`),
+      this.pushEvent(`Wave ${e.detail.wave} engaged.`),
     );
     window.addEventListener("gameOver", (e) =>
-      this.pushEvent(`Operator down. Score: ${e.detail.score}. Wave: ${e.detail.wave}.`),
+      this.pushEvent(`Operator down. Score: ${e.detail.score}.`),
     );
   }
 
@@ -35,39 +38,86 @@ export class UIManager {
       const muted = this.game.toggleMute();
       this.setMuteLabel(muted);
     });
+
+    this.elements.settingsButton.addEventListener("click", () => {
+      this.settingsOrigin = "menu";
+      this.showMenu(false);
+      this.showSettings(true);
+    });
+
+    this.elements.pauseSettingsButton.addEventListener("click", () => {
+      this.settingsOrigin = "pause";
+      this.showPause(false);
+      this.showSettings(true);
+    });
+
+    this.elements.settingsBack.addEventListener("click", () => {
+      this.showSettings(false);
+      if (this.settingsOrigin === "pause") {
+        this.showPause(true);
+      } else {
+        this.showMenu(true);
+      }
+    });
+  }
+
+  bindSettings(settings) {
+    this.settings = settings;
+    const el = this.elements;
+
+    // Initialize controls from saved settings
+    el.setMasterVol.value = Math.round(settings.get("masterVolume") * 100);
+    el.setMusicVol.value = Math.round(settings.get("musicVolume") * 100);
+    el.setSfxVol.value = Math.round(settings.get("sfxVolume") * 100);
+    el.setScreenShake.checked = settings.get("screenShake");
+    el.setDamageNumbers.checked = settings.get("damageNumbers");
+    el.setBlood.checked = settings.get("blood");
+    el.setShowFps.checked = settings.get("showFps");
+    el.setDevMode.checked = settings.get("devMode");
+
+    // Slider handlers
+    el.setMasterVol.addEventListener("input", () => {
+      settings.set("masterVolume", el.setMasterVol.value / 100);
+      if (this.game) this.game.applySettings();
+    });
+    el.setMusicVol.addEventListener("input", () => {
+      settings.set("musicVolume", el.setMusicVol.value / 100);
+      if (this.game) this.game.applySettings();
+    });
+    el.setSfxVol.addEventListener("input", () => {
+      settings.set("sfxVolume", el.setSfxVol.value / 100);
+      if (this.game) this.game.applySettings();
+    });
+
+    // Toggle handlers
+    el.setScreenShake.addEventListener("change", () => {
+      settings.set("screenShake", el.setScreenShake.checked);
+    });
+    el.setDamageNumbers.addEventListener("change", () => {
+      settings.set("damageNumbers", el.setDamageNumbers.checked);
+    });
+    el.setBlood.addEventListener("change", () => {
+      settings.set("blood", el.setBlood.checked);
+    });
+    el.setShowFps.addEventListener("change", () => {
+      settings.set("showFps", el.setShowFps.checked);
+    });
+    el.setDevMode.addEventListener("change", () => {
+      settings.set("devMode", el.setDevMode.checked);
+      if (this.game) this.game.applySettings();
+    });
   }
 
   setMuteLabel(muted) {
-    this.elements.muteButton.textContent = muted ? "Sound: Off" : "Sound: On";
+    this.elements.muteButton.textContent = muted ? "\u266B" : "\u266A";
+    this.elements.muteButton.style.opacity = muted ? "0.4" : "1";
   }
 
-  updateHud(snapshot) {
-    this.elements.health.textContent = `${Math.ceil(snapshot.health)} / ${snapshot.maxHealth}`;
-    this.elements.score.textContent = snapshot.score.toLocaleString();
-    this.elements.wave.textContent = snapshot.wave.toString();
-    this.elements.weapon.textContent = snapshot.weapon;
-    this.elements.zombies.textContent = `${snapshot.activeZombies} active`;
-    this.elements.state.textContent = snapshot.state;
-    this.elements.kills.textContent = snapshot.kills.toString();
-    this.elements.combo.textContent = snapshot.combo > 1
-      ? `${snapshot.combo}x (${snapshot.comboMultiplier.toFixed(1)}x)`
-      : "---";
-
-    // Health bar fill
-    const healthBar = this.elements.healthBar;
-    if (healthBar) {
-      const pct = (snapshot.health / snapshot.maxHealth) * 100;
-      healthBar.style.width = `${pct}%`;
-      healthBar.style.background = pct > 60
-        ? "linear-gradient(90deg, #5a5, #6c6)"
-        : pct > 30
-          ? "linear-gradient(90deg, #c90, #da5)"
-          : "linear-gradient(90deg, #c33, #e55)";
-    }
-  }
+  updateHud() { /* HUD is now rendered on canvas by Game */ }
 
   showMenu(visible) { this.toggleElement(this.elements.menuScreen, visible); }
   showPause(visible) { this.toggleElement(this.elements.pauseScreen, visible); }
+  showSettings(visible) { this.toggleElement(this.elements.settingsScreen, visible); }
 
   showGameOver(visible, summary = "") {
     this.toggleElement(this.elements.gameOverScreen, visible);
@@ -80,11 +130,16 @@ export class UIManager {
   }
 
   pushEvent(message) {
-    const item = document.createElement("li");
-    item.textContent = message;
-    this.elements.eventFeed.prepend(item);
-    while (this.elements.eventFeed.children.length > this.maxFeedItems) {
-      this.elements.eventFeed.removeChild(this.elements.eventFeed.lastElementChild);
+    this.toasts.push({ text: message, life: 3.5 });
+    while (this.toasts.length > this.maxToasts) {
+      this.toasts.shift();
+    }
+  }
+
+  updateToasts(delta) {
+    for (let i = this.toasts.length - 1; i >= 0; i--) {
+      this.toasts[i].life -= delta;
+      if (this.toasts[i].life <= 0) this.toasts.splice(i, 1);
     }
   }
 }
