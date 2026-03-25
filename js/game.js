@@ -1,5 +1,5 @@
 import { Player } from "./entities/player.js";
-import { circlesOverlap, clamp, keepCircleInBounds, randomRange, separateCircles } from "./systems/collision.js";
+import { circlesOverlap, clamp, keepCircleInBounds, randomRange, separateCircles, resolveCircleRect, pointInRect } from "./systems/collision.js";
 import { WaveSpawner } from "./systems/spawner.js";
 
 export class Game {
@@ -44,6 +44,29 @@ export class Game {
 
     // Damage vignette
     this.damageVignette = 0;
+
+    // Background image
+    this.bgImg = new Image();
+    this.bgImg.src = "assets/images/background.png";
+    this.bgTransform = { x: 0, y: 0, w: 1280, h: 720 };
+
+    // Map obstacles — normalized to background image dimensions (0-1)
+    this.mapObstaclesNorm = [
+      // Buildings
+      { nx: 0.275, ny: -0.01, nw: 0.445, nh: 0.225, label: "Top Building" },
+      { nx: 0.245, ny: 0.79, nw: 0.48, nh: 0.22, label: "Bottom Building" },
+      { nx: -0.01, ny: -0.01, nw: 0.13, nh: 0.225, label: "TL Corner" },
+      { nx: 0.875, ny: -0.01, nw: 0.135, nh: 0.225, label: "TR Corner" },
+      { nx: -0.01, ny: 0.79, nw: 0.10, nh: 0.22, label: "BL Corner" },
+      { nx: 0.91, ny: 0.79, nw: 0.10, nh: 0.22, label: "BR Corner" },
+      // Cars
+      { nx: 0.175, ny: 0.02, nw: 0.07, nh: 0.07, label: "Car TL" },
+      { nx: -0.005, ny: 0.30, nw: 0.05, nh: 0.12, label: "Car L1" },
+      { nx: -0.005, ny: 0.57, nw: 0.055, nh: 0.12, label: "Car L2" },
+      { nx: 0.075, ny: 0.845, nw: 0.06, nh: 0.06, label: "Car BL" },
+      { nx: 0.815, ny: 0.86, nw: 0.065, nh: 0.06, label: "Car BR" },
+    ];
+    this.obstacles = [];
 
     // Ambient dust particles
     this.ambientDust = [];
@@ -194,7 +217,45 @@ export class Game {
     this.bounds.height = Math.max(320, Math.floor(rect.height));
     this.canvas.width = Math.floor(this.bounds.width * this.dpr);
     this.canvas.height = Math.floor(this.bounds.height * this.dpr);
-    if (this.player) keepCircleInBounds(this.player, this.bounds);
+    this.computeBgTransform();
+    if (this.player) {
+      keepCircleInBounds(this.player, this.bounds);
+      this.resolveEntityObstacles(this.player);
+    }
+  }
+
+  computeBgTransform() {
+    const img = this.bgImg;
+    if (!img.naturalWidth) return;
+    const { bounds } = this;
+    const zoom = 1.12;
+    const imgAspect = img.naturalWidth / img.naturalHeight;
+    const canAspect = bounds.width / bounds.height;
+    let dw, dh;
+    if (canAspect > imgAspect) {
+      dw = bounds.width * zoom;
+      dh = dw / imgAspect;
+    } else {
+      dh = bounds.height * zoom;
+      dw = dh * imgAspect;
+    }
+    const dx = (bounds.width - dw) / 2;
+    const dy = (bounds.height - dh) / 2;
+    this.bgTransform = { x: dx, y: dy, w: dw, h: dh };
+
+    this.obstacles = this.mapObstaclesNorm.map(o => ({
+      x: dx + o.nx * dw,
+      y: dy + o.ny * dh,
+      w: o.nw * dw,
+      h: o.nh * dh,
+      label: o.label,
+    }));
+  }
+
+  resolveEntityObstacles(entity) {
+    for (const obs of this.obstacles) {
+      resolveCircleRect(entity, obs);
+    }
   }
 
   loop(timestamp) {
@@ -256,6 +317,7 @@ export class Game {
       if (event.type === "contextmenu") {
         const dashed = this.player.useDash(event.x, event.y, this.bounds);
         if (dashed) {
+          this.resolveEntityObstacles(this.player);
           this.audio.playDash();
           this.spawnBurst(this.player.x, this.player.y, "#6be0d6", 16, 25, 160);
           this.screenShake = Math.max(this.screenShake, 5);
@@ -296,7 +358,13 @@ export class Game {
   }
 
   update(delta) {
+    // Recompute obstacles if image just loaded
+    if (this.bgImg.naturalWidth && this.obstacles.length === 0) {
+      this.computeBgTransform();
+    }
+
     this.player.update(delta, this.input, this.bounds);
+    this.resolveEntityObstacles(this.player);
     this.screenShake = Math.max(0, this.screenShake - delta * 24);
     this.damageVignette = Math.max(0, this.damageVignette - delta * 1.8);
 
@@ -317,15 +385,31 @@ export class Game {
     // Spawn enemies
     const spawnedEnemies = this.waveSpawner.update(delta);
     this.enemies.push(...spawnedEnemies);
+    for (const e of spawnedEnemies) this.resolveEntityObstacles(e);
 
-    // Update bullets
-    for (const b of this.bullets) b.update(delta, this.bounds);
-    for (const p of this.enemyProjectiles) p.update(delta, this.bounds);
+    // Update bullets — kill on obstacle hit
+    for (const b of this.bullets) {
+      b.update(delta, this.bounds);
+      if (b.alive) {
+        for (const obs of this.obstacles) {
+          if (pointInRect(b.x, b.y, obs)) { b.alive = false; break; }
+        }
+      }
+    }
+    for (const p of this.enemyProjectiles) {
+      p.update(delta, this.bounds);
+      if (p.alive) {
+        for (const obs of this.obstacles) {
+          if (pointInRect(p.x, p.y, obs)) { p.alive = false; break; }
+        }
+      }
+    }
 
     // Update enemies with full context
     const enemyContext = {
       player: this.player,
       bounds: this.bounds,
+      obstacles: this.obstacles,
       enemies: this.enemies,
       damagePlayer: (amount) => this.damagePlayer(amount),
       spawnEnemyProjectile: (p) => this.enemyProjectiles.push(p),
@@ -333,7 +417,10 @@ export class Game {
       leaveBlood: (x, y, r) => this.leaveBlood(x, y, r),
     };
 
-    for (const enemy of this.enemies) enemy.update(delta, enemyContext);
+    for (const enemy of this.enemies) {
+      enemy.update(delta, enemyContext);
+      if (enemy.fsm.currentState !== "DEAD") this.resolveEntityObstacles(enemy);
+    }
 
     // Update pickups
     this.updatePickups(delta);
@@ -765,64 +852,24 @@ export class Game {
 
   renderBackground() {
     const { ctx, bounds } = this;
+    const bt = this.bgTransform;
 
-    // Dark green radial gradient
-    const bg = ctx.createRadialGradient(
-      bounds.width * 0.5, bounds.height * 0.45, 60,
-      bounds.width * 0.5, bounds.height * 0.45, bounds.width * 0.9,
-    );
-    bg.addColorStop(0, "#0e1a0e");
-    bg.addColorStop(0.4, "#0a120a");
-    bg.addColorStop(1, "#040804");
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, bounds.width, bounds.height);
-
-    // Grid lines
-    ctx.strokeStyle = "rgba(0,255,136,0.03)";
-    ctx.lineWidth = 1;
-    for (let x = 24; x < bounds.width; x += 48) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, bounds.height);
-      ctx.stroke();
-    }
-    for (let y = 24; y < bounds.height; y += 48) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(bounds.width, y);
-      ctx.stroke();
-    }
-
-    // Ground debris
-    ctx.fillStyle = "rgba(0,255,136,0.015)";
-    for (const d of this.debris) {
-      ctx.save();
-      ctx.translate(d.x % bounds.width, d.y % bounds.height);
-      ctx.rotate(d.rotation);
-      ctx.globalAlpha = d.alpha;
-      ctx.fillRect(-d.size / 2, -d.size / 2, d.size, d.size * 0.6);
-      ctx.restore();
-    }
-
-    // Arena border
-    ctx.strokeStyle = "rgba(0,255,136,0.12)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(18, 18, bounds.width - 36, bounds.height - 36);
-
-    // Corner accents
-    const cornerSize = 24;
-    ctx.strokeStyle = "rgba(0,255,136,0.25)";
-    ctx.lineWidth = 2;
-    const corners = [
-      [18, 18, 1, 1], [bounds.width - 18, 18, -1, 1],
-      [18, bounds.height - 18, 1, -1], [bounds.width - 18, bounds.height - 18, -1, -1],
-    ];
-    for (const [cx, cy, dx, dy] of corners) {
-      ctx.beginPath();
-      ctx.moveTo(cx, cy + dy * cornerSize);
-      ctx.lineTo(cx, cy);
-      ctx.lineTo(cx + dx * cornerSize, cy);
-      ctx.stroke();
+    // Draw background image (cover + zoom)
+    if (this.bgImg.naturalWidth) {
+      ctx.drawImage(this.bgImg, bt.x, bt.y, bt.w, bt.h);
+      // Subtle vignette darkening at edges for gameplay clarity
+      const vig = ctx.createRadialGradient(
+        bounds.width * 0.5, bounds.height * 0.5, bounds.width * 0.25,
+        bounds.width * 0.5, bounds.height * 0.5, bounds.width * 0.75,
+      );
+      vig.addColorStop(0, "rgba(0,0,0,0)");
+      vig.addColorStop(1, "rgba(0,0,0,0.35)");
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, bounds.width, bounds.height);
+    } else {
+      // Fallback while image loads
+      ctx.fillStyle = "#1a1a1a";
+      ctx.fillRect(0, 0, bounds.width, bounds.height);
     }
 
     // Blood trails (tiny drips from gibs and blood particles)
@@ -857,7 +904,7 @@ export class Game {
 
     // Ambient dust
     for (const d of this.ambientDust) {
-      ctx.fillStyle = `rgba(180,255,200,${d.alpha * 0.5})`;
+      ctx.fillStyle = `rgba(160,150,130,${d.alpha * 0.4})`;
       ctx.beginPath();
       ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
       ctx.fill();
@@ -1342,6 +1389,26 @@ export class Game {
 
     // Toast notifications
     this.renderToasts();
+
+    // Debug obstacle overlay (dev mode only)
+    if (this.settings.get("devMode")) {
+      ctx.save();
+      for (const obs of this.obstacles) {
+        ctx.strokeStyle = "rgba(255,0,0,0.6)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+        ctx.fillStyle = "rgba(255,0,0,0.08)";
+        ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+        if (obs.label) {
+          ctx.setLineDash([]);
+          ctx.font = "10px monospace";
+          ctx.fillStyle = "rgba(255,100,100,0.8)";
+          ctx.fillText(obs.label, obs.x + 4, obs.y + 12);
+        }
+      }
+      ctx.restore();
+    }
 
     // Pause overlay
     if (this.state === "paused") {

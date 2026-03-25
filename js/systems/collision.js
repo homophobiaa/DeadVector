@@ -41,3 +41,37 @@ export const separateCircles = (a, b) => {
   b.x += nx * half;
   b.y += ny * half;
 };
+
+// Push a circle out of an axis-aligned rectangle
+export const resolveCircleRect = (circle, rect) => {
+  const closestX = clamp(circle.x, rect.x, rect.x + rect.w);
+  const closestY = clamp(circle.y, rect.y, rect.y + rect.h);
+  const dx = circle.x - closestX;
+  const dy = circle.y - closestY;
+  const dist = Math.hypot(dx, dy);
+
+  if (dist >= circle.radius) return false;
+
+  // Circle center is inside the rectangle
+  if (dist === 0) {
+    const dLeft = circle.x - rect.x;
+    const dRight = rect.x + rect.w - circle.x;
+    const dTop = circle.y - rect.y;
+    const dBottom = rect.y + rect.h - circle.y;
+    const min = Math.min(dLeft, dRight, dTop, dBottom);
+    if (min === dLeft) circle.x = rect.x - circle.radius;
+    else if (min === dRight) circle.x = rect.x + rect.w + circle.radius;
+    else if (min === dTop) circle.y = rect.y - circle.radius;
+    else circle.y = rect.y + rect.h + circle.radius;
+    return true;
+  }
+
+  const overlap = circle.radius - dist;
+  circle.x += (dx / dist) * overlap;
+  circle.y += (dy / dist) * overlap;
+  return true;
+};
+
+// Check if a point is inside a rectangle
+export const pointInRect = (x, y, rect) =>
+  x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
