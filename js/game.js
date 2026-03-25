@@ -1,6 +1,7 @@
 import { Player } from "./entities/player.js";
 import { circlesOverlap, clamp, keepCircleInBounds, randomRange, separateCircles, resolveCircleRect, pointInRect } from "./systems/collision.js";
 import { WaveSpawner } from "./systems/spawner.js";
+import { MAP_OBSTACLES } from "./map-data.js";
 
 export class Game {
   constructor({ canvas, input, ui, audio, settings }) {
@@ -51,21 +52,7 @@ export class Game {
     this.bgTransform = { x: 0, y: 0, w: 1280, h: 720 };
 
     // Map obstacles — normalized to background image dimensions (0-1)
-    this.mapObstaclesNorm = [
-      // Buildings
-      { nx: 0.275, ny: -0.01, nw: 0.445, nh: 0.225, label: "Top Building" },
-      { nx: 0.245, ny: 0.79, nw: 0.48, nh: 0.22, label: "Bottom Building" },
-      { nx: -0.01, ny: -0.01, nw: 0.13, nh: 0.225, label: "TL Corner" },
-      { nx: 0.875, ny: -0.01, nw: 0.135, nh: 0.225, label: "TR Corner" },
-      { nx: -0.01, ny: 0.79, nw: 0.10, nh: 0.22, label: "BL Corner" },
-      { nx: 0.91, ny: 0.79, nw: 0.10, nh: 0.22, label: "BR Corner" },
-      // Cars
-      { nx: 0.175, ny: 0.02, nw: 0.07, nh: 0.07, label: "Car TL" },
-      { nx: -0.005, ny: 0.30, nw: 0.05, nh: 0.12, label: "Car L1" },
-      { nx: -0.005, ny: 0.57, nw: 0.055, nh: 0.12, label: "Car L2" },
-      { nx: 0.075, ny: 0.845, nw: 0.06, nh: 0.06, label: "Car BL" },
-      { nx: 0.815, ny: 0.86, nw: 0.065, nh: 0.06, label: "Car BR" },
-    ];
+    this.mapObstaclesNorm = MAP_OBSTACLES;
     this.obstacles = [];
 
     // Ambient dust particles
