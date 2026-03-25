@@ -151,6 +151,8 @@ export class Enemy {
     this.wobble = Math.random() * Math.PI * 2;
     this.wobbleRate = 4;
     this.strafeDir = Math.random() > 0.5 ? 1 : -1;
+    this.perceivedPlayer = { x, y };
+    this.driftAngle = Math.random() * Math.PI * 2;
     this.buffed = false;
 
     this.fsm = new FiniteStateMachine({
@@ -220,13 +222,14 @@ export class Enemy {
           owner.stateLabel = "CHASE";
         },
         update: (owner, context, delta) => {
+          const pp = owner.perceivedPlayer;
           const dist = owner.distanceToPlayer(context.player);
           if (owner.config.ranged && dist < (owner.config.preferredDistance || 150) * 0.72) {
-            owner.moveAway(context.player.x, context.player.y, owner.speed * 0.95, delta, context.bounds);
+            owner.moveAway(pp.x, pp.y, owner.speed * 0.95, delta, context.bounds);
           } else if (owner.config.ranged && dist < owner.config.attackRange) {
             owner.strafe(context.player, owner.speed * 0.8, delta, context.bounds);
           } else {
-            owner.moveToward(context.player.x, context.player.y, owner.speed, delta, context.bounds);
+            owner.moveToward(pp.x, pp.y, owner.speed, delta, context.bounds);
           }
         },
         transitions: [
@@ -264,7 +267,8 @@ export class Enemy {
           }
           owner.attackRecovery -= delta;
           if (owner.config.ranged) {
-            owner.moveAway(context.player.x, context.player.y, owner.speed * 0.75, delta, context.bounds);
+            const pp = owner.perceivedPlayer;
+            owner.moveAway(pp.x, pp.y, owner.speed * 0.75, delta, context.bounds);
           }
         },
         transitions: [
@@ -294,7 +298,8 @@ export class Enemy {
         },
         update: (owner, context, delta) => {
           owner.retreatTimer -= delta;
-          owner.moveAway(context.player.x, context.player.y, owner.speed * 1.05, delta, context.bounds);
+          const pp = owner.perceivedPlayer;
+          owner.moveAway(pp.x, pp.y, owner.speed * 1.05, delta, context.bounds);
         },
         transitions: [
           {
@@ -397,6 +402,24 @@ export class Enemy {
     this._effectiveSpeed = this.speed * speedMult;
     this.buffed = false;
     const isChase = this.stateLabel === "CHASE";
+
+    // Update perceived player position — lags behind real pos with random drift
+    if (context.player) {
+      // Tracking rate: sprinters react faster, shamblers are sluggish
+      const trackRate = this.type === "sprinter" ? 4.5
+        : this.type === "brute" ? 1.8
+        : this.type === "screamer" ? 3.2
+        : this.type === "spitter" ? 2.8
+        : 2.2; // shambler
+      const lerpT = Math.min(1, trackRate * delta);
+      // Slowly wander the drift offset so zombies don't perfectly converge
+      this.driftAngle += delta * (0.5 + Math.sin(this.wobble * 0.7) * 0.3);
+      const driftR = this.config.radius * 1.2;
+      const driftX = Math.cos(this.driftAngle) * driftR;
+      const driftY = Math.sin(this.driftAngle) * driftR;
+      this.perceivedPlayer.x += ((context.player.x + driftX) - this.perceivedPlayer.x) * lerpT;
+      this.perceivedPlayer.y += ((context.player.y + driftY) - this.perceivedPlayer.y) * lerpT;
+    }
 
     this.fsm.update(delta, context);
 
