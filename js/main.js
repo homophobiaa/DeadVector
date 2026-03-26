@@ -4,6 +4,7 @@ import { AudioManager } from "./systems/audio.js";
 import { Settings } from "./systems/settings.js";
 import { UIManager } from "./systems/ui.js";
 import { preloadZombieParts } from "./entities/zombie-renderer.js";
+import { preloadPlayerParts } from "./entities/player-renderer.js";
 
 const bootstrap = async () => {
   const mapData = await fetch("./js/map-data.json").then(r => r.json());
@@ -12,6 +13,7 @@ const bootstrap = async () => {
   const [,] = await Promise.all([
     Promise.resolve(),
     preloadZombieParts(),
+    preloadPlayerParts(),
   ]);
 
   const canvas = document.getElementById("game-canvas");

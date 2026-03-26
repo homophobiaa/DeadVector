@@ -1,5 +1,6 @@
 import { Bullet } from "./bullet.js";
 import { clamp, keepCircleInBounds, normalize } from "../systems/collision.js";
+import { renderPlayerParts, playerPartsReady } from "./player-renderer.js";
 
 const BASE_WEAPONS = [
   {
@@ -242,18 +243,32 @@ export class Player {
 
     ctx.save();
     ctx.translate(this.x, this.y);
-    ctx.rotate(this.aimAngle);
 
-    // Drop shadow
+    // Drop shadow (world-aligned, not rotated)
     ctx.save();
-    ctx.rotate(-this.aimAngle);
     ctx.fillStyle = "rgba(0,0,0,0.25)";
     ctx.beginPath();
     ctx.ellipse(3, 6, this.radius * 1.05, this.radius * 0.55, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // Body glow
+    ctx.rotate(this.aimAngle);
+
+    // Try PNG body-part renderer first
+    const usedPng = renderPlayerParts(ctx, this);
+
+    if (!usedPng) {
+      // Fallback: procedural draw
+      this._renderProcedural(ctx);
+    }
+
+    ctx.restore();
+
+    // UI rings (not rotated)
+    this._renderRings(ctx);
+  }
+
+  _renderProcedural(ctx) {
     const isHurt = this.damageFlash > 0;
     ctx.shadowBlur = isHurt ? 35 : 22;
     ctx.shadowColor = isHurt ? "rgba(255,100,70,0.5)" : "rgba(107,224,214,0.2)";
@@ -332,39 +347,38 @@ export class Player {
     ctx.lineTo(8, 0);
     ctx.lineTo(6, 3);
     ctx.stroke();
+  }
 
-    ctx.restore();
-
-    // UI rings (not rotated)
+  _renderRings(ctx) {
     ctx.save();
     ctx.translate(this.x, this.y);
 
-    // Health ring
+    // Health ring — thin, subtle arc
     const healthRatio = this.health / this.maxHealth;
     const hColor = healthRatio > 0.6 ? "#78ff78" : healthRatio > 0.3 ? "#ffc850" : "#ff5040";
     ctx.strokeStyle = hColor;
-    ctx.globalAlpha = 0.35;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(0, 0, this.radius + 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * healthRatio);
-    ctx.stroke();
-
-    // Energy ring
-    const energyRatio = this.energy / 100;
-    ctx.strokeStyle = this.dashCooldown > 0 ? "rgba(255,255,255,0.06)" : "rgba(107,224,214,0.22)";
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = 0.18;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(0, 0, this.radius + 8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * energyRatio);
+    ctx.arc(0, 0, this.radius + 3, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * healthRatio);
+    ctx.stroke();
+
+    // Energy ring — barely visible when idle
+    const energyRatio = this.energy / 100;
+    ctx.strokeStyle = this.dashCooldown > 0 ? "rgba(255,255,255,0.04)" : "rgba(107,224,214,0.12)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius + 6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * energyRatio);
     ctx.stroke();
 
     // Invulnerability flash
     if (this.invulnerability > 0) {
-      ctx.globalAlpha = Math.sin(this.invulnerability * 30) * 0.15 + 0.05;
+      ctx.globalAlpha = Math.sin(this.invulnerability * 30) * 0.08 + 0.03;
       ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(0, 0, this.radius + 12, 0, Math.PI * 2);
+      ctx.arc(0, 0, this.radius + 8, 0, Math.PI * 2);
       ctx.stroke();
     }
 
