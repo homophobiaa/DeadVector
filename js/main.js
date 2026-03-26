@@ -3,9 +3,18 @@ import { InputManager } from "./input.js";
 import { AudioManager } from "./systems/audio.js";
 import { Settings } from "./systems/settings.js";
 import { UIManager } from "./systems/ui.js";
+import { preloadZombieParts } from "./entities/zombie-renderer.js";
+import { preloadPlayerParts } from "./entities/player-renderer.js";
 
 const bootstrap = async () => {
-  const mapObstacles = await fetch("./js/map-data.json").then(r => r.json());
+  const mapData = await fetch("./js/map-data.json").then(r => r.json());
+  const mapObstacles = Array.isArray(mapData) ? mapData : (mapData.obstacles || []);
+  const mapSpawnZones = Array.isArray(mapData) ? [] : (mapData.spawnZones || []);
+  const [,] = await Promise.all([
+    Promise.resolve(),
+    preloadZombieParts(),
+    preloadPlayerParts(),
+  ]);
 
   const canvas = document.getElementById("game-canvas");
 
@@ -30,13 +39,17 @@ const bootstrap = async () => {
     setBlood: document.getElementById("set-blood"),
     setShowFps: document.getElementById("set-show-fps"),
     setDevMode: document.getElementById("set-dev-mode"),
+    devSubOptions: document.getElementById("dev-sub-options"),
+    setDevInvincible: document.getElementById("set-dev-invincible"),
+    setDevNoclip: document.getElementById("set-dev-noclip"),
+    setDevObstacles: document.getElementById("set-dev-obstacles"),
   });
 
   const input = new InputManager(canvas);
   const audio = new AudioManager();
   const settings = new Settings();
   audio.installUnlockHandlers();
-  const game = new Game({ canvas, input, ui, audio, settings, mapObstacles });
+  const game = new Game({ canvas, input, ui, audio, settings, mapObstacles, mapSpawnZones });
 
   ui.bindGame(game);
   ui.bindSettings(settings);

@@ -1,4 +1,5 @@
-[
+{
+  "obstacles": [
   {
     "nx": 0.2723,
     "ny": -0.0066,
@@ -233,4 +234,49 @@
     "nr": 0.3703,
     "label": "Car BL2"
   }
-]
+  ],
+"spawnZones": [
+    {
+      "nx": 0.001,
+      "ny": 0.3414,
+      "nw": 0.0369,
+      "nh": 0.2927,
+      "label": "Zone Left"
+    },
+    {
+      "nx": 0.9608,
+      "ny": 0.325,
+      "nw": 0.0369,
+      "nh": 0.4215,
+      "label": "Zone Right"
+    },
+    {
+      "nx": 0.1768,
+      "ny": 0.0372,
+      "nw": 0.0768,
+      "nh": 0.0551,
+      "label": "Zone Top Left"
+    },
+    {
+      "nx": 0.7361,
+      "ny": 0.0444,
+      "nw": 0.1056,
+      "nh": 0.0446,
+      "label": "Zone Top Right"
+    },
+    {
+      "nx": 0.7476,
+      "ny": 0.9124,
+      "nw": 0.0886,
+      "nh": 0.0446,
+      "label": "Zone Bottom Right"
+    },
+    {
+      "nx": 0.1518,
+      "ny": 0.916,
+      "nw": 0.0638,
+      "nh": 0.0446,
+      "label": "Zone Bottom Left"
+    }
+  ]
+}

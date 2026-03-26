@@ -8,6 +8,7 @@ import {
   pointInRect,
   randomRange,
 } from "../systems/collision.js";
+import { renderZombieParts } from "./zombie-renderer.js";
 
 // Five enemy types for FSM AI variety
 const ENEMY_TYPES = {
@@ -29,6 +30,7 @@ const ENEMY_TYPES = {
     accentColor: "#ff9966",
     eyeColor: "#ffcc85",
     glowColor: "rgba(255,150,80,0.35)",
+    tintFilter: "hue-rotate(-110deg) saturate(1.1)",
     score: 18,
     ranged: false,
   },
@@ -50,6 +52,7 @@ const ENEMY_TYPES = {
     accentColor: "#ffa54e",
     eyeColor: "#ffe08e",
     glowColor: "rgba(255,200,100,0.35)",
+    tintFilter: "hue-rotate(-80deg) saturate(1.3) brightness(1.1)",
     score: 22,
     ranged: false,
   },
@@ -72,6 +75,7 @@ const ENEMY_TYPES = {
     accentColor: "#7bcf78",
     eyeColor: "#d2ffb9",
     glowColor: "rgba(120,210,100,0.4)",
+    tintFilter: "saturate(1.5) brightness(1.05)",
     score: 28,
     ranged: true,
     projectileSpeed: 360,
@@ -94,6 +98,7 @@ const ENEMY_TYPES = {
     accentColor: "#cc5060",
     eyeColor: "#ffc49f",
     glowColor: "rgba(200,60,80,0.35)",
+    tintFilter: "hue-rotate(-130deg) saturate(1.1) brightness(0.8)",
     score: 44,
     ranged: false,
   },
@@ -116,6 +121,7 @@ const ENEMY_TYPES = {
     accentColor: "#bb88dd",
     eyeColor: "#eeccff",
     glowColor: "rgba(160,100,220,0.45)",
+    tintFilter: "hue-rotate(160deg) saturate(1.4)",
     score: 34,
     ranged: true,
     projectileSpeed: 320,
@@ -148,6 +154,10 @@ export class Enemy {
     this.hasDeathBurst = false;
     this.facing = 0;
     this.wobble = Math.random() * Math.PI * 2;
+    this.wobbleRate = 4;
+    this.strafeDir = Math.random() > 0.5 ? 1 : -1;
+    this.perceivedPlayer = { x, y };
+    this.driftAngle = Math.random() * Math.PI * 2;
     this.buffed = false;
 
     this.fsm = new FiniteStateMachine({
@@ -217,13 +227,14 @@ export class Enemy {
           owner.stateLabel = "CHASE";
         },
         update: (owner, context, delta) => {
+          const pp = owner.perceivedPlayer;
           const dist = owner.distanceToPlayer(context.player);
           if (owner.config.ranged && dist < (owner.config.preferredDistance || 150) * 0.72) {
-            owner.moveAway(context.player.x, context.player.y, owner.speed * 0.95, delta, context.bounds);
+            owner.moveAway(pp.x, pp.y, owner.speed * 0.95, delta, context.bounds);
           } else if (owner.config.ranged && dist < owner.config.attackRange) {
             owner.strafe(context.player, owner.speed * 0.8, delta, context.bounds);
           } else {
-            owner.moveToward(context.player.x, context.player.y, owner.speed, delta, context.bounds);
+            owner.moveToward(pp.x, pp.y, owner.speed, delta, context.bounds);
           }
         },
         transitions: [
@@ -261,7 +272,8 @@ export class Enemy {
           }
           owner.attackRecovery -= delta;
           if (owner.config.ranged) {
-            owner.moveAway(context.player.x, context.player.y, owner.speed * 0.75, delta, context.bounds);
+            const pp = owner.perceivedPlayer;
+            owner.moveAway(pp.x, pp.y, owner.speed * 0.75, delta, context.bounds);
           }
         },
         transitions: [
@@ -291,7 +303,8 @@ export class Enemy {
         },
         update: (owner, context, delta) => {
           owner.retreatTimer -= delta;
-          owner.moveAway(context.player.x, context.player.y, owner.speed * 1.05, delta, context.bounds);
+          const pp = owner.perceivedPlayer;
+          owner.moveAway(pp.x, pp.y, owner.speed * 1.05, delta, context.bounds);
         },
         transitions: [
           {
@@ -347,7 +360,9 @@ export class Enemy {
     this.attackCooldown = Math.max(0, this.attackCooldown - delta);
     this.damageFlash = Math.max(0, this.damageFlash - delta * 4);
     this.retreatCooldown = Math.max(0, this.retreatCooldown - delta);
-    this.wobble += delta * (this.stateLabel === "CHASE" ? 8 : 4);
+    const targetWobbleRate = this.stateLabel === "CHASE" ? 8 : 4;
+    this.wobbleRate += (targetWobbleRate - this.wobbleRate) * Math.min(1, delta * 3);
+    this.wobble += delta * this.wobbleRate;
 
     // Wounded blood dripping — enemies below 55% HP leave heavy blood trails
     if (this.fsm.currentState !== "DEAD" && this.health / this.maxHealth < 0.55) {
@@ -391,8 +406,43 @@ export class Enemy {
     const speedMult = this.buffed ? 1.18 : 1;
     this._effectiveSpeed = this.speed * speedMult;
     this.buffed = false;
+    const isChase = this.stateLabel === "CHASE";
+
+    // Update perceived player position — lags behind real pos with random drift
+    if (context.player) {
+      // Tracking rate: sprinters react faster, shamblers are sluggish
+      const trackRate = this.type === "sprinter" ? 4.5
+        : this.type === "brute" ? 1.8
+        : this.type === "screamer" ? 3.2
+        : this.type === "spitter" ? 2.8
+        : 2.2; // shambler
+      const lerpT = Math.min(1, trackRate * delta);
+      // Slowly wander the drift offset so zombies don't perfectly converge
+      this.driftAngle += delta * (0.5 + Math.sin(this.wobble * 0.7) * 0.3);
+      const driftR = this.config.radius * 1.2;
+      const driftX = Math.cos(this.driftAngle) * driftR;
+      const driftY = Math.sin(this.driftAngle) * driftR;
+      this.perceivedPlayer.x += ((context.player.x + driftX) - this.perceivedPlayer.x) * lerpT;
+      this.perceivedPlayer.y += ((context.player.y + driftY) - this.perceivedPlayer.y) * lerpT;
+    }
 
     this.fsm.update(delta, context);
+
+    // Smooth facing interpolation (angular lerp with wrapping)
+    if (this._faceTarget !== undefined) {
+      let diff = this._faceTarget - this.facing;
+      // Wrap to [-PI, PI]
+      diff = ((diff + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      const turnSpeed = isChase ? 8 : 5; // rad/s
+      const step = turnSpeed * delta;
+      if (Math.abs(diff) < step) {
+        this.facing = this._faceTarget;
+      } else {
+        this.facing += Math.sign(diff) * step;
+      }
+      // Keep facing in [-PI, PI]
+      this.facing = ((this.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+    }
   }
 
   takeDamage(amount) {
@@ -420,7 +470,7 @@ export class Enemy {
   }
 
   facePlayer(player) {
-    this.facing = Math.atan2(player.y - this.y, player.x - this.x);
+    this._faceTarget = Math.atan2(player.y - this.y, player.x - this.x);
   }
 
   pickWanderTarget(bounds, obstacles) {
@@ -476,15 +526,16 @@ export class Enemy {
 
   strafe(player, speed, delta, bounds) {
     const away = normalize(this.x - player.x, this.y - player.y);
-    const lateral = Math.random() > 0.5 ? 1 : -1;
-    this.x += (-away.y * lateral + away.x * 0.25) * speed * delta;
-    this.y += (away.x * lateral + away.y * 0.25) * speed * delta;
+    // Occasionally flip strafe direction for unpredictability
+    if (Math.random() < delta * 0.4) this.strafeDir *= -1;
+    this.x += (-away.y * this.strafeDir + away.x * 0.25) * speed * delta;
+    this.y += (away.x * this.strafeDir + away.y * 0.25) * speed * delta;
     this.facePlayer(player);
     keepCircleInBounds(this, bounds);
   }
 
   facePoint(tx, ty) {
-    this.facing = Math.atan2(ty - this.y, tx - this.x);
+    this._faceTarget = Math.atan2(ty - this.y, tx - this.x);
   }
 
   performAttack(context) {
@@ -547,11 +598,38 @@ export class Enemy {
     ctx.globalAlpha = this.opacity;
     ctx.translate(this.x, this.y);
 
-    // Drop shadow
-    ctx.fillStyle = "rgba(0,0,0,0.28)";
-    ctx.beginPath();
-    ctx.ellipse(2, this.radius + 6, this.radius * 0.9, this.radius * 0.4, 0, 0, Math.PI * 2);
-    ctx.fill();
+    // Drop shadow — follows body sway, bob and facing for a grounded look
+    {
+      const w = this.wobble;
+      const isDead = this.stateLabel === "DEAD";
+      const isChasing = this.stateLabel === "CHASE";
+
+      // Mirror the sway/bob from the zombie renderer
+      const swayAmp = isDead ? 0 : isChasing ? 0.06 : 0.035;
+      const sway = Math.sin(w * 0.5) * swayAmp;
+      const bobScale = this.radius / 16;
+      const bob = isDead ? 0 : Math.sin(w * 1.4) * 1.2 * bobScale;
+      const jx = isDead ? 0 : Math.sin(w * 7.1) * 0.3;
+
+      // Shadow shifts laterally with sway and slightly with facing
+      const bodyAngle = this.facing + Math.PI / 2 + sway;
+      const shadowOffX = 2 + Math.sin(bodyAngle) * this.radius * 0.12 + jx * 0.5;
+      const shadowOffY = this.radius + 6 - bob * 0.4;
+
+      // Shadow stretches when moving (chasing) and compresses with bob
+      const stretchX = this.radius * (isChasing ? 0.95 : 0.88) + Math.abs(Math.sin(w * 0.5)) * 1.5;
+      const stretchY = this.radius * 0.38 + bob * 0.08;
+
+      // Slight rotation to match body lean
+      ctx.save();
+      ctx.translate(shadowOffX, shadowOffY);
+      ctx.rotate(sway * 0.5);
+      ctx.fillStyle = "rgba(0,0,0,0.24)";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, stretchX, stretchY, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
 
     // State-specific effects
     if (this.stateLabel === "SPAWN") {
@@ -604,153 +682,14 @@ export class Enemy {
       ctx.stroke();
     }
 
-    // Body glow
-    ctx.shadowBlur = 18;
-    ctx.shadowColor = c.glowColor;
-
-    // Type-specific body rendering
-    const bodyCol = isFlash ? "#fff0df" : c.bodyColor;
-
-    if (this.type === "brute") {
-      // Brute: large irregular body with armor ridges
-      ctx.fillStyle = bodyCol;
+    // Zombie body — PNG parts with procedural animation
+    if (!renderZombieParts(ctx, this)) {
+      // Fallback: simple coloured circle when images haven't loaded
+      ctx.fillStyle = isFlash ? "#fff0df" : c.bodyColor;
       ctx.beginPath();
       ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
       ctx.fill();
-
-      // Armor plates
-      ctx.fillStyle = isFlash ? "#eee" : "#5a2030";
-      ctx.beginPath();
-      ctx.arc(-this.radius * 0.5, -this.radius * 0.5, 7, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(this.radius * 0.5, -this.radius * 0.5, 7, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(0, -this.radius * 0.6, 5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Thick border
-      ctx.strokeStyle = isFlash ? "#ddd" : "#4a1828";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-      ctx.stroke();
-
-    } else if (this.type === "sprinter") {
-      // Sprinter: elongated body facing movement direction
-      ctx.save();
-      ctx.rotate(this.facing);
-      ctx.fillStyle = bodyCol;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, this.radius * 1.3, this.radius * 0.85, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Speed streaks
-      if (this.stateLabel === "CHASE") {
-        ctx.globalAlpha = 0.2;
-        ctx.fillStyle = c.accentColor;
-        for (let i = 1; i <= 3; i++) {
-          ctx.beginPath();
-          ctx.ellipse(-this.radius * 0.8 * i, 0, 3, 2, 0, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.globalAlpha = this.opacity;
-      }
-      ctx.restore();
-
-    } else if (this.type === "spitter") {
-      // Spitter: bloated round body with drips
-      ctx.fillStyle = bodyCol;
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Bloated belly
-      ctx.fillStyle = isFlash ? "#dfd" : "#4a8a48";
-      ctx.beginPath();
-      ctx.arc(0, 2, this.radius * 0.7, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Acid drip
-      const dripY = this.radius + 2 + Math.sin(t * 4) * 3;
-      ctx.fillStyle = "#a7ff7c";
-      ctx.globalAlpha = 0.5 * this.opacity;
-      ctx.beginPath();
-      ctx.arc(0, dripY, 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = this.opacity;
-
-    } else if (this.type === "screamer") {
-      // Screamer: thin body with pulsing rings
-      ctx.fillStyle = bodyCol;
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Inner energy
-      const pulse = 0.4 + Math.sin(t * 5) * 0.2;
-      ctx.fillStyle = `rgba(200,140,255,${pulse})`;
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius * 0.6, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Sound wave rings
-      ctx.strokeStyle = `rgba(200,140,255,${0.15 + Math.sin(t * 4) * 0.1})`;
-      ctx.lineWidth = 1;
-      for (let i = 0; i < 2; i++) {
-        const r = this.radius + 6 + ((t * 20 + i * 15) % 30);
-        const a = Math.max(0, 0.3 - (r - this.radius) / 50);
-        ctx.globalAlpha = a * this.opacity;
-        ctx.beginPath();
-        ctx.arc(0, 0, r, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = this.opacity;
-
-    } else {
-      // Shambler: classic zombie body
-      ctx.fillStyle = bodyCol;
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Shamble wobble arms
-      const armAngle = Math.sin(this.wobble) * 0.3;
-      ctx.save();
-      ctx.rotate(this.facing + armAngle);
-      ctx.fillStyle = isFlash ? "#eee" : c.accentColor;
-      ctx.fillRect(this.radius - 2, -3, 10, 6);
-      ctx.restore();
-      ctx.save();
-      ctx.rotate(this.facing - armAngle);
-      ctx.fillStyle = isFlash ? "#eee" : c.accentColor;
-      ctx.fillRect(this.radius - 2, -3, 10, 6);
-      ctx.restore();
     }
-
-    // Inner face darkness
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "rgba(15,10,8,0.6)";
-    ctx.beginPath();
-    ctx.arc(0, 2, this.radius * 0.55, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Eyes (face toward player)
-    const eyeSpread = this.radius * 0.32;
-    const eyeSize = this.type === "brute" ? 4 : this.type === "sprinter" ? 2.5 : 3;
-    ctx.save();
-    ctx.rotate(this.facing);
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = c.eyeColor;
-    ctx.fillStyle = c.eyeColor;
-    ctx.beginPath();
-    ctx.arc(this.radius * 0.3, -eyeSpread, eyeSize, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(this.radius * 0.3, eyeSpread, eyeSize, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
 
     // Health bar above
     ctx.shadowBlur = 0;

@@ -74,6 +74,10 @@ export class UIManager {
     el.setBlood.checked = settings.get("blood");
     el.setShowFps.checked = settings.get("showFps");
     el.setDevMode.checked = settings.get("devMode");
+    el.devSubOptions.classList.toggle("hidden", !settings.get("devMode"));
+    el.setDevInvincible.checked = settings.get("devInvincible");
+    el.setDevNoclip.checked = settings.get("devNoclip");
+    el.setDevObstacles.checked = settings.get("devShowObstacles");
 
     // Slider handlers
     el.setMasterVol.addEventListener("input", () => {
@@ -104,7 +108,18 @@ export class UIManager {
     });
     el.setDevMode.addEventListener("change", () => {
       settings.set("devMode", el.setDevMode.checked);
+      el.devSubOptions.classList.toggle("hidden", !el.setDevMode.checked);
       if (this.game) this.game.applySettings();
+    });
+    el.setDevInvincible.addEventListener("change", () => {
+      settings.set("devInvincible", el.setDevInvincible.checked);
+      if (this.game) this.game.applySettings();
+    });
+    el.setDevNoclip.addEventListener("change", () => {
+      settings.set("devNoclip", el.setDevNoclip.checked);
+    });
+    el.setDevObstacles.addEventListener("change", () => {
+      settings.set("devShowObstacles", el.setDevObstacles.checked);
     });
   }
 

@@ -9,6 +9,9 @@ const DEFAULTS = {
   blood: true,
   showFps: false,
   devMode: false,
+  devInvincible: true,
+  devNoclip: false,
+  devShowObstacles: false,
 };
 
 export class Settings {
