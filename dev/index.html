@@ -55,7 +55,7 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
 
 /* ---- Tabs ---- */
 .nav-tabs { display: flex; gap: 2px; margin-left: 8px; }
-.nav-tab { padding: 5px 14px; background: transparent; color: var(--text-2); border: 1px solid transparent; border-bottom: none; border-radius: var(--radius-sm) var(--radius-sm) 0 0; font-family: var(--font-ui); font-size: 10px; font-weight: 600; cursor: pointer; transition: all var(--transition); letter-spacing: 0.3px; }
+.nav-tab { padding: 6px 16px; background: transparent; color: var(--text-1); border: 1px solid transparent; border-bottom: none; border-radius: var(--radius-sm) var(--radius-sm) 0 0; font-family: var(--font-ui); font-size: 12px; font-weight: 600; cursor: pointer; transition: all var(--transition); letter-spacing: 0.3px; }
 .nav-tab:hover { color: var(--text-0); background: var(--bg-2); }
 .nav-tab.active { color: var(--accent); background: var(--bg-0); border-color: var(--border); position: relative; }
 .nav-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px; background: var(--bg-0); }
@@ -83,7 +83,7 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
 
 /* ---- Panel content ---- */
 .fp-toolbar { display: flex; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--border); flex-wrap: wrap; flex-shrink: 0; }
-.btn { padding: 4px 10px; background: var(--bg-3); color: var(--text-1); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-family: var(--font-ui); font-size: 10px; font-weight: 500; transition: all var(--transition); white-space: nowrap; }
+.btn { padding: 6px 12px; background: var(--bg-3); color: var(--text-1); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 500; transition: all var(--transition); white-space: nowrap; }
 .btn:hover { background: var(--bg-4); border-color: var(--border-hi); color: var(--text-0); }
 .btn:active { transform: scale(0.96); }
 .btn.primary { color: var(--green); border-color: rgba(0,255,136,0.25); }
@@ -140,81 +140,101 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
 
 /* ---- Editor Pages (Enemies, Weapons, Settings) ---- */
 .ep-layout { display: flex; height: 100%; }
-.ep-sidebar { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--bg-1); border-right: 1px solid var(--border); }
-.ep-main { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
-.ep-bar { display: flex; align-items: center; padding: 8px 12px; background: var(--bg-1); border-bottom: 1px solid var(--border); gap: 8px; flex-shrink: 0; }
-.ep-bar .ep-icon { font-size: 14px; }
-.ep-bar .ep-title { flex: 1; font-family: var(--font-display); font-size: 10px; font-weight: 700; color: var(--text-1); letter-spacing: 1.2px; text-transform: uppercase; }
-.ep-bar .ep-count { background: var(--bg-4); color: var(--text-2); padding: 2px 8px; border-radius: 10px; font-size: 10px; font-family: var(--font-mono); }
-.ep-toolbar { display: flex; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap; }
+.ep-sidebar { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--bg-1); border-right: 1px solid var(--border); }
+.ep-main { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; background: var(--bg-0); }
+.ep-bar { display: flex; align-items: center; padding: 10px 14px; background: var(--bg-2); border-bottom: 1px solid var(--border); gap: 10px; flex-shrink: 0; }
+.ep-bar .ep-icon { font-size: 18px; }
+.ep-bar .ep-title { flex: 1; font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--text-0); letter-spacing: 1.5px; text-transform: uppercase; }
+.ep-bar .ep-count { background: var(--accent); color: #fff; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-family: var(--font-mono); font-weight: 600; }
+.ep-toolbar { display: flex; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap; background: var(--bg-1); }
+.ep-toolbar .btn { font-size: 12px; padding: 6px 14px; }
 .ep-body { flex: 1; overflow-y: auto; overflow-x: hidden; }
-.ep-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.12s; }
-.ep-item:hover { background: var(--bg-2); }
-.ep-item.selected { background: rgba(0,255,136,0.06); border-left-color: var(--green); }
-.ep-item .item-color { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.1); }
-.ep-item.selected .item-color { border-color: rgba(255,255,255,0.3); box-shadow: 0 0 6px var(--green); }
+
+/* -- List items -- */
+.ep-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.12s; border-bottom: 1px solid rgba(42,45,56,0.4); }
+.ep-item:hover { background: var(--bg-3); }
+.ep-item.selected { background: rgba(0,255,136,0.08); border-left-color: var(--green); }
+.ep-item .item-color { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.15); }
+.ep-item.selected .item-color { border-color: rgba(255,255,255,0.4); box-shadow: 0 0 8px var(--green); }
 .ep-item .item-info { flex: 1; min-width: 0; }
-.ep-item .item-name { font-size: 12px; font-weight: 600; color: var(--text-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; gap: 6px; align-items: center; }
-.ep-item.selected .item-name { color: var(--text-0); }
-.ep-item .item-meta { font-size: 9px; font-family: var(--font-mono); color: var(--text-3); margin-top: 2px; display: flex; gap: 8px; }
-.ep-item.dev { border-left-color: #ff00ff !important; background: rgba(255,0,255,0.04); }
-.ep-item.dev.selected { background: rgba(255,0,255,0.08); border-left-color: #ff00ff !important; }
+.ep-item .item-name { font-size: 14px; font-weight: 600; color: var(--text-0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; gap: 8px; align-items: center; }
+.ep-item.selected .item-name { color: #fff; }
+.ep-item .item-meta { font-size: 11px; font-family: var(--font-mono); color: var(--text-2); margin-top: 3px; display: flex; gap: 10px; }
+.ep-item.dev { border-left-color: #ff00ff !important; background: rgba(255,0,255,0.05); }
+.ep-item.dev.selected { background: rgba(255,0,255,0.1); border-left-color: #ff00ff !important; }
 .ep-item.dev .item-name { color: #ff88ff; }
-.ep-item.dev .item-color { border-color: rgba(255,0,255,0.4); }
-.ep-item .item-badge { font-size: 8px; font-family: var(--font-mono); padding: 1px 6px; border-radius: 8px; background: rgba(255,0,255,0.15); color: #ff88ff; border: 1px solid rgba(255,0,255,0.3); letter-spacing: 1px; flex-shrink: 0; }
-.ep-divider { padding: 6px 12px 4px; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-3); border-top: 1px solid var(--border); margin-top: 4px; }
-.ep-header-card { padding: 14px 16px; background: var(--bg-1); border-bottom: 1px solid var(--border); flex-shrink: 0; }
-.ep-header-card .hc-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.ep-header-card .hc-color { width: 16px; height: 16px; border-radius: 4px; border: 2px solid rgba(255,255,255,0.15); flex-shrink: 0; }
-.ep-header-card .hc-name { font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--text-0); letter-spacing: 1px; text-transform: uppercase; }
-.ep-header-card .hc-key { font-family: var(--font-mono); font-size: 10px; color: var(--text-3); margin-left: auto; }
-.ep-header-card .hc-stats { display: flex; gap: 12px; flex-wrap: wrap; }
-.ep-header-card .hc-stat { display: flex; align-items: center; gap: 4px; }
-.ep-header-card .hc-stat-label { font-size: 9px; font-family: var(--font-mono); color: var(--text-3); text-transform: uppercase; }
-.ep-header-card .hc-stat-val { font-size: 12px; font-family: var(--font-mono); color: var(--green); font-weight: 600; }
-.ep-no-sel { color: var(--text-3); font-size: 13px; font-style: italic; text-align: center; padding: 40px 20px; }
-.ep-fields-scroll { flex: 1; overflow-y: auto; padding: 14px 18px 16px; }
-.ep-section { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.8px; color: var(--text-3); margin: 16px 0 8px; padding: 6px 0 6px 10px; border-left: 3px solid var(--accent); background: linear-gradient(90deg, rgba(255,58,58,0.04), transparent); }
+.ep-item.dev .item-color { border-color: rgba(255,0,255,0.5); }
+.ep-item .item-badge { font-size: 9px; font-family: var(--font-mono); padding: 2px 8px; border-radius: 10px; background: rgba(255,0,255,0.2); color: #ff88ff; border: 1px solid rgba(255,0,255,0.4); letter-spacing: 1px; flex-shrink: 0; font-weight: 700; }
+.ep-divider { padding: 8px 14px 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--text-2); border-top: 1px solid var(--border); margin-top: 6px; }
+
+/* -- Header card -- */
+.ep-header-card { padding: 16px 20px; background: var(--bg-2); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.ep-header-card .hc-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.ep-header-card .hc-color { width: 20px; height: 20px; border-radius: 5px; border: 2px solid rgba(255,255,255,0.2); flex-shrink: 0; }
+.ep-header-card .hc-name { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: #fff; letter-spacing: 1.5px; text-transform: uppercase; }
+.ep-header-card .hc-key { font-family: var(--font-mono); font-size: 12px; color: var(--text-2); margin-left: auto; background: var(--bg-4); padding: 3px 10px; border-radius: var(--radius-sm); }
+.ep-header-card .hc-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+.ep-header-card .hc-stat { display: flex; align-items: center; gap: 6px; background: var(--bg-3); padding: 4px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.ep-header-card .hc-stat-label { font-size: 10px; font-family: var(--font-mono); color: var(--text-2); text-transform: uppercase; letter-spacing: 0.5px; }
+.ep-header-card .hc-stat-val { font-size: 14px; font-family: var(--font-mono); color: var(--green); font-weight: 700; }
+
+/* -- Properties -- */
+.ep-no-sel { color: var(--text-2); font-size: 16px; font-style: italic; text-align: center; padding: 60px 24px; }
+.ep-fields-scroll { flex: 1; overflow-y: auto; padding: 16px 24px 20px; }
+.ep-section { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--text-1); margin: 20px 0 10px; padding: 8px 0 8px 12px; border-left: 3px solid var(--accent); background: linear-gradient(90deg, rgba(255,58,58,0.06), transparent); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
 .ep-section:first-child { margin-top: 0; }
-.ep-row { display: flex; gap: 8px; margin-bottom: 6px; align-items: center; }
-.ep-row label { font-size: 10px; font-family: var(--font-mono); color: var(--text-2); width: 90px; text-align: right; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.3px; }
-.ep-row input[type="number"], .ep-row input[type="text"] { flex: 1; background: var(--bg-0); border: 1px solid var(--border); color: var(--text-0); padding: 6px 8px; border-radius: var(--radius-sm); font-size: 12px; font-family: var(--font-mono); transition: border-color var(--transition), box-shadow var(--transition); min-width: 0; }
-.ep-row input:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 2px rgba(0,255,136,0.08); }
-.ep-row input[type="color"] { width: 32px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-0); cursor: pointer; flex-shrink: 0; }
-.ep-row .color-pair { display: flex; gap: 6px; flex: 1; align-items: center; }
+.ep-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; min-height: 34px; }
+.ep-row label { font-size: 13px; font-family: var(--font-ui); font-weight: 500; color: var(--text-1); width: 130px; text-align: right; flex-shrink: 0; }
+.ep-row input[type="number"], .ep-row input[type="text"] { flex: 1; background: var(--bg-2); border: 1px solid var(--border); color: #fff; padding: 8px 10px; border-radius: var(--radius-sm); font-size: 14px; font-family: var(--font-mono); transition: border-color var(--transition), box-shadow var(--transition); min-width: 0; }
+.ep-row input:hover { border-color: var(--border-hi); }
+.ep-row input:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px rgba(0,255,136,0.1); }
+.ep-row input[type="color"] { width: 38px; height: 34px; padding: 2px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-2); cursor: pointer; flex-shrink: 0; }
+.ep-row input[type="color"]:hover { border-color: var(--border-hi); }
+.ep-row .color-pair { display: flex; gap: 8px; flex: 1; align-items: center; }
 .ep-row .color-pair input[type="text"] { flex: 1; }
-.ep-toggle { position: relative; width: 36px; height: 20px; cursor: pointer; flex-shrink: 0; display: inline-block; }
+
+/* -- Toggle switch -- */
+.ep-toggle { position: relative; width: 42px; height: 24px; cursor: pointer; flex-shrink: 0; display: inline-block; }
 .ep-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
-.ep-toggle .slider { position: absolute; inset: 0; background: var(--bg-4); border: 1px solid var(--border); border-radius: 10px; transition: all 0.2s; }
-.ep-toggle .slider::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: var(--text-3); border-radius: 50%; transition: all 0.2s; }
-.ep-toggle input:checked + .slider { background: rgba(0,255,136,0.2); border-color: rgba(0,255,136,0.4); }
-.ep-toggle input:checked + .slider::after { transform: translateX(16px); background: var(--green); box-shadow: 0 0 4px var(--green); }
-.ep-range2 { display: flex; gap: 4px; flex: 1; align-items: center; }
+.ep-toggle .slider { position: absolute; inset: 0; background: var(--bg-4); border: 1px solid var(--border); border-radius: 12px; transition: all 0.2s; }
+.ep-toggle .slider::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: var(--text-3); border-radius: 50%; transition: all 0.2s; }
+.ep-toggle input:checked + .slider { background: rgba(0,255,136,0.25); border-color: rgba(0,255,136,0.5); }
+.ep-toggle input:checked + .slider::after { transform: translateX(18px); background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+/* -- Range2 -- */
+.ep-range2 { display: flex; gap: 6px; flex: 1; align-items: center; }
 .ep-range2 input { flex: 1; min-width: 0; }
-.ep-range2 .dash { color: var(--text-3); font-size: 10px; padding: 0 2px; flex-shrink: 0; }
-.ep-export-drawer { border-top: 1px solid var(--border); background: var(--bg-1); flex-shrink: 0; transition: max-height 0.3s ease; max-height: 300px; overflow: hidden; }
-.ep-export-drawer.collapsed { max-height: 36px; }
-.ep-export-toggle { display: flex; align-items: center; padding: 8px 12px; gap: 6px; cursor: pointer; user-select: none; border: none; background: none; color: var(--text-2); width: 100%; font-family: var(--font-display); font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; text-align: left; transition: color 0.15s; }
-.ep-export-toggle:hover { color: var(--text-0); }
-.ep-export-toggle .chevron { font-size: 8px; transition: transform 0.2s; display: inline-block; }
+.ep-range2 .dash { color: var(--text-2); font-size: 14px; padding: 0 2px; flex-shrink: 0; }
+
+/* -- Export drawer -- */
+.ep-export-drawer { border-top: 1px solid var(--border); background: var(--bg-2); flex-shrink: 0; transition: max-height 0.3s ease; max-height: 350px; overflow: hidden; }
+.ep-export-drawer.collapsed { max-height: 40px; }
+.ep-export-toggle { display: flex; align-items: center; padding: 10px 14px; gap: 8px; cursor: pointer; user-select: none; border: none; background: none; color: var(--text-1); width: 100%; font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; text-align: left; transition: color 0.15s; }
+.ep-export-toggle:hover { color: #fff; }
+.ep-export-toggle .chevron { font-size: 10px; transition: transform 0.2s; display: inline-block; }
 .ep-export-drawer.collapsed .chevron { transform: rotate(-90deg); }
-.ep-export-inner { padding: 0 12px 10px; display: flex; flex-direction: column; gap: 6px; }
-.ep-json { flex: 1; min-height: 80px; max-height: 180px; background: var(--bg-0); color: var(--green); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 10px; font-family: var(--font-mono); resize: vertical; line-height: 1.5; }
+.ep-export-inner { padding: 0 14px 12px; display: flex; flex-direction: column; gap: 8px; }
+.ep-json { flex: 1; min-height: 100px; max-height: 200px; background: var(--bg-0); color: var(--green); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12px; font-family: var(--font-mono); resize: vertical; line-height: 1.6; }
 .ep-json:focus { outline: none; border-color: var(--green); }
-.ep-export-actions { display: flex; gap: 4px; flex-shrink: 0; }
-.ep-export-actions .btn { flex: 1; text-align: center; }
+.ep-export-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.ep-export-actions .btn { flex: 1; text-align: center; font-size: 12px; padding: 7px 14px; }
+
+/* -- Settings layout -- */
 .ep-settings-layout { display: flex; height: 100%; }
-.ep-settings-card { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+.ep-settings-card { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--bg-0); }
 .ep-settings-card:last-child { border-right: none; }
-.ep-settings-card .ep-fields-scroll { flex: 1; overflow-y: auto; padding: 14px 18px 18px; }
-.ep-threshold-labels { display: flex; gap: 4px; padding: 4px 8px; margin-bottom: 4px; }
-.ep-threshold-labels span { flex: 1; font-size: 8px; font-family: var(--font-mono); color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; }
-.ep-threshold { display: flex; gap: 4px; align-items: center; margin-bottom: 4px; padding: 5px 8px; background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: border-color 0.15s; }
+.ep-settings-card .ep-bar { background: var(--bg-2); }
+.ep-settings-card .ep-fields-scroll { flex: 1; overflow-y: auto; padding: 16px 24px 20px; }
+
+/* -- Thresholds -- */
+.ep-threshold-labels { display: flex; gap: 6px; padding: 6px 10px; margin-bottom: 4px; }
+.ep-threshold-labels span { flex: 1; font-size: 10px; font-family: var(--font-ui); font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.5px; }
+.ep-threshold { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; padding: 8px 10px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: border-color 0.15s; }
 .ep-threshold:hover { border-color: var(--border-hi); }
-.ep-threshold input { flex: 1; min-width: 0; background: var(--bg-0); border: 1px solid var(--border); color: var(--text-0); padding: 4px 6px; border-radius: var(--radius-sm); font-size: 11px; font-family: var(--font-mono); }
+.ep-threshold input { flex: 1; min-width: 0; background: var(--bg-0); border: 1px solid var(--border); color: #fff; padding: 6px 8px; border-radius: var(--radius-sm); font-size: 13px; font-family: var(--font-mono); }
 .ep-threshold input:focus { outline: none; border-color: var(--green); }
-.ep-threshold .btn { padding: 3px 8px; font-size: 10px; flex-shrink: 0; }
-.ep-threshold-add { margin-top: 6px; }
+.ep-threshold .btn { padding: 5px 10px; font-size: 12px; flex-shrink: 0; }
+.ep-threshold-add { margin-top: 8px; font-size: 12px; padding: 7px 14px; }
 
 /* ---- Scanline + crosshair ---- */
 #page-map::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.02) 2px, rgba(0,0,0,0.02) 4px); pointer-events: none; z-index: 5; }
@@ -1582,29 +1602,29 @@ const ENEMY_SCHEMA = [
   { section: "Body" },
   { key: "radius", label: "Radius", type: "number", step: 1 },
   { key: "speed", label: "Speed", type: "number", step: 1 },
-  { key: "maxHealth", label: "Max HP", type: "number", step: 1 },
+  { key: "maxHealth", label: "Max Health", type: "number", step: 1 },
   { section: "Combat" },
   { key: "damage", label: "Damage", type: "number", step: 1 },
-  { key: "attackRange", label: "Atk Range", type: "number", step: 1 },
-  { key: "preferredDistance", label: "Pref Dist", type: "number", step: 1 },
+  { key: "attackRange", label: "Attack Range", type: "number", step: 1 },
+  { key: "preferredDistance", label: "Prefer Distance", type: "number", step: 1 },
   { key: "attackWindup", label: "Windup", type: "number", step: 0.01 },
   { key: "attackRecovery", label: "Recovery", type: "number", step: 0.01 },
   { key: "attackCooldown", label: "Cooldown", type: "number", step: 0.01 },
-  { key: "projectileSpeed", label: "Proj Speed", type: "number", step: 1 },
-  { section: "AI" },
-  { key: "noticeRange", label: "Notice", type: "number", step: 1 },
-  { key: "retreatThreshold", label: "Retreat %", type: "number", step: 0.01 },
-  { key: "retreatTime", label: "Retreat T", type: "range2", step: 0.05 },
-  { key: "retreatCooldown", label: "Retreat CD", type: "number", step: 0.1 },
-  { section: "Special" },
-  { key: "auraRadius", label: "Aura Rad", type: "number", step: 1 },
-  { key: "buffSpeedMult", label: "Buff Spd", type: "number", step: 0.01 },
+  { key: "projectileSpeed", label: "Projectile Speed", type: "number", step: 1 },
+  { section: "AI Behavior" },
+  { key: "noticeRange", label: "Notice Range", type: "number", step: 1 },
+  { key: "retreatThreshold", label: "Retreat HP %", type: "number", step: 0.01 },
+  { key: "retreatTime", label: "Retreat Time", type: "range2", step: 0.05 },
+  { key: "retreatCooldown", label: "Retreat Cooldown", type: "number", step: 0.1 },
+  { section: "Special Abilities" },
+  { key: "auraRadius", label: "Aura Radius", type: "number", step: 1 },
+  { key: "buffSpeedMult", label: "Buff Speed", type: "number", step: 0.01 },
   { section: "Visuals" },
-  { key: "bodyColor", label: "Body", type: "color" },
-  { key: "accentColor", label: "Accent", type: "color" },
-  { key: "eyeColor", label: "Eye", type: "color" },
-  { key: "glowColor", label: "Glow", type: "text" },
-  { key: "tintFilter", label: "Filter", type: "text" },
+  { key: "bodyColor", label: "Body Color", type: "color" },
+  { key: "accentColor", label: "Accent Color", type: "color" },
+  { key: "eyeColor", label: "Eye Color", type: "color" },
+  { key: "glowColor", label: "Glow Color", type: "text" },
+  { key: "tintFilter", label: "Tint Filter", type: "text" },
 ];
 
 const WEAPON_SCHEMA = [
@@ -1615,10 +1635,10 @@ const WEAPON_SCHEMA = [
   { section: "Stats" },
   { key: "damage", label: "Damage", type: "number", step: 1 },
   { key: "cooldown", label: "Cooldown", type: "number", step: 0.001 },
-  { key: "projectileSpeed", label: "Proj Speed", type: "number", step: 1 },
+  { key: "projectileSpeed", label: "Projectile Speed", type: "number", step: 1 },
   { key: "pellets", label: "Pellets", type: "number", step: 1 },
   { key: "spread", label: "Spread", type: "number", step: 0.01 },
-  { key: "radius", label: "Bullet Rad", type: "number", step: 1 },
+  { key: "radius", label: "Bullet Radius", type: "number", step: 1 },
   { key: "recoil", label: "Recoil", type: "number", step: 1 },
   { section: "Visuals" },
   { key: "color", label: "Color", type: "color" },
@@ -1626,18 +1646,18 @@ const WEAPON_SCHEMA = [
 
 const PLAYER_SCHEMA = [
   { section: "Health" },
-  { key: "maxHealth", label: "Max HP", type: "number", step: 1 },
+  { key: "maxHealth", label: "Max Health", type: "number", step: 1 },
   { key: "radius", label: "Radius", type: "number", step: 1 },
   { section: "Movement" },
   { key: "speed", label: "Speed", type: "number", step: 1 },
   { section: "Energy" },
   { key: "maxEnergy", label: "Max Energy", type: "number", step: 1 },
-  { key: "energyRegen", label: "Regen", type: "number", step: 1 },
+  { key: "energyRegen", label: "Energy Regen", type: "number", step: 1 },
   { section: "Dash" },
-  { key: "dashCost", label: "Cost", type: "number", step: 1 },
-  { key: "dashDistance", label: "Distance", type: "number", step: 1 },
-  { key: "dashCooldown", label: "Cooldown", type: "number", step: 0.01 },
-  { key: "dashInvulnerability", label: "Invuln", type: "number", step: 0.01 },
+  { key: "dashCost", label: "Dash Cost", type: "number", step: 1 },
+  { key: "dashDistance", label: "Dash Distance", type: "number", step: 1 },
+  { key: "dashCooldown", label: "Dash Cooldown", type: "number", step: 0.01 },
+  { key: "dashInvulnerability", label: "Invulnerability", type: "number", step: 0.01 },
 ];
 
 const WAVE_SCHEMA = [
@@ -1648,9 +1668,9 @@ const WAVE_SCHEMA = [
   { key: "maxEnemies", label: "Max Enemies", type: "number", step: 1 },
   { key: "spawnDelay", label: "Spawn Delay", type: "range2", step: 0.01 },
   { section: "Boss" },
-  { key: "bossInterval", label: "Boss Every", type: "number", step: 1 },
+  { key: "bossInterval", label: "Boss Interval", type: "number", step: 1 },
   { key: "bossType", label: "Boss Type", type: "text" },
-  { key: "defaultType", label: "Default", type: "text" },
+  { key: "defaultType", label: "Default Type", type: "text" },
 ];
 
 // ===========================================================================
@@ -1679,7 +1699,7 @@ function renderEnemList() {
     item.className = "ep-item" + (k === enemSelKey ? " selected" : "");
     item.innerHTML = '<div class="item-color" style="background:' + (e.bodyColor||'#888') + '"></div>'
       + '<div class="item-info"><div class="item-name">' + (e.label || k) + '</div>'
-      + '<div class="item-meta"><span>\u2665 ' + (e.maxHealth||0) + '</span><span>\u26A1 ' + (e.speed||0) + '</span><span>\u2694 ' + (e.damage||0) + '</span></div></div>';
+      + '<div class="item-meta"><span>HP ' + (e.maxHealth||0) + '</span><span>SPD ' + (e.speed||0) + '</span><span>DMG ' + (e.damage||0) + '</span></div></div>';
     item.addEventListener("click", () => selectEnemy(k));
     list.appendChild(item);
   }
@@ -1777,7 +1797,7 @@ function renderWeapList() {
     item.className = "ep-item" + (i === weapSelIdx ? " selected" : "");
     item.innerHTML = '<div class="item-color" style="background:' + (w.color||'#888') + '"></div>'
       + '<div class="item-info"><div class="item-name">' + (w.name||'Weapon '+i) + '</div>'
-      + '<div class="item-meta"><span>\u2694 ' + (w.damage||0) + '</span><span>\u23F1 ' + (w.cooldown||0) + 's</span><span>\u2727 ' + (w.pellets||1) + '</span></div></div>';
+      + '<div class="item-meta"><span>DMG ' + (w.damage||0) + '</span><span>CD ' + (w.cooldown||0) + 's</span><span>x' + (w.pellets||1) + ' pellets</span></div></div>';
     const idx = i; item.addEventListener("click", () => selectWeapon(idx));
     list.appendChild(item);
   }
@@ -1789,7 +1809,7 @@ function renderWeapList() {
   devItem.className = "ep-item dev" + (weapSelIdx === DEV_SEL ? " selected" : "");
   devItem.innerHTML = '<div class="item-color" style="background:' + (dw.color||'#ff00ff') + '"></div>'
     + '<div class="item-info"><div class="item-name">' + (dw.name||'DEV Laser') + ' <span class="item-badge">DEV</span></div>'
-    + '<div class="item-meta"><span>\u2694 ' + (dw.damage||0) + '</span><span>\u23F1 ' + (dw.cooldown||0) + 's</span><span>\u2727 ' + (dw.pellets||1) + '</span></div></div>';
+    + '<div class="item-meta"><span>DMG ' + (dw.damage||0) + '</span><span>CD ' + (dw.cooldown||0) + 's</span><span>x' + (dw.pellets||1) + ' pellets</span></div></div>';
   devItem.addEventListener("click", () => selectWeapon(DEV_SEL));
   list.appendChild(devItem);
 }
