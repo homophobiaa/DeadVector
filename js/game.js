@@ -388,7 +388,6 @@ export class Game {
     this.bullets.push(...bullets);
     this.audio.playShoot(this.player.weapon.name);
     this.screenShake = Math.max(this.screenShake, this.player.weapon.recoil);
-    this.spawnBurst(this.player.x, this.player.y, this.player.weapon.color, 4, 10, 40);
   }
 
   update(delta) {

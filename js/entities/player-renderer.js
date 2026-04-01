@@ -149,16 +149,12 @@ export function renderPlayerParts(ctx, player) {
       ctx.translate(shX, shY);
       ctx.rotate(rSwing + weaponSway);
       const muzzleY = -ah - (gh - gripOffset);
-      ctx.globalAlpha = player.muzzleFlash;
-      ctx.shadowBlur = 30;
-      ctx.shadowColor = player.weapon.color;
+      ctx.globalAlpha = player.muzzleFlash * 0.85;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "#fff";
       ctx.fillStyle = "#fff";
       ctx.beginPath();
-      ctx.arc(0, muzzleY, 4 + player.muzzleFlash * 6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = player.weapon.color;
-      ctx.beginPath();
-      ctx.arc(0, muzzleY, 2 + player.muzzleFlash * 10, 0, Math.PI * 2);
+      ctx.arc(0, muzzleY, 2 + player.muzzleFlash * 3, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
