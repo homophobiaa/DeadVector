@@ -10,8 +10,8 @@ import {
 } from "../systems/collision.js";
 import { renderZombieParts } from "./zombie-renderer.js";
 
-// Five enemy types for FSM AI variety
-const ENEMY_TYPES = {
+// Five enemy types for FSM AI variety — mutable so dev panel can hot-swap
+let ENEMY_TYPES = {
   shambler: {
     label: "Shambler",
     radius: 16,
@@ -129,6 +129,11 @@ const ENEMY_TYPES = {
     buffSpeedMult: 1.2,
   },
 };
+
+/** Replace all enemy type configs at runtime (dev panel). */
+export function setEnemyTypes(types) { ENEMY_TYPES = types; }
+/** Return current enemy type configs (for export). */
+export function getEnemyTypes() { return ENEMY_TYPES; }
 
 export class Enemy {
   constructor({ x, y, type, wave }) {

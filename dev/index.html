@@ -49,13 +49,13 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
 #main { flex: 1; position: relative; overflow: hidden; background: var(--bg-0); }
 
 /* ---- Pages ---- */
-.dev-page { position: absolute; inset: 0; display: none; }
-.dev-page.active { display: block; }
+.dev-page { position: absolute; inset: 0; display: none; flex-direction: column; overflow: hidden; }
+.dev-page.active { display: flex; }
 .dev-page canvas { position: absolute; top: 0; left: 0; }
 
 /* ---- Tabs ---- */
 .nav-tabs { display: flex; gap: 2px; margin-left: 8px; }
-.nav-tab { padding: 5px 14px; background: transparent; color: var(--text-2); border: 1px solid transparent; border-bottom: none; border-radius: var(--radius-sm) var(--radius-sm) 0 0; font-family: var(--font-ui); font-size: 10px; font-weight: 600; cursor: pointer; transition: all var(--transition); letter-spacing: 0.3px; }
+.nav-tab { padding: 6px 16px; background: transparent; color: var(--text-1); border: 1px solid transparent; border-bottom: none; border-radius: var(--radius-sm) var(--radius-sm) 0 0; font-family: var(--font-ui); font-size: 12px; font-weight: 600; cursor: pointer; transition: all var(--transition); letter-spacing: 0.3px; }
 .nav-tab:hover { color: var(--text-0); background: var(--bg-2); }
 .nav-tab.active { color: var(--accent); background: var(--bg-0); border-color: var(--border); position: relative; }
 .nav-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px; background: var(--bg-0); }
@@ -83,7 +83,7 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
 
 /* ---- Panel content ---- */
 .fp-toolbar { display: flex; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--border); flex-wrap: wrap; flex-shrink: 0; }
-.btn { padding: 4px 10px; background: var(--bg-3); color: var(--text-1); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-family: var(--font-ui); font-size: 10px; font-weight: 500; transition: all var(--transition); white-space: nowrap; }
+.btn { padding: 6px 12px; background: var(--bg-3); color: var(--text-1); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 500; transition: all var(--transition); white-space: nowrap; }
 .btn:hover { background: var(--bg-4); border-color: var(--border-hi); color: var(--text-0); }
 .btn:active { transform: scale(0.96); }
 .btn.primary { color: var(--green); border-color: rgba(0,255,136,0.25); }
@@ -137,6 +137,114 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
 /* ---- Toast ---- */
 .toast { position: fixed; top: 54px; left: 50%; transform: translateX(-50%) translateY(-6px); background: var(--bg-3); color: var(--green); border: 1px solid rgba(0,255,136,0.2); border-radius: var(--radius); padding: 6px 18px; font-family: var(--font-mono); font-size: 11px; z-index: 200; opacity: 0; transition: all 0.3s ease; pointer-events: none; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---- Editor Pages (Enemies, Weapons, Settings) ---- */
+.ep-layout { display: flex; height: 100%; overflow: hidden; }
+.ep-sidebar { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--bg-1); border-right: 1px solid var(--border); overflow: hidden; }
+.ep-main { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; background: var(--bg-0); }
+.ep-content { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.ep-bar { display: flex; align-items: center; padding: 10px 14px; background: var(--bg-2); border-bottom: 1px solid var(--border); gap: 10px; flex-shrink: 0; }
+.ep-bar .ep-icon { font-size: 18px; }
+.ep-bar .ep-title { flex: 1; font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--text-0); letter-spacing: 1.5px; text-transform: uppercase; }
+.ep-bar .ep-count { background: var(--accent); color: #fff; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-family: var(--font-mono); font-weight: 600; }
+.ep-toolbar { display: flex; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap; background: var(--bg-1); }
+.ep-toolbar .btn { font-size: 12px; padding: 6px 14px; }
+.ep-body { flex: 1; overflow-y: auto; overflow-x: hidden; }
+
+/* -- List items -- */
+.ep-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.12s; border-bottom: 1px solid rgba(42,45,56,0.4); }
+.ep-item:hover { background: var(--bg-3); }
+.ep-item.selected { background: rgba(0,255,136,0.08); border-left-color: var(--green); }
+.ep-item .item-color { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.15); }
+.ep-item.selected .item-color { border-color: rgba(255,255,255,0.4); box-shadow: 0 0 8px var(--green); }
+.ep-item .item-info { flex: 1; min-width: 0; }
+.ep-item .item-name { font-size: 14px; font-weight: 600; color: var(--text-0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; gap: 8px; align-items: center; }
+.ep-item.selected .item-name { color: #fff; }
+.ep-item .item-meta { font-size: 11px; font-family: var(--font-mono); color: var(--text-2); margin-top: 3px; display: flex; gap: 10px; }
+.ep-item.dev { border-left-color: #ff00ff !important; background: rgba(255,0,255,0.05); }
+.ep-item.dev.selected { background: rgba(255,0,255,0.1); border-left-color: #ff00ff !important; }
+.ep-item.dev .item-name { color: #ff88ff; }
+.ep-item.dev .item-color { border-color: rgba(255,0,255,0.5); }
+.ep-item .item-badge { font-size: 9px; font-family: var(--font-mono); padding: 2px 8px; border-radius: 10px; background: rgba(255,0,255,0.2); color: #ff88ff; border: 1px solid rgba(255,0,255,0.4); letter-spacing: 1px; flex-shrink: 0; font-weight: 700; }
+.ep-divider { padding: 8px 14px 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--text-2); border-top: 1px solid var(--border); margin-top: 6px; }
+
+/* -- Header card -- */
+.ep-header-card { padding: 16px 20px; background: var(--bg-2); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.ep-header-card .hc-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.ep-header-card .hc-color { width: 20px; height: 20px; border-radius: 5px; border: 2px solid rgba(255,255,255,0.2); flex-shrink: 0; }
+.ep-header-card .hc-name { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: #fff; letter-spacing: 1.5px; text-transform: uppercase; }
+.ep-header-card .hc-key { font-family: var(--font-mono); font-size: 12px; color: var(--text-2); margin-left: auto; background: var(--bg-4); padding: 3px 10px; border-radius: var(--radius-sm); }
+.ep-header-card .hc-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+.ep-header-card .hc-stat { display: flex; align-items: center; gap: 6px; background: var(--bg-3); padding: 4px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.ep-header-card .hc-stat-label { font-size: 10px; font-family: var(--font-mono); color: var(--text-2); text-transform: uppercase; letter-spacing: 0.5px; }
+.ep-header-card .hc-stat-val { font-size: 14px; font-family: var(--font-mono); color: var(--green); font-weight: 700; }
+
+/* -- Properties -- */
+.ep-no-sel { color: var(--text-2); font-size: 16px; font-style: italic; text-align: center; padding: 60px 24px; flex: 1; display: flex; align-items: center; justify-content: center; }
+.ep-editor-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.ep-editor { min-height: 0; overflow: hidden; }
+.ep-fields-scroll { flex: 1; overflow-y: auto; padding: 16px 24px 20px; min-height: 0; }
+.ep-section { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--text-1); margin: 20px 0 10px; padding: 8px 0 8px 12px; border-left: 3px solid var(--accent); background: linear-gradient(90deg, rgba(255,58,58,0.06), transparent); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.ep-section:first-child { margin-top: 0; }
+.ep-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; min-height: 34px; }
+.ep-row label { font-size: 13px; font-family: var(--font-ui); font-weight: 500; color: var(--text-1); width: 130px; text-align: right; flex-shrink: 0; }
+.ep-row input[type="number"], .ep-row input[type="text"] { flex: 1; background: var(--bg-2); border: 1px solid var(--border); color: #fff; padding: 8px 10px; border-radius: var(--radius-sm); font-size: 14px; font-family: var(--font-mono); transition: border-color var(--transition), box-shadow var(--transition); min-width: 0; }
+.ep-row input:hover { border-color: var(--border-hi); }
+.ep-row input:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px rgba(0,255,136,0.1); }
+.ep-row input[type="color"] { width: 38px; height: 34px; padding: 2px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-2); cursor: pointer; flex-shrink: 0; }
+.ep-row input[type="color"]:hover { border-color: var(--border-hi); }
+.ep-row .color-pair { display: flex; gap: 8px; flex: 1; align-items: center; }
+.ep-row .color-pair input[type="text"] { flex: 1; }
+
+/* -- Toggle switch -- */
+.ep-toggle { position: relative; width: 42px; height: 24px; cursor: pointer; flex-shrink: 0; display: inline-block; }
+.ep-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.ep-toggle .slider { position: absolute; inset: 0; background: var(--bg-4); border: 1px solid var(--border); border-radius: 12px; transition: all 0.2s; }
+.ep-toggle .slider::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: var(--text-3); border-radius: 50%; transition: all 0.2s; }
+.ep-toggle input:checked + .slider { background: rgba(0,255,136,0.25); border-color: rgba(0,255,136,0.5); }
+.ep-toggle input:checked + .slider::after { transform: translateX(18px); background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+/* -- Range2 -- */
+.ep-range2 { display: flex; gap: 6px; flex: 1; align-items: center; }
+.ep-range2 input { flex: 1; min-width: 0; }
+.ep-range2 .dash { color: var(--text-2); font-size: 14px; padding: 0 2px; flex-shrink: 0; }
+
+/* -- Export drawer -- */
+.ep-export-resize { height: 5px; cursor: ns-resize; background: transparent; flex-shrink: 0; transition: background 0.15s; }
+.ep-export-resize:hover, .ep-export-resize.dragging { background: var(--green); }
+.ep-export-drawer.collapsed .ep-export-resize { display: none; }
+.ep-export-drawer { border-top: 1px solid var(--border); background: var(--bg-2); flex-shrink: 0; overflow: hidden; transition: height 0.3s ease; display: flex; flex-direction: column; }
+.ep-export-toggle { display: flex; align-items: center; padding: 10px 14px; gap: 8px; cursor: pointer; user-select: none; border: none; background: none; color: var(--text-1); width: 100%; font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; text-align: left; transition: color 0.15s; }
+.ep-export-toggle:hover { color: #fff; }
+.ep-export-toggle .chevron { font-size: 10px; transition: transform 0.2s; display: inline-block; }
+.ep-export-drawer.collapsed .chevron { transform: rotate(-90deg); }
+.ep-export-inner { padding: 0 14px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; overflow: hidden; }
+.ep-json { flex: 1; min-height: 60px; background: var(--bg-0); color: var(--green); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12px; font-family: var(--font-mono); resize: none; line-height: 1.6; overflow-y: auto; }
+.ep-json:focus { outline: none; border-color: var(--green); }
+.ep-export-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.ep-export-actions .btn { flex: 1; text-align: center; font-size: 12px; padding: 7px 14px; }
+
+/* -- Drag divider -- */
+.ep-drag { width: 5px; flex-shrink: 0; background: var(--border); cursor: ew-resize; position: relative; transition: background 0.15s; z-index: 10; }
+.ep-drag:hover, .ep-drag.dragging { background: var(--green); }
+.ep-drag::after { content: ''; position: absolute; inset: 0 -4px; }
+
+/* -- Settings layout -- */
+.ep-settings-layout { display: flex; height: 100%; overflow: hidden; }
+.ep-settings-card { min-width: 160px; display: flex; flex-direction: column; background: var(--bg-0); overflow: hidden; }
+.ep-spacer { flex: 1; min-width: 0; background: var(--bg-0); }
+.ep-settings-card .ep-bar { background: var(--bg-2); }
+.ep-settings-card .ep-fields-scroll { flex: 1; overflow-y: auto; padding: 16px 24px 20px; min-height: 0; }
+
+/* -- Thresholds -- */
+.ep-threshold-labels { display: flex; gap: 6px; padding: 6px 10px; margin-bottom: 4px; }
+.ep-threshold-labels span { flex: 1; font-size: 10px; font-family: var(--font-ui); font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.5px; }
+.ep-threshold { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; padding: 8px 10px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: border-color 0.15s; }
+.ep-threshold:hover { border-color: var(--border-hi); }
+.ep-threshold input { flex: 1; min-width: 0; background: var(--bg-0); border: 1px solid var(--border); color: #fff; padding: 6px 8px; border-radius: var(--radius-sm); font-size: 13px; font-family: var(--font-mono); }
+.ep-threshold input:focus { outline: none; border-color: var(--green); }
+.ep-threshold .btn { padding: 5px 10px; font-size: 12px; flex-shrink: 0; }
+.ep-threshold-add { margin-top: 8px; font-size: 12px; padding: 7px 14px; }
 
 /* ---- Scanline + crosshair ---- */
 #page-map::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.02) 2px, rgba(0,0,0,0.02) 4px); pointer-events: none; z-index: 5; }
@@ -266,31 +374,128 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
 
   <!-- ===== Enemies Page ===== -->
   <div class="dev-page" id="page-enemies">
-    <div class="page-placeholder">
-      <div class="ph-icon">&#128128;</div>
-      <h2>Enemy Tuner</h2>
-      <p>Tune enemy types, FSM states, speed, health, and spawn rates.</p>
-      <span class="ph-badge">Coming Soon</span>
+    <div class="ep-layout" id="enem-layout">
+      <div class="ep-sidebar" id="enem-sidebar">
+        <div class="ep-bar">
+          <span class="ep-icon">&#128128;</span>
+          <span class="ep-title">Enemy Types</span>
+          <span class="ep-count" id="enem-count">0</span>
+        </div>
+        <div class="ep-toolbar">
+          <button class="btn primary" id="enem-add">+ Add</button>
+          <button class="btn" id="enem-dup">Duplicate</button>
+          <button class="btn danger" id="enem-del">Delete</button>
+        </div>
+        <div class="ep-body" id="enem-list"></div>
+      </div>
+      <div class="ep-drag" id="enem-drag" title="Drag to resize"></div>
+      <div class="ep-main">
+        <div class="ep-content">
+          <div class="ep-no-sel" id="enem-no-sel">Select an enemy type to edit its properties</div>
+          <div class="ep-editor" id="enem-editor" style="display:none;flex-direction:column;flex:1">
+            <div class="ep-header-card" id="enem-header"></div>
+            <div class="ep-fields-scroll" id="enem-fields"></div>
+          </div>
+        </div>
+        <div class="ep-export-drawer collapsed" id="enem-export-drawer">
+          <div class="ep-export-resize" title="Drag to resize"></div>
+          <button class="ep-export-toggle" id="enem-export-toggle"><span class="chevron">&#9660;</span> Export JSON <span style="font-family:var(--font-mono);font-size:8px;color:var(--text-3);margin-left:auto">enemies-data.json</span></button>
+          <div class="ep-export-inner">
+            <textarea id="enem-export" class="ep-json" spellcheck="false" readonly></textarea>
+            <div class="ep-export-actions">
+              <button class="btn primary" id="enem-copy">Copy JSON</button>
+              <button class="btn danger" id="enem-reset">Reset All</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- ===== Weapons Page ===== -->
   <div class="dev-page" id="page-weapons">
-    <div class="page-placeholder">
-      <div class="ph-icon">&#9876;</div>
-      <h2>Weapon Stats</h2>
-      <p>Adjust weapon damage, fire rate, spread, and projectile properties.</p>
-      <span class="ph-badge">Coming Soon</span>
+    <div class="ep-layout" id="weap-layout">
+      <div class="ep-sidebar" id="weap-sidebar">
+        <div class="ep-bar">
+          <span class="ep-icon">&#9876;</span>
+          <span class="ep-title">Weapons</span>
+          <span class="ep-count" id="weap-count">0</span>
+        </div>
+        <div class="ep-toolbar">
+          <button class="btn primary" id="weap-add">+ Add</button>
+          <button class="btn" id="weap-dup">Duplicate</button>
+          <button class="btn danger" id="weap-del">Delete</button>
+          <button class="btn" id="weap-up" title="Move Up">&#8593;</button>
+          <button class="btn" id="weap-down" title="Move Down">&#8595;</button>
+        </div>
+        <div class="ep-body" id="weap-list"></div>
+      </div>
+      <div class="ep-drag" id="weap-drag" title="Drag to resize"></div>
+      <div class="ep-main">
+        <div class="ep-content">
+          <div class="ep-no-sel" id="weap-no-sel">Select a weapon to edit its properties</div>
+          <div class="ep-editor" id="weap-editor" style="display:none;flex-direction:column;flex:1">
+            <div class="ep-header-card" id="weap-header"></div>
+            <div class="ep-fields-scroll" id="weap-fields"></div>
+          </div>
+        </div>
+        <div class="ep-export-drawer collapsed" id="weap-export-drawer">
+          <div class="ep-export-resize" title="Drag to resize"></div>
+          <button class="ep-export-toggle" id="weap-export-toggle"><span class="chevron">&#9660;</span> Export JSON <span style="font-family:var(--font-mono);font-size:8px;color:var(--text-3);margin-left:auto">weapons-data.json</span></button>
+          <div class="ep-export-inner">
+            <textarea id="weap-export" class="ep-json" spellcheck="false" readonly></textarea>
+            <div class="ep-export-actions">
+              <button class="btn primary" id="weap-copy">Copy JSON</button>
+              <button class="btn danger" id="weap-reset">Reset All</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- ===== Settings Page ===== -->
   <div class="dev-page" id="page-settings">
-    <div class="page-placeholder">
-      <div class="ph-icon">&#9881;</div>
-      <h2>Game Settings</h2>
-      <p>Configure game rules, difficulty scaling, and debug options.</p>
-      <span class="ph-badge">Coming Soon</span>
+    <div class="ep-settings-layout" id="sett-layout">
+      <div class="ep-settings-card" id="sett-card-a">
+        <div class="ep-bar">
+          <span class="ep-icon">&#9823;</span>
+          <span class="ep-title">Player Stats</span>
+        </div>
+        <div class="ep-fields-scroll" id="player-fields"></div>
+        <div class="ep-export-drawer collapsed" id="player-export-drawer">
+          <div class="ep-export-resize" title="Drag to resize"></div>
+          <button class="ep-export-toggle" id="player-export-toggle"><span class="chevron">&#9660;</span> Export JSON <span style="font-family:var(--font-mono);font-size:8px;color:var(--text-3);margin-left:auto">player-data.json</span></button>
+          <div class="ep-export-inner">
+            <textarea id="player-export" class="ep-json" spellcheck="false" readonly></textarea>
+            <div class="ep-export-actions">
+              <button class="btn primary" id="player-copy">Copy</button>
+              <button class="btn danger" id="player-reset">Reset</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ep-drag" id="sett-drag" title="Drag to resize"></div>
+      <div class="ep-settings-card" id="sett-card-b">
+        <div class="ep-bar">
+          <span class="ep-icon">&#127754;</span>
+          <span class="ep-title">Wave Config</span>
+        </div>
+        <div class="ep-fields-scroll" id="waves-fields"></div>
+        <div class="ep-export-drawer collapsed" id="waves-export-drawer">
+          <div class="ep-export-resize" title="Drag to resize"></div>
+          <button class="ep-export-toggle" id="waves-export-toggle"><span class="chevron">&#9660;</span> Export JSON <span style="font-family:var(--font-mono);font-size:8px;color:var(--text-3);margin-left:auto">waves-data.json</span></button>
+          <div class="ep-export-inner">
+            <textarea id="waves-export" class="ep-json" spellcheck="false" readonly></textarea>
+            <div class="ep-export-actions">
+              <button class="btn primary" id="waves-copy">Copy</button>
+              <button class="btn danger" id="waves-reset">Reset</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ep-drag" id="sett-drag-r" title="Drag to resize"></div>
+      <div class="ep-spacer" id="sett-spacer"></div>
     </div>
   </div>
 </div>
@@ -1322,25 +1527,590 @@ document.getElementById("btn-import").addEventListener("click", doImport);
 // ===========================================================================
 //  Tab Switching
 // ===========================================================================
+const PAGE_FRAGMENTS = {
+  "page-map": "map",
+  "page-enemies": "enemies",
+  "page-weapons": "weapons",
+  "page-settings": "settings",
+};
+const FRAGMENT_PAGES = Object.fromEntries(Object.entries(PAGE_FRAGMENTS).map(([k,v]) => [v, k]));
+
 let activePage = "page-map";
 
+function switchToPage(pageId, pushState = true) {
+  if (pageId === activePage) return;
+  document.querySelector(".nav-tab.active").classList.remove("active");
+  document.getElementById(activePage).classList.remove("active");
+  activePage = pageId;
+  document.querySelector(`.nav-tab[data-page="${pageId}"]`).classList.add("active");
+  document.getElementById(activePage).classList.add("active");
+  const isMap = activePage === "page-map";
+  document.getElementById("map-toggles").style.display = isMap ? "" : "none";
+  document.getElementById("map-status").style.display = isMap ? "" : "none";
+  if (isMap) { resizeCanvas(); draw(); }
+  if (pushState) history.pushState(null, "", "#" + PAGE_FRAGMENTS[pageId]);
+}
+
 document.querySelectorAll(".nav-tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    if (tab.dataset.page === activePage) return;
-    // Deactivate old
-    document.querySelector(".nav-tab.active").classList.remove("active");
-    document.getElementById(activePage).classList.remove("active");
-    // Activate new
-    activePage = tab.dataset.page;
-    tab.classList.add("active");
-    document.getElementById(activePage).classList.add("active");
-    // Show/hide map-specific nav controls
-    const isMap = activePage === "page-map";
-    document.getElementById("map-toggles").style.display = isMap ? "" : "none";
-    document.getElementById("map-status").style.display = isMap ? "" : "none";
-    if (isMap) { resizeCanvas(); draw(); }
-  });
+  tab.addEventListener("click", () => switchToPage(tab.dataset.page));
 });
+
+window.addEventListener("popstate", () => {
+  const frag = location.hash.slice(1);
+  const pageId = FRAGMENT_PAGES[frag] || "page-map";
+  switchToPage(pageId, false);
+});
+
+// On load, honour existing fragment
+{
+  const frag = location.hash.slice(1);
+  const pageId = FRAGMENT_PAGES[frag];
+  if (pageId) switchToPage(pageId, false);
+}
+
+// ===========================================================================
+//  Panel Resize (drag dividers between sidebar & main)
+// ===========================================================================
+function setupPanelResize(dragId, leftId, minLeft = 160, minRight = 200) {
+  const drag = document.getElementById(dragId);
+  const left = document.getElementById(leftId);
+  if (!drag || !left) return;
+  let startX, startW;
+  drag.addEventListener("mousedown", e => {
+    e.preventDefault();
+    startX = e.clientX;
+    startW = left.getBoundingClientRect().width;
+    drag.classList.add("dragging");
+    document.body.style.cursor = "ew-resize";
+    document.body.style.userSelect = "none";
+    const onMove = e => {
+      const delta = e.clientX - startX;
+      const newW = Math.max(minLeft, startW + delta);
+      // Clamp so right panel stays usable
+      const layoutW = drag.parentElement.getBoundingClientRect().width;
+      const clamped = Math.min(newW, layoutW - minRight - 5);
+      left.style.width = clamped + "px";
+      left.style.flex = "none";
+    };
+    const onUp = () => {
+      drag.classList.remove("dragging");
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  });
+}
+
+setupPanelResize("enem-drag", "enem-sidebar");
+setupPanelResize("weap-drag", "weap-sidebar");
+setupPanelResize("sett-drag", "sett-card-a");
+setupPanelResize("sett-drag-r", "sett-card-b", 250, 0);
+
+// ===========================================================================
+//  DEV Weapon Default (mirrors player.js DEV_WEAPON)
+// ===========================================================================
+const DEV_WEAPON_DEFAULT = {
+  name: "DEV Laser", auto: true, cooldown: 0.025, projectileSpeed: 2000,
+  damage: 300, radius: 5, pellets: 3, spread: 0.12, color: "#ff00ff",
+  recoil: 2, pierce: true
+};
+const DEV_SEL = -2; // sentinel index for dev weapon selection
+
+// ===========================================================================
+//  Shared Utilities
+// ===========================================================================
+function setupExportDrawer(toggleId, drawerId) {
+  const drawer = document.getElementById(drawerId);
+  const toggle = document.getElementById(toggleId);
+  const COLLAPSED_H = 40;
+  const DEFAULT_H = 260;
+  let expanded = false;
+  let lastH = DEFAULT_H;
+
+  // Initialize collapsed height via inline style
+  drawer.style.height = COLLAPSED_H + "px";
+
+  toggle.addEventListener("click", () => {
+    expanded = !expanded;
+    drawer.classList.toggle("collapsed", !expanded);
+    drawer.style.height = (expanded ? lastH : COLLAPSED_H) + "px";
+  });
+
+  const handle = drawer.querySelector(".ep-export-resize");
+  if (!handle) return;
+  handle.addEventListener("mousedown", e => {
+    if (!expanded) return;
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = drawer.getBoundingClientRect().height;
+    const savedTransition = drawer.style.transition;
+    drawer.style.transition = "none";
+    handle.classList.add("dragging");
+    document.body.style.cursor = "ns-resize";
+    document.body.style.userSelect = "none";
+    const onMove = ev => {
+      const delta = startY - ev.clientY; // drag up = taller
+      const newH = Math.max(80, Math.min(600, startH + delta));
+      drawer.style.height = newH + "px";
+      lastH = newH;
+    };
+    const onUp = () => {
+      drawer.style.transition = savedTransition;
+      handle.classList.remove("dragging");
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  });
+}
+
+function renderFields(container, schema, data, onChange) {
+  container.innerHTML = "";
+  for (const f of schema) {
+    if (f.section) {
+      const s = document.createElement("div"); s.className = "ep-section"; s.textContent = f.section;
+      container.appendChild(s); continue;
+    }
+    if (data[f.key] === undefined && f.type !== "bool") continue;
+    const row = document.createElement("div"); row.className = "ep-row";
+    const lbl = document.createElement("label"); lbl.textContent = f.label; row.appendChild(lbl);
+    if (f.type === "number") {
+      const inp = document.createElement("input"); inp.type = "number"; inp.step = f.step || 1;
+      inp.value = data[f.key] ?? 0;
+      inp.addEventListener("input", () => { data[f.key] = parseFloat(inp.value) || 0; onChange(); });
+      row.appendChild(inp);
+    } else if (f.type === "text") {
+      const inp = document.createElement("input"); inp.type = "text"; inp.value = data[f.key] ?? "";
+      inp.addEventListener("input", () => { data[f.key] = inp.value; onChange(); });
+      row.appendChild(inp);
+    } else if (f.type === "color") {
+      const pair = document.createElement("div"); pair.className = "color-pair";
+      const pick = document.createElement("input"); pick.type = "color";
+      const raw = data[f.key] || "#888888";
+      pick.value = /^#[0-9a-f]{6}$/i.test(raw) ? raw : "#888888";
+      const txt = document.createElement("input"); txt.type = "text"; txt.value = raw;
+      pick.addEventListener("input", () => { data[f.key] = pick.value; txt.value = pick.value; onChange(); });
+      txt.addEventListener("input", () => { data[f.key] = txt.value; if (/^#[0-9a-f]{6}$/i.test(txt.value)) pick.value = txt.value; onChange(); });
+      pair.append(pick, txt); row.appendChild(pair);
+    } else if (f.type === "bool") {
+      const toggle = document.createElement("label"); toggle.className = "ep-toggle";
+      const inp = document.createElement("input"); inp.type = "checkbox"; inp.checked = !!data[f.key];
+      const slider = document.createElement("span"); slider.className = "slider";
+      inp.addEventListener("change", () => { data[f.key] = inp.checked; onChange(); });
+      toggle.append(inp, slider); row.appendChild(toggle);
+    } else if (f.type === "range2") {
+      const wrap = document.createElement("div"); wrap.className = "ep-range2";
+      const arr = Array.isArray(data[f.key]) ? data[f.key] : [0, 0];
+      const i1 = document.createElement("input"); i1.type = "number"; i1.step = f.step || 0.01; i1.value = arr[0];
+      const dash = document.createElement("span"); dash.className = "dash"; dash.textContent = "\u2013";
+      const i2 = document.createElement("input"); i2.type = "number"; i2.step = f.step || 0.01; i2.value = arr[1];
+      i1.addEventListener("input", () => { arr[0] = parseFloat(i1.value) || 0; data[f.key] = arr; onChange(); });
+      i2.addEventListener("input", () => { arr[1] = parseFloat(i2.value) || 0; data[f.key] = arr; onChange(); });
+      wrap.append(i1, dash, i2); row.appendChild(wrap);
+    }
+    container.appendChild(row);
+  }
+}
+
+// ===========================================================================
+//  Field Schemas
+// ===========================================================================
+const ENEMY_SCHEMA = [
+  { section: "Identity" },
+  { key: "label", label: "Label", type: "text" },
+  { key: "score", label: "Score", type: "number", step: 1 },
+  { key: "ranged", label: "Ranged", type: "bool" },
+  { section: "Body" },
+  { key: "radius", label: "Radius", type: "number", step: 1 },
+  { key: "speed", label: "Speed", type: "number", step: 1 },
+  { key: "maxHealth", label: "Max Health", type: "number", step: 1 },
+  { section: "Combat" },
+  { key: "damage", label: "Damage", type: "number", step: 1 },
+  { key: "attackRange", label: "Attack Range", type: "number", step: 1 },
+  { key: "preferredDistance", label: "Prefer Distance", type: "number", step: 1 },
+  { key: "attackWindup", label: "Windup", type: "number", step: 0.01 },
+  { key: "attackRecovery", label: "Recovery", type: "number", step: 0.01 },
+  { key: "attackCooldown", label: "Cooldown", type: "number", step: 0.01 },
+  { key: "projectileSpeed", label: "Projectile Speed", type: "number", step: 1 },
+  { section: "AI Behavior" },
+  { key: "noticeRange", label: "Notice Range", type: "number", step: 1 },
+  { key: "retreatThreshold", label: "Retreat HP %", type: "number", step: 0.01 },
+  { key: "retreatTime", label: "Retreat Time", type: "range2", step: 0.05 },
+  { key: "retreatCooldown", label: "Retreat Cooldown", type: "number", step: 0.1 },
+  { section: "Special Abilities" },
+  { key: "auraRadius", label: "Aura Radius", type: "number", step: 1 },
+  { key: "buffSpeedMult", label: "Buff Speed", type: "number", step: 0.01 },
+  { section: "Visuals" },
+  { key: "bodyColor", label: "Body Color", type: "color" },
+  { key: "accentColor", label: "Accent Color", type: "color" },
+  { key: "eyeColor", label: "Eye Color", type: "color" },
+  { key: "glowColor", label: "Glow Color", type: "text" },
+  { key: "tintFilter", label: "Tint Filter", type: "text" },
+];
+
+const WEAPON_SCHEMA = [
+  { section: "Identity" },
+  { key: "name", label: "Name", type: "text" },
+  { key: "auto", label: "Auto-fire", type: "bool" },
+  { key: "pierce", label: "Pierce", type: "bool" },
+  { section: "Stats" },
+  { key: "damage", label: "Damage", type: "number", step: 1 },
+  { key: "cooldown", label: "Cooldown", type: "number", step: 0.001 },
+  { key: "projectileSpeed", label: "Projectile Speed", type: "number", step: 1 },
+  { key: "pellets", label: "Pellets", type: "number", step: 1 },
+  { key: "spread", label: "Spread", type: "number", step: 0.01 },
+  { key: "radius", label: "Bullet Radius", type: "number", step: 1 },
+  { key: "recoil", label: "Recoil", type: "number", step: 1 },
+  { section: "Visuals" },
+  { key: "color", label: "Color", type: "color" },
+];
+
+const PLAYER_SCHEMA = [
+  { section: "Health" },
+  { key: "maxHealth", label: "Max Health", type: "number", step: 1 },
+  { key: "radius", label: "Radius", type: "number", step: 1 },
+  { section: "Movement" },
+  { key: "speed", label: "Speed", type: "number", step: 1 },
+  { section: "Energy" },
+  { key: "maxEnergy", label: "Max Energy", type: "number", step: 1 },
+  { key: "energyRegen", label: "Energy Regen", type: "number", step: 1 },
+  { section: "Dash" },
+  { key: "dashCost", label: "Dash Cost", type: "number", step: 1 },
+  { key: "dashDistance", label: "Dash Distance", type: "number", step: 1 },
+  { key: "dashCooldown", label: "Dash Cooldown", type: "number", step: 0.01 },
+  { key: "dashInvulnerability", label: "Invulnerability", type: "number", step: 0.01 },
+];
+
+const WAVE_SCHEMA = [
+  { section: "Spawning" },
+  { key: "baseCount", label: "Base Count", type: "number", step: 1 },
+  { key: "perWave", label: "Per Wave", type: "number", step: 1 },
+  { key: "bonusEvery", label: "Bonus Every", type: "number", step: 1 },
+  { key: "maxEnemies", label: "Max Enemies", type: "number", step: 1 },
+  { key: "spawnDelay", label: "Spawn Delay", type: "range2", step: 0.01 },
+  { section: "Boss" },
+  { key: "bossInterval", label: "Boss Interval", type: "number", step: 1 },
+  { key: "bossType", label: "Boss Type", type: "text" },
+  { key: "defaultType", label: "Default Type", type: "text" },
+];
+
+// ===========================================================================
+//  Enemies Editor
+// ===========================================================================
+let enemData = {}, enemDefault = {}, enemSelKey = null;
+
+async function initEnemiesEditor() {
+  try {
+    const raw = await fetch("../js/enemies-data.json").then(r => r.json());
+    enemDefault = structuredClone(raw);
+    const saved = localStorage.getItem("dv_dev_enemies");
+    enemData = saved ? JSON.parse(saved) : structuredClone(raw);
+  } catch { enemData = {}; }
+  setupExportDrawer("enem-export-toggle", "enem-export-drawer");
+  renderEnemList(); updateEnemExport();
+}
+
+function renderEnemList() {
+  const list = document.getElementById("enem-list"); list.innerHTML = "";
+  const keys = Object.keys(enemData);
+  document.getElementById("enem-count").textContent = keys.length;
+  for (const k of keys) {
+    const e = enemData[k];
+    const item = document.createElement("div");
+    item.className = "ep-item" + (k === enemSelKey ? " selected" : "");
+    item.innerHTML = '<div class="item-color" style="background:' + (e.bodyColor||'#888') + '"></div>'
+      + '<div class="item-info"><div class="item-name">' + (e.label || k) + '</div>'
+      + '<div class="item-meta"><span>HP ' + (e.maxHealth||0) + '</span><span>SPD ' + (e.speed||0) + '</span><span>DMG ' + (e.damage||0) + '</span></div></div>';
+    item.addEventListener("click", () => selectEnemy(k));
+    list.appendChild(item);
+  }
+}
+
+function renderEnemHeader(key) {
+  const card = document.getElementById("enem-header");
+  const e = enemData[key]; if (!e) { card.innerHTML = ""; return; }
+  const ranged = e.ranged ? '<span class="hc-stat"><span class="hc-stat-label">TYPE</span><span class="hc-stat-val" style="color:var(--cyan)">Ranged</span></span>' : '';
+  card.innerHTML = '<div class="hc-top"><div class="hc-color" style="background:' + (e.bodyColor||'#888') + '"></div>'
+    + '<span class="hc-name">' + (e.label||key) + '</span><span class="hc-key">' + key + '</span></div>'
+    + '<div class="hc-stats">'
+    + '<span class="hc-stat"><span class="hc-stat-label">HP</span><span class="hc-stat-val">' + (e.maxHealth||0) + '</span></span>'
+    + '<span class="hc-stat"><span class="hc-stat-label">SPD</span><span class="hc-stat-val">' + (e.speed||0) + '</span></span>'
+    + '<span class="hc-stat"><span class="hc-stat-label">DMG</span><span class="hc-stat-val">' + (e.damage||0) + '</span></span>'
+    + '<span class="hc-stat"><span class="hc-stat-label">RNG</span><span class="hc-stat-val">' + (e.attackRange||0) + '</span></span>'
+    + ranged + '</div>';
+}
+
+function selectEnemy(key) {
+  enemSelKey = key; renderEnemList();
+  const editor = document.getElementById("enem-editor");
+  const noSel = document.getElementById("enem-no-sel");
+  if (!key || !enemData[key]) {
+    editor.style.display = "none"; noSel.style.display = ""; return;
+  }
+  noSel.style.display = "none"; editor.style.display = "flex";
+  renderEnemHeader(key);
+  renderFields(document.getElementById("enem-fields"), ENEMY_SCHEMA, enemData[key], () => {
+    saveEnem(); updateEnemExport(); renderEnemList(); renderEnemHeader(enemSelKey);
+  });
+}
+
+function saveEnem() { localStorage.setItem("dv_dev_enemies", JSON.stringify(enemData)); }
+function updateEnemExport() { document.getElementById("enem-export").value = JSON.stringify(enemData, null, 2); }
+
+document.getElementById("enem-add").addEventListener("click", () => {
+  let id = "new_enemy", n = 1; while (enemData[id]) id = "new_enemy_" + n++;
+  enemData[id] = { label: "New Enemy", radius: 14, speed: 80, maxHealth: 50, damage: 10,
+    attackRange: 30, attackWindup: 0.4, attackRecovery: 0.25, attackCooldown: 1.0,
+    noticeRange: 250, retreatThreshold: 0.15, retreatTime: [0.6, 1.0], retreatCooldown: 3.0,
+    bodyColor: "#888888", accentColor: "#aaaaaa", eyeColor: "#ffffff",
+    glowColor: "rgba(150,150,150,0.3)", tintFilter: "", score: 20, ranged: false };
+  saveEnem(); renderEnemList(); selectEnemy(id); updateEnemExport(); showToast("Added " + id);
+});
+
+document.getElementById("enem-dup").addEventListener("click", () => {
+  if (!enemSelKey || !enemData[enemSelKey]) return;
+  let id = enemSelKey + "_copy", n = 1; while (enemData[id]) id = enemSelKey + "_copy" + n++;
+  enemData[id] = structuredClone(enemData[enemSelKey]); enemData[id].label += " (Copy)";
+  saveEnem(); renderEnemList(); selectEnemy(id); updateEnemExport(); showToast("Duplicated \u2192 " + id);
+});
+
+document.getElementById("enem-del").addEventListener("click", () => {
+  if (!enemSelKey || !enemData[enemSelKey]) return;
+  const old = enemSelKey; delete enemData[enemSelKey]; enemSelKey = null;
+  saveEnem(); renderEnemList(); selectEnemy(null); updateEnemExport(); showToast("Deleted " + old);
+});
+
+document.getElementById("enem-copy").addEventListener("click", () => {
+  navigator.clipboard.writeText(document.getElementById("enem-export").value).then(() => showToast("Copied enemies JSON!"));
+});
+
+document.getElementById("enem-reset").addEventListener("click", () => {
+  enemData = structuredClone(enemDefault); enemSelKey = null;
+  localStorage.removeItem("dv_dev_enemies");
+  renderEnemList(); selectEnemy(null); updateEnemExport(); showToast("Reset enemies to defaults!");
+});
+
+// ===========================================================================
+//  Weapons Editor
+// ===========================================================================
+let weapData = [], weapDefault = [], weapSelIdx = -1;
+let devWeapData = null;
+
+async function initWeaponsEditor() {
+  try {
+    const raw = await fetch("../js/weapons-data.json").then(r => r.json());
+    weapDefault = structuredClone(raw);
+    const saved = localStorage.getItem("dv_dev_weapons");
+    weapData = saved ? JSON.parse(saved) : structuredClone(raw);
+  } catch { weapData = []; }
+  const savedDev = localStorage.getItem("dv_dev_devweapon");
+  devWeapData = savedDev ? JSON.parse(savedDev) : structuredClone(DEV_WEAPON_DEFAULT);
+  setupExportDrawer("weap-export-toggle", "weap-export-drawer");
+  renderWeapList(); updateWeapExport();
+}
+
+function renderWeapList() {
+  const list = document.getElementById("weap-list"); list.innerHTML = "";
+  document.getElementById("weap-count").textContent = weapData.length + 1;
+  for (let i = 0; i < weapData.length; i++) {
+    const w = weapData[i];
+    const item = document.createElement("div");
+    item.className = "ep-item" + (i === weapSelIdx ? " selected" : "");
+    item.innerHTML = '<div class="item-color" style="background:' + (w.color||'#888') + '"></div>'
+      + '<div class="item-info"><div class="item-name">' + (w.name||'Weapon '+i) + '</div>'
+      + '<div class="item-meta"><span>DMG ' + (w.damage||0) + '</span><span>CD ' + (w.cooldown||0) + 's</span><span>x' + (w.pellets||1) + ' pellets</span></div></div>';
+    const idx = i; item.addEventListener("click", () => selectWeapon(idx));
+    list.appendChild(item);
+  }
+  // Divider + DEV weapon
+  const div = document.createElement("div"); div.className = "ep-divider"; div.textContent = "Special";
+  list.appendChild(div);
+  const dw = devWeapData;
+  const devItem = document.createElement("div");
+  devItem.className = "ep-item dev" + (weapSelIdx === DEV_SEL ? " selected" : "");
+  devItem.innerHTML = '<div class="item-color" style="background:' + (dw.color||'#ff00ff') + '"></div>'
+    + '<div class="item-info"><div class="item-name">' + (dw.name||'DEV Laser') + ' <span class="item-badge">DEV</span></div>'
+    + '<div class="item-meta"><span>DMG ' + (dw.damage||0) + '</span><span>CD ' + (dw.cooldown||0) + 's</span><span>x' + (dw.pellets||1) + ' pellets</span></div></div>';
+  devItem.addEventListener("click", () => selectWeapon(DEV_SEL));
+  list.appendChild(devItem);
+}
+
+function renderWeapHeader(idx) {
+  const card = document.getElementById("weap-header");
+  const w = idx === DEV_SEL ? devWeapData : weapData[idx];
+  if (!w) { card.innerHTML = ""; return; }
+  const isDev = idx === DEV_SEL;
+  const devBadge = isDev ? ' <span class="item-badge">DEV</span>' : '';
+  const pierceBadge = w.pierce ? '<span class="hc-stat"><span class="hc-stat-label">PIERCE</span><span class="hc-stat-val" style="color:#ff88ff">Yes</span></span>' : '';
+  const autoBadge = w.auto ? '<span class="hc-stat"><span class="hc-stat-label">MODE</span><span class="hc-stat-val" style="color:var(--cyan)">Auto</span></span>' : '';
+  card.innerHTML = '<div class="hc-top"><div class="hc-color" style="background:' + (w.color||'#888') + (isDev?';box-shadow:0 0 8px #ff00ff':'') + '"></div>'
+    + '<span class="hc-name"' + (isDev?' style="color:#ff88ff"':'') + '>' + (w.name||'Unnamed') + '</span>' + devBadge + '</div>'
+    + '<div class="hc-stats">'
+    + '<span class="hc-stat"><span class="hc-stat-label">DMG</span><span class="hc-stat-val">' + (w.damage||0) + '</span></span>'
+    + '<span class="hc-stat"><span class="hc-stat-label">CD</span><span class="hc-stat-val">' + (w.cooldown||0) + 's</span></span>'
+    + '<span class="hc-stat"><span class="hc-stat-label">PELLETS</span><span class="hc-stat-val">' + (w.pellets||1) + '</span></span>'
+    + '<span class="hc-stat"><span class="hc-stat-label">SPREAD</span><span class="hc-stat-val">' + (w.spread||0) + '</span></span>'
+    + autoBadge + pierceBadge + '</div>';
+}
+
+function selectWeapon(idx) {
+  weapSelIdx = idx; renderWeapList();
+  const editor = document.getElementById("weap-editor");
+  const noSel = document.getElementById("weap-no-sel");
+  const w = idx === DEV_SEL ? devWeapData : weapData[idx];
+  if (!w) {
+    editor.style.display = "none"; noSel.style.display = ""; return;
+  }
+  noSel.style.display = "none"; editor.style.display = "flex";
+  renderWeapHeader(idx);
+  const onChange = () => {
+    if (idx === DEV_SEL) saveDevWeap(); else saveWeap();
+    updateWeapExport(); renderWeapList(); renderWeapHeader(weapSelIdx);
+  };
+  renderFields(document.getElementById("weap-fields"), WEAPON_SCHEMA, w, onChange);
+}
+
+function saveWeap() { localStorage.setItem("dv_dev_weapons", JSON.stringify(weapData)); }
+function saveDevWeap() { localStorage.setItem("dv_dev_devweapon", JSON.stringify(devWeapData)); }
+function updateWeapExport() {
+  document.getElementById("weap-export").value = JSON.stringify(weapData, null, 2);
+}
+
+document.getElementById("weap-add").addEventListener("click", () => {
+  weapData.push({ name: "New Weapon", auto: false, cooldown: 0.3, projectileSpeed: 800,
+    damage: 15, radius: 4, pellets: 1, spread: 0.05, color: "#ffffff", recoil: 10 });
+  saveWeap(); renderWeapList(); selectWeapon(weapData.length - 1); updateWeapExport(); showToast("Added new weapon");
+});
+
+document.getElementById("weap-dup").addEventListener("click", () => {
+  if (weapSelIdx === DEV_SEL || weapSelIdx < 0 || !weapData[weapSelIdx]) return;
+  const copy = structuredClone(weapData[weapSelIdx]); copy.name += " (Copy)";
+  weapData.splice(weapSelIdx + 1, 0, copy);
+  saveWeap(); renderWeapList(); selectWeapon(weapSelIdx + 1); updateWeapExport(); showToast("Duplicated weapon");
+});
+
+document.getElementById("weap-del").addEventListener("click", () => {
+  if (weapSelIdx === DEV_SEL || weapSelIdx < 0 || !weapData[weapSelIdx]) return;
+  const old = weapData[weapSelIdx].name; weapData.splice(weapSelIdx, 1); weapSelIdx = -1;
+  saveWeap(); renderWeapList(); selectWeapon(-1); updateWeapExport(); showToast("Deleted " + old);
+});
+
+document.getElementById("weap-up").addEventListener("click", () => {
+  if (weapSelIdx <= 0 || weapSelIdx === DEV_SEL) return;
+  [weapData[weapSelIdx - 1], weapData[weapSelIdx]] = [weapData[weapSelIdx], weapData[weapSelIdx - 1]];
+  weapSelIdx--; saveWeap(); renderWeapList(); updateWeapExport();
+});
+
+document.getElementById("weap-down").addEventListener("click", () => {
+  if (weapSelIdx < 0 || weapSelIdx >= weapData.length - 1 || weapSelIdx === DEV_SEL) return;
+  [weapData[weapSelIdx], weapData[weapSelIdx + 1]] = [weapData[weapSelIdx + 1], weapData[weapSelIdx]];
+  weapSelIdx++; saveWeap(); renderWeapList(); updateWeapExport();
+});
+
+document.getElementById("weap-copy").addEventListener("click", () => {
+  navigator.clipboard.writeText(document.getElementById("weap-export").value).then(() => showToast("Copied weapons JSON!"));
+});
+
+document.getElementById("weap-reset").addEventListener("click", () => {
+  weapData = structuredClone(weapDefault); devWeapData = structuredClone(DEV_WEAPON_DEFAULT);
+  weapSelIdx = -1; localStorage.removeItem("dv_dev_weapons"); localStorage.removeItem("dv_dev_devweapon");
+  renderWeapList(); selectWeapon(-1); updateWeapExport(); showToast("Reset weapons to defaults!");
+});
+
+// ===========================================================================
+//  Player Stats Editor
+// ===========================================================================
+let plyrData = {}, plyrDefault = {};
+
+async function initPlayerEditor() {
+  try {
+    const raw = await fetch("../js/player-data.json").then(r => r.json());
+    plyrDefault = structuredClone(raw);
+    const saved = localStorage.getItem("dv_dev_player");
+    plyrData = saved ? JSON.parse(saved) : structuredClone(raw);
+  } catch { plyrData = {}; }
+  setupExportDrawer("player-export-toggle", "player-export-drawer");
+  renderPlayerFields(); updatePlayerExport();
+}
+
+function renderPlayerFields() {
+  renderFields(document.getElementById("player-fields"), PLAYER_SCHEMA, plyrData, () => {
+    localStorage.setItem("dv_dev_player", JSON.stringify(plyrData)); updatePlayerExport();
+  });
+}
+function updatePlayerExport() { document.getElementById("player-export").value = JSON.stringify(plyrData, null, 2); }
+
+document.getElementById("player-copy").addEventListener("click", () => {
+  navigator.clipboard.writeText(document.getElementById("player-export").value).then(() => showToast("Copied player JSON!"));
+});
+document.getElementById("player-reset").addEventListener("click", () => {
+  plyrData = structuredClone(plyrDefault); localStorage.removeItem("dv_dev_player");
+  renderPlayerFields(); updatePlayerExport(); showToast("Reset player to defaults!");
+});
+
+// ===========================================================================
+//  Waves Editor
+// ===========================================================================
+let waveData = {}, waveDefault = {};
+
+async function initWavesEditor() {
+  try {
+    const raw = await fetch("../js/waves-data.json").then(r => r.json());
+    waveDefault = structuredClone(raw);
+    const saved = localStorage.getItem("dv_dev_waves");
+    waveData = saved ? JSON.parse(saved) : structuredClone(raw);
+  } catch { waveData = {}; }
+  setupExportDrawer("waves-export-toggle", "waves-export-drawer");
+  renderWavesFields(); updateWavesExport();
+}
+
+function renderWavesFields() {
+  const container = document.getElementById("waves-fields"); container.innerHTML = "";
+  renderFields(container, WAVE_SCHEMA, waveData, () => { saveWaves(); updateWavesExport(); });
+  const sec = document.createElement("div"); sec.className = "ep-section"; sec.textContent = "Type Thresholds";
+  container.appendChild(sec);
+  const labels = document.createElement("div"); labels.className = "ep-threshold-labels";
+  labels.innerHTML = '<span style="flex:2">Type</span><span>Min Wave</span><span>Threshold</span><span style="width:30px"></span>';
+  container.appendChild(labels);
+  const arr = waveData.typeThresholds || [];
+  for (let i = 0; i < arr.length; i++) {
+    const t = arr[i], row = document.createElement("div"); row.className = "ep-threshold";
+    const tIn = document.createElement("input"); tIn.type = "text"; tIn.value = t.type; tIn.style.flex = "2";
+    const wIn = document.createElement("input"); wIn.type = "number"; wIn.value = t.minWave; wIn.step = 1;
+    const hIn = document.createElement("input"); hIn.type = "number"; hIn.value = t.threshold; hIn.step = 0.01;
+    const del = document.createElement("button"); del.className = "btn danger"; del.textContent = "\u00d7";
+    const save = () => { t.type = tIn.value; t.minWave = parseInt(wIn.value)||1; t.threshold = parseFloat(hIn.value)||0; saveWaves(); updateWavesExport(); };
+    tIn.addEventListener("input", save); wIn.addEventListener("input", save); hIn.addEventListener("input", save);
+    const idx = i; del.addEventListener("click", () => { arr.splice(idx, 1); waveData.typeThresholds = arr; saveWaves(); renderWavesFields(); updateWavesExport(); });
+    row.append(tIn, wIn, hIn, del); container.appendChild(row);
+  }
+  const addBtn = document.createElement("button"); addBtn.className = "btn primary ep-threshold-add"; addBtn.textContent = "+ Threshold";
+  addBtn.addEventListener("click", () => { arr.push({ type: "shambler", minWave: 1, threshold: 0.5 }); waveData.typeThresholds = arr; saveWaves(); renderWavesFields(); updateWavesExport(); });
+  container.appendChild(addBtn);
+}
+
+function saveWaves() { localStorage.setItem("dv_dev_waves", JSON.stringify(waveData)); }
+function updateWavesExport() { document.getElementById("waves-export").value = JSON.stringify(waveData, null, 2); }
+
+document.getElementById("waves-copy").addEventListener("click", () => {
+  navigator.clipboard.writeText(document.getElementById("waves-export").value).then(() => showToast("Copied waves JSON!"));
+});
+document.getElementById("waves-reset").addEventListener("click", () => {
+  waveData = structuredClone(waveDefault); localStorage.removeItem("dv_dev_waves");
+  renderWavesFields(); updateWavesExport(); showToast("Reset waves to defaults!");
+});
+
+// ---- Boot all editors ----
+initEnemiesEditor();
+initWeaponsEditor();
+initPlayerEditor();
+initWavesEditor();
 
 init();
 </script>

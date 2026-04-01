@@ -1,0 +1,17 @@
+{
+  "baseCount": 5,
+  "perWave": 2,
+  "bonusEvery": 2,
+  "maxEnemies": 40,
+  "spawnDelay": [0.2, 0.45],
+  "bossInterval": 5,
+  "bossType": "brute",
+  "defaultType": "shambler",
+  "typeThresholds": [
+    { "type": "screamer", "minWave": 7, "threshold": 0.92 },
+    { "type": "brute",    "minWave": 5, "threshold": 0.85 },
+    { "type": "screamer", "minWave": 4, "threshold": 0.82 },
+    { "type": "spitter",  "minWave": 3, "threshold": 0.58 },
+    { "type": "sprinter", "minWave": 2, "threshold": 0.32 }
+  ]
+}

@@ -1,9 +1,11 @@
-import { Player } from "./entities/player.js";
+import { Player, DEV_WEAPON, setBaseWeapons, getBaseWeapons, setPlayerStats, getPlayerStats } from "./entities/player.js";
 import { circlesOverlap, clamp, keepCircleInBounds, randomRange, separateCircles, resolveCircleRect, pointInRect } from "./systems/collision.js";
 import { WaveSpawner } from "./systems/spawner.js";
+import { Enemy, setEnemyTypes, getEnemyTypes } from "./entities/enemy.js";
 
 export class Game {
-  constructor({ canvas, input, ui, audio, settings, mapObstacles = [], mapSpawnZones = [] }) {
+  constructor({ canvas, input, ui, audio, settings, mapObstacles = [], mapSpawnZones = [],
+                weaponsData, enemiesData, wavesData, playerData }) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
     this.input = input;
@@ -19,6 +21,19 @@ export class Game {
     this.fpsDisplay = 0;
     this.waveSpawner = new WaveSpawner();
     this.player = new Player(this.bounds.width / 2, this.bounds.height / 2);
+
+    // Apply external data configs if provided
+    if (weaponsData) setBaseWeapons(weaponsData);
+    if (enemiesData) setEnemyTypes(enemiesData);
+    if (wavesData) this.waveSpawner.setConfig(wavesData);
+    if (playerData) { setPlayerStats(playerData); this.player.applyStats(); }
+
+    // Store original configs for reset
+    this._defaultWeapons = JSON.parse(JSON.stringify(getBaseWeapons()));
+    this._defaultEnemies = JSON.parse(JSON.stringify(getEnemyTypes()));
+    this._defaultWaves  = JSON.parse(JSON.stringify(this.waveSpawner.getConfig()));
+    this._defaultPlayer = JSON.parse(JSON.stringify(getPlayerStats()));
+
     this.bullets = [];
     this.enemyProjectiles = [];
     this.enemies = [];
@@ -47,6 +62,7 @@ export class Game {
 
     // Background image
     this.bgImg = new Image();
+    this.bgImg.onload = () => this.resize();
     this.bgImg.src = "assets/images/background.png";
     this.bgTransform = { x: 0, y: 0, w: 1280, h: 720 };
 
@@ -180,6 +196,84 @@ export class Game {
     this.player.setDevMode(s.get("devMode"));
     this.player.setDevInvincible(s.get("devMode") && s.get("devInvincible"));
   }
+
+  // ---- Dev panel helpers ----
+
+  devKillAll() {
+    for (const e of this.enemies) e.health = 0;
+  }
+
+  devSkipWave() {
+    this.enemies.forEach(e => e.health = 0);
+    this.waveSpawner.queue = [];
+  }
+
+  devHeal() {
+    this.player.health = this.player.maxHealth;
+    this.player.energy = getPlayerStats().maxEnergy;
+  }
+
+  devTeleportCenter() {
+    this.player.x = this.bounds.width / 2;
+    this.player.y = this.bounds.height / 2;
+  }
+
+  devSpawnEnemy(type) {
+    const margin = 60;
+    const x = margin + Math.random() * (this.bounds.width - margin * 2);
+    const y = margin + Math.random() * (this.bounds.height - margin * 2);
+    this.enemies.push(new Enemy({ x, y, type, wave: this.waveSpawner.wave || 1 }));
+  }
+
+  // Data accessors for dev panel
+  getWeaponsData()   { return getBaseWeapons(); }
+  getEnemiesData()   { return getEnemyTypes(); }
+  getWavesData()     { return this.waveSpawner.getConfig(); }
+  getPlayerData()    { return getPlayerStats(); }
+  getSpawnZonesData(){ return this.mapSpawnZonesNorm; }
+  getObstaclesData() { return this.mapObstaclesNorm; }
+
+  applyWeaponsData(data) {
+    setBaseWeapons(data);
+    if (this.player.devMode) {
+      this.player.weapons = [...data, DEV_WEAPON];
+    } else {
+      this.player.weapons = [...data];
+    }
+    this.player.weaponIndex = Math.min(this.player.weaponIndex, this.player.weapons.length - 1);
+  }
+
+  applyEnemiesData(data) {
+    setEnemyTypes(data);
+  }
+
+  applyWavesData(data) {
+    this.waveSpawner.setConfig(data);
+  }
+
+  applyPlayerData(data) {
+    setPlayerStats(data);
+    this.player.applyStats();
+  }
+
+  applySpawnZonesData(data) {
+    this.mapSpawnZonesNorm = data;
+    this.computeBgTransform();
+  }
+
+  applyObstaclesData(data) {
+    this.mapObstaclesNorm = data;
+    this.computeBgTransform();
+  }
+
+  resetWeaponsData() {
+    setBaseWeapons(JSON.parse(JSON.stringify(this._defaultWeapons)));
+    this.player.weapons = this.player.devMode ? [...getBaseWeapons(), DEV_WEAPON] : [...getBaseWeapons()];
+    this.player.weaponIndex = Math.min(this.player.weaponIndex, this.player.weapons.length - 1);
+  }
+  resetEnemiesData()   { setEnemyTypes(JSON.parse(JSON.stringify(this._defaultEnemies))); }
+  resetWavesData()     { this.waveSpawner.setConfig(JSON.parse(JSON.stringify(this._defaultWaves))); }
+  resetPlayerData()    { setPlayerStats(JSON.parse(JSON.stringify(this._defaultPlayer))); this.player.applyStats(); }
 
   queueNextWave(delayMs) {
     this.awaitingWaveStart = true;
@@ -387,7 +481,6 @@ export class Game {
     this.bullets.push(...bullets);
     this.audio.playShoot(this.player.weapon.name);
     this.screenShake = Math.max(this.screenShake, this.player.weapon.recoil);
-    this.spawnBurst(this.player.x, this.player.y, this.player.weapon.color, 4, 10, 40);
   }
 
   update(delta) {

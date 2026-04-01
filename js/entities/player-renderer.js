@@ -70,8 +70,10 @@ export function renderPlayerParts(ctx, player) {
   const th = bodyImgs.torso.height * s;
   const hw = bodyImgs.head.width  * s * 0.85;
   const hh = bodyImgs.head.height * s * 0.85;
-  const aw = bodyImgs.armL.width  * s * 0.8;
-  const ah = bodyImgs.armL.height * s * 0.8;
+  // Arms: scale height (length) to fit body, keep proportional width
+  const armScale = s * 0.7;
+  const aw = bodyImgs.armL.width  * armScale;
+  const ah = bodyImgs.armL.height * armScale;
 
   // --- Movement animation ---
   const speed = Math.hypot(player.vx, player.vy);
@@ -86,8 +88,12 @@ export function renderPlayerParts(ctx, player) {
 
   const walkAmp = isMoving ? 0.25 : 0.06;
   const lSwing =  Math.sin(w * 0.08) * walkAmp;
-  const rSwing = -Math.sin(w * 0.08 + Math.PI) * walkAmp;
+  // Gun arm swings less — player keeps it steady while aiming
+  const rSwing = -Math.sin(w * 0.08 + Math.PI) * walkAmp * 0.35;
   const bob = Math.sin(w * (isMoving ? 0.06 : 0.04)) * (isMoving ? 1.0 : 0.5);
+
+  // Subtle weapon sway (breathing + movement)
+  const weaponSway = Math.sin(w * (isMoving ? 0.06 : 0.03)) * (isMoving ? 0.04 : 0.015);
 
   // --- Gun sprite ---
   const gunKey = GUN_MAP[player.weapon.name];
@@ -100,62 +106,62 @@ export function renderPlayerParts(ctx, player) {
   // Rotate +π/2 so local coordinate space becomes:
   //   -y = forward (aim direction)   +y = backward
   //   -x = left                      +x = right
-  // This matches the zombie renderer convention and aligns PNG "up" with aim.
   ctx.rotate(Math.PI / 2);
   ctx.translate(0, bob);
 
-  // Shoulder anchor positions (relative to torso centre)
-  const shX = tw * 0.30;
-  const shY = -th * 0.10;
+  // Shoulder anchor positions (relative to torso centre, at the shoulder bulge edges)
+  const shX = tw * 0.32;
+  const shY = -th * 0.05;
 
   const drawArm = (img, sx, sy, angle) => {
     ctx.save();
     ctx.translate(sx, sy);
     ctx.rotate(angle);
-    // Shoulder (image bottom) at pivot; hand (image top) extends toward -y (forward)
-    ctx.drawImage(img, -aw / 2, -ah, aw, ah);
+    // Shoulder (top of PNG) at pivot (y=0); hand extends forward (-y)
+    ctx.scale(1, -1);
+    ctx.drawImage(img, -aw / 2, 0, aw, ah);
     ctx.restore();
   };
 
-  // Back arm (left, drawn first → behind torso)
-  drawArm(bodyImgs.armL, -shX, shY, lSwing);
+  // Back arm (left, drawn first → behind torso) — support hand
+  drawArm(bodyImgs.armL, -shX * 0.7, shY, lSwing - 0.12);
 
   // Torso (centred on origin)
   ctx.drawImage(bodyImgs.torso, -tw / 2, -th / 2, tw, th);
 
-  // Gun — positioned at front arm hand area, extending forward (-y)
+  // Gun — held at the hand end of the right arm
   if (gunImg) {
-    const gScale = (r * 1.8) / Math.max(gunImg.width, gunImg.height);
+    // Scale gun relative to arm length so it looks proportional
+    const gScale = (ah * 1.1) / gunImg.height;
     const gw = gunImg.width  * gScale;
     const gh = gunImg.height * gScale;
     ctx.save();
-    // Place gun at the front (right) arm shoulder, barrel extends forward (-y)
-    ctx.translate(shX * 0.3, shY);
-    ctx.drawImage(gunImg, -gw / 2, -gh - ah * 0.3, gw, gh);
+    ctx.translate(shX, shY);
+    ctx.rotate(rSwing + weaponSway);
+    // Grip is ~65% down the gun sprite; align grip with the hand position (y = -ah)
+    const gripOffset = gh * 0.65;
+    ctx.drawImage(gunImg, -gw / 2, -ah - (gh - gripOffset), gw, gh);
     ctx.restore();
 
     // Muzzle flash at barrel tip
     if (player.muzzleFlash > 0) {
       ctx.save();
-      const muzzleX = shX * 0.3;
-      const muzzleY = shY - gh - ah * 0.3;
-      ctx.globalAlpha = player.muzzleFlash;
-      ctx.shadowBlur = 30;
-      ctx.shadowColor = player.weapon.color;
+      ctx.translate(shX, shY);
+      ctx.rotate(rSwing + weaponSway);
+      const muzzleY = -ah - (gh - gripOffset);
+      ctx.globalAlpha = player.muzzleFlash * 0.85;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "#fff";
       ctx.fillStyle = "#fff";
       ctx.beginPath();
-      ctx.arc(muzzleX, muzzleY, 4 + player.muzzleFlash * 6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = player.weapon.color;
-      ctx.beginPath();
-      ctx.arc(muzzleX, muzzleY, 2 + player.muzzleFlash * 10, 0, Math.PI * 2);
+      ctx.arc(0, muzzleY, 2 + player.muzzleFlash * 3, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
   }
 
   // Front arm (right, on top — the gun hand)
-  drawArm(bodyImgs.armR, shX, shY, rSwing);
+  drawArm(bodyImgs.armR, shX, shY, rSwing + weaponSway);
 
   // Head — slightly forward along aim direction
   ctx.save();
@@ -165,4 +171,40 @@ export function renderPlayerParts(ctx, player) {
 
   ctx.restore();
   return true;
+}
+
+/**
+ * Returns the world-space offset {x, y} from the player's centre to the gun muzzle tip,
+ * taking aimAngle into account. Returns null if images haven't loaded yet.
+ */
+export function getMuzzleOffset(player) {
+  if (!ready || !bodyImgs.torso || !bodyImgs.armL) return null;
+
+  const r = player.radius;
+  const s = (r * 2.2) / Math.max(bodyImgs.torso.width, bodyImgs.torso.height);
+  const tw = bodyImgs.torso.width  * s;
+  const th = bodyImgs.torso.height * s;
+  const ah = bodyImgs.armL.height  * s * 0.7;
+
+  const gunKey = GUN_MAP[player.weapon.name];
+  const gunImg = gunKey ? gunImgs[gunKey] : null;
+  const gh     = gunImg ? (ah * 1.1) : ah;
+
+  const shX = tw * 0.32;
+  const shY = -th * 0.05;
+  const gripOffset = gh * 0.65;
+  const muzzleLocalY = -ah - (gh - gripOffset); // top of gun sprite = muzzle
+
+  // Absolute local position in the +PI/2-rotated drawing frame
+  const lx = shX;
+  const ly = shY + muzzleLocalY;
+
+  // Convert from the drawing frame (aimAngle + PI/2) back to world offsets:
+  //   world = rotate(aimAngle + PI/2) * (lx, ly)
+  //   cos(a+PI/2) = -sin(a),  sin(a+PI/2) = cos(a)
+  const a = player.aimAngle;
+  return {
+    x: -lx * Math.sin(a) - ly * Math.cos(a),
+    y:  lx * Math.cos(a) - ly * Math.sin(a),
+  };
 }
