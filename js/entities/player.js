@@ -2,7 +2,7 @@ import { Bullet } from "./bullet.js";
 import { clamp, keepCircleInBounds, normalize } from "../systems/collision.js";
 import { renderPlayerParts, playerPartsReady, getMuzzleOffset } from "./player-renderer.js";
 
-const BASE_WEAPONS = [
+let BASE_WEAPONS = [
   {
     name: "Service Pistol",
     auto: false,
@@ -55,11 +55,32 @@ export const DEV_WEAPON = {
   pierce: true,
 };
 
+/** Replace base weapons list at runtime (dev panel). */
+export function setBaseWeapons(weapons) { BASE_WEAPONS = weapons; }
+/** Return current base weapons (for export). */
+export function getBaseWeapons() { return BASE_WEAPONS; }
+
+// Default player stats — configurable from dev panel
+let PLAYER_STATS = {
+  maxHealth: 100,
+  radius: 17,
+  speed: 280,
+  maxEnergy: 100,
+  energyRegen: 28,
+  dashCost: 35,
+  dashDistance: 135,
+  dashCooldown: 1.25,
+  dashInvulnerability: 0.24,
+};
+
+export function setPlayerStats(stats) { PLAYER_STATS = stats; }
+export function getPlayerStats() { return PLAYER_STATS; }
+
 export class Player {
   constructor(x, y) {
-    this.maxHealth = 100;
-    this.radius = 17;
-    this.speed = 280;
+    this.maxHealth = PLAYER_STATS.maxHealth;
+    this.radius = PLAYER_STATS.radius;
+    this.speed = PLAYER_STATS.speed;
     this.devMode = false;
     this.devInvincible = false;
     this.weapons = [...BASE_WEAPONS];
@@ -77,7 +98,7 @@ export class Player {
       this.health = this.maxHealth;
     } else {
       this.weapons = [...BASE_WEAPONS];
-      this.maxHealth = 100;
+      this.maxHealth = PLAYER_STATS.maxHealth;
       this.health = Math.min(this.health, this.maxHealth);
     }
     if (this.weaponIndex >= this.weapons.length) {
@@ -91,7 +112,7 @@ export class Player {
     this.vx = 0;
     this.vy = 0;
     this.health = this.maxHealth;
-    this.energy = 100;
+    this.energy = PLAYER_STATS.maxEnergy;
     this.aimAngle = 0;
     this.weaponIndex = 0;
     this.fireCooldown = 0;
@@ -124,7 +145,7 @@ export class Player {
     this.invulnerability = Math.max(0, this.invulnerability - delta);
     this.damageFlash = Math.max(0, this.damageFlash - delta * 2.4);
     this.muzzleFlash = Math.max(0, this.muzzleFlash - delta * 12);
-    this.energy = clamp(this.energy + 28 * delta, 0, 100);
+    this.energy = clamp(this.energy + PLAYER_STATS.energyRegen * delta, 0, PLAYER_STATS.maxEnergy);
 
     // Fade afterimages
     for (let i = this.afterImages.length - 1; i >= 0; i--) {
@@ -187,14 +208,14 @@ export class Player {
   }
 
   useDash(targetX, targetY, bounds) {
-    if (this.dashCooldown > 0 || this.energy < 35) return false;
+    if (this.dashCooldown > 0 || this.energy < PLAYER_STATS.dashCost) return false;
 
     // Store afterimage
     this.afterImages.push({ x: this.x, y: this.y, angle: this.aimAngle, alpha: 0.6 });
 
     const direction = normalize(targetX - this.x, targetY - this.y);
-    this.x += direction.x * 135;
-    this.y += direction.y * 135;
+    this.x += direction.x * PLAYER_STATS.dashDistance;
+    this.y += direction.y * PLAYER_STATS.dashDistance;
     keepCircleInBounds(this, bounds);
 
     // Second afterimage at midpoint
@@ -205,10 +226,20 @@ export class Player {
       alpha: 0.35,
     });
 
-    this.energy -= 35;
-    this.dashCooldown = 1.25;
-    this.invulnerability = 0.24;
+    this.energy -= PLAYER_STATS.dashCost;
+    this.dashCooldown = PLAYER_STATS.dashCooldown;
+    this.invulnerability = PLAYER_STATS.dashInvulnerability;
     return true;
+  }
+
+  /** Re-read PLAYER_STATS into live properties (dev panel hot-reload). */
+  applyStats() {
+    if (!this.devMode) {
+      this.maxHealth = PLAYER_STATS.maxHealth;
+      this.health = Math.min(this.health, this.maxHealth);
+    }
+    this.radius = PLAYER_STATS.radius;
+    this.speed = PLAYER_STATS.speed;
   }
 
   heal(amount) {

@@ -1,10 +1,34 @@
 import { Enemy } from "../entities/enemy.js";
 import { randomRange } from "./collision.js";
 
+const DEFAULT_WAVE_CONFIG = {
+  baseCount: 5,
+  perWave: 2,
+  bonusEvery: 2,
+  maxEnemies: 40,
+  spawnDelay: [0.2, 0.45],
+  bossInterval: 5,
+  bossType: "brute",
+  defaultType: "shambler",
+  typeThresholds: [
+    { type: "screamer", minWave: 7, threshold: 0.92 },
+    { type: "brute",    minWave: 5, threshold: 0.85 },
+    { type: "screamer", minWave: 4, threshold: 0.82 },
+    { type: "spitter",  minWave: 3, threshold: 0.58 },
+    { type: "sprinter", minWave: 2, threshold: 0.32 },
+  ],
+};
+
 export class WaveSpawner {
   constructor() {
+    this.config = { ...DEFAULT_WAVE_CONFIG };
     this.reset();
   }
+
+  setConfig(cfg) {
+    this.config = { ...DEFAULT_WAVE_CONFIG, ...cfg };
+  }
+  getConfig() { return this.config; }
 
   reset() {
     this.wave = 0;
@@ -20,23 +44,24 @@ export class WaveSpawner {
   }
 
   buildWave(wave, bounds) {
-    const baseCount = 5 + wave * 2 + Math.floor(wave / 2);
-    const zombieCount = Math.min(baseCount, 40);
+    const c = this.config;
+    const baseCount = c.baseCount + wave * c.perWave + Math.floor(wave / c.bonusEvery);
+    const zombieCount = Math.min(baseCount, c.maxEnemies);
     const queue = [];
 
     for (let i = 0; i < zombieCount; i++) {
       queue.push({
         type: this.pickType(wave),
-        delay: randomRange(0.2, 0.45),
+        delay: randomRange(c.spawnDelay[0], c.spawnDelay[1]),
         ...this.pickSpawnPoint(bounds),
       });
     }
 
-    // Boss-tier brute every 5 waves
-    if (wave % 5 === 0) {
-      for (let i = 0; i < Math.ceil(wave / 5); i++) {
+    // Boss-tier every N waves
+    if (c.bossInterval > 0 && wave % c.bossInterval === 0) {
+      for (let i = 0; i < Math.ceil(wave / c.bossInterval); i++) {
         queue.push({
-          type: "brute",
+          type: c.bossType,
           delay: 0.1,
           ...this.pickSpawnPoint(bounds),
         });
@@ -48,13 +73,10 @@ export class WaveSpawner {
 
   pickType(wave) {
     const roll = Math.random();
-
-    if (wave >= 7 && roll > 0.92) return "screamer";
-    if (wave >= 5 && roll > 0.85) return "brute";
-    if (wave >= 4 && roll > 0.82) return "screamer";
-    if (wave >= 3 && roll > 0.58) return "spitter";
-    if (wave >= 2 && roll > 0.32) return "sprinter";
-    return "shambler";
+    for (const t of this.config.typeThresholds) {
+      if (wave >= t.minWave && roll > t.threshold) return t.type;
+    }
+    return this.config.defaultType;
   }
 
   pickSpawnPoint(bounds) {

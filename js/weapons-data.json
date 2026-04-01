@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Service Pistol",
+    "auto": false,
+    "cooldown": 0.22,
+    "projectileSpeed": 860,
+    "damage": 24,
+    "radius": 4,
+    "pellets": 1,
+    "spread": 0.02,
+    "color": "#ffd17b",
+    "recoil": 12
+  },
+  {
+    "name": "Vector SMG",
+    "auto": true,
+    "cooldown": 0.085,
+    "projectileSpeed": 920,
+    "damage": 10,
+    "radius": 3,
+    "pellets": 1,
+    "spread": 0.08,
+    "color": "#6be0d6",
+    "recoil": 8
+  },
+  {
+    "name": "Scatter Cannon",
+    "auto": false,
+    "cooldown": 0.6,
+    "projectileSpeed": 720,
+    "damage": 11,
+    "radius": 3,
+    "pellets": 7,
+    "spread": 0.38,
+    "color": "#ff9d6f",
+    "recoil": 20
+  }
+]

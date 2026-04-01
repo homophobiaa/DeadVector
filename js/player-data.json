@@ -1,0 +1,11 @@
+{
+  "maxHealth": 100,
+  "radius": 17,
+  "speed": 280,
+  "maxEnergy": 100,
+  "energyRegen": 28,
+  "dashCost": 35,
+  "dashDistance": 135,
+  "dashCooldown": 1.25,
+  "dashInvulnerability": 0.24
+}

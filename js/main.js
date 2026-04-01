@@ -19,6 +19,15 @@ const bootstrap = async () => {
   const mapData = await fetch("./js/map-data.json").then(r => r.json());
   const mapObstacles = Array.isArray(mapData) ? mapData : (mapData.obstacles || []);
   const mapSpawnZones = Array.isArray(mapData) ? [] : (mapData.spawnZones || []);
+
+  // Load optional data configs (weapons, enemies, waves, player)
+  const fetchJson = (url) => fetch(url).then(r => r.json()).catch(() => null);
+  const [weaponsData, enemiesData, wavesData, playerData] = await Promise.all([
+    fetchJson("./js/weapons-data.json"),
+    fetchJson("./js/enemies-data.json"),
+    fetchJson("./js/waves-data.json"),
+    fetchJson("./js/player-data.json"),
+  ]);
   setProgress(25, "LOADING ASSETS");
 
   await Promise.all([
@@ -67,7 +76,8 @@ const bootstrap = async () => {
   const audio = new AudioManager();
   const settings = new Settings();
   audio.installUnlockHandlers();
-  const game = new Game({ canvas, input, ui, audio, settings, mapObstacles, mapSpawnZones });
+  const game = new Game({ canvas, input, ui, audio, settings, mapObstacles, mapSpawnZones,
+                          weaponsData, enemiesData, wavesData, playerData });
 
   ui.bindGame(game);
   ui.bindSettings(settings);
