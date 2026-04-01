@@ -172,3 +172,39 @@ export function renderPlayerParts(ctx, player) {
   ctx.restore();
   return true;
 }
+
+/**
+ * Returns the world-space offset {x, y} from the player's centre to the gun muzzle tip,
+ * taking aimAngle into account. Returns null if images haven't loaded yet.
+ */
+export function getMuzzleOffset(player) {
+  if (!ready || !bodyImgs.torso || !bodyImgs.armL) return null;
+
+  const r = player.radius;
+  const s = (r * 2.2) / Math.max(bodyImgs.torso.width, bodyImgs.torso.height);
+  const tw = bodyImgs.torso.width  * s;
+  const th = bodyImgs.torso.height * s;
+  const ah = bodyImgs.armL.height  * s * 0.7;
+
+  const gunKey = GUN_MAP[player.weapon.name];
+  const gunImg = gunKey ? gunImgs[gunKey] : null;
+  const gh     = gunImg ? (ah * 1.1) : ah;
+
+  const shX = tw * 0.32;
+  const shY = -th * 0.05;
+  const gripOffset = gh * 0.65;
+  const muzzleLocalY = -ah - (gh - gripOffset); // top of gun sprite = muzzle
+
+  // Absolute local position in the +PI/2-rotated drawing frame
+  const lx = shX;
+  const ly = shY + muzzleLocalY;
+
+  // Convert from the drawing frame (aimAngle + PI/2) back to world offsets:
+  //   world = rotate(aimAngle + PI/2) * (lx, ly)
+  //   cos(a+PI/2) = -sin(a),  sin(a+PI/2) = cos(a)
+  const a = player.aimAngle;
+  return {
+    x: -lx * Math.sin(a) - ly * Math.cos(a),
+    y:  lx * Math.cos(a) - ly * Math.sin(a),
+  };
+}

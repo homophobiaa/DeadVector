@@ -1,6 +1,6 @@
 import { Bullet } from "./bullet.js";
 import { clamp, keepCircleInBounds, normalize } from "../systems/collision.js";
-import { renderPlayerParts, playerPartsReady } from "./player-renderer.js";
+import { renderPlayerParts, playerPartsReady, getMuzzleOffset } from "./player-renderer.js";
 
 const BASE_WEAPONS = [
   {
@@ -159,6 +159,11 @@ export class Player {
     this.fireCooldown = weapon.cooldown;
     this.muzzleFlash = 1;
 
+    // Spawn bullets from the gun muzzle tip, not the player's chest
+    const muzzleOff = getMuzzleOffset(this);
+    const spawnX = muzzleOff ? this.x + muzzleOff.x : this.x + Math.cos(angle) * (this.radius + 12);
+    const spawnY = muzzleOff ? this.y + muzzleOff.y : this.y + Math.sin(angle) * (this.radius + 12);
+
     for (let i = 0; i < weapon.pellets; i++) {
       const spreadOffset = (Math.random() - 0.5) * weapon.spread;
       const a = angle + spreadOffset;
@@ -167,8 +172,8 @@ export class Player {
 
       bullets.push(
         new Bullet({
-          x: this.x + Math.cos(a) * (this.radius + 12),
-          y: this.y + Math.sin(a) * (this.radius + 12),
+          x: spawnX,
+          y: spawnY,
           vx, vy,
           radius: weapon.radius,
           damage: weapon.damage,
