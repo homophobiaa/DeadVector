@@ -210,14 +210,16 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
 .ep-range2 .dash { color: var(--text-2); font-size: 14px; padding: 0 2px; flex-shrink: 0; }
 
 /* -- Export drawer -- */
-.ep-export-drawer { border-top: 1px solid var(--border); background: var(--bg-2); flex-shrink: 0; transition: max-height 0.3s ease; max-height: 260px; overflow: hidden; }
-.ep-export-drawer.collapsed { max-height: 40px; }
+.ep-export-resize { height: 5px; cursor: ns-resize; background: transparent; flex-shrink: 0; transition: background 0.15s; }
+.ep-export-resize:hover, .ep-export-resize.dragging { background: var(--green); }
+.ep-export-drawer.collapsed .ep-export-resize { display: none; }
+.ep-export-drawer { border-top: 1px solid var(--border); background: var(--bg-2); flex-shrink: 0; overflow: hidden; transition: height 0.3s ease; display: flex; flex-direction: column; }
 .ep-export-toggle { display: flex; align-items: center; padding: 10px 14px; gap: 8px; cursor: pointer; user-select: none; border: none; background: none; color: var(--text-1); width: 100%; font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; text-align: left; transition: color 0.15s; }
 .ep-export-toggle:hover { color: #fff; }
 .ep-export-toggle .chevron { font-size: 10px; transition: transform 0.2s; display: inline-block; }
 .ep-export-drawer.collapsed .chevron { transform: rotate(-90deg); }
-.ep-export-inner { padding: 0 14px 12px; display: flex; flex-direction: column; gap: 8px; }
-.ep-json { flex: 1; min-height: 100px; max-height: 200px; background: var(--bg-0); color: var(--green); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12px; font-family: var(--font-mono); resize: vertical; line-height: 1.6; }
+.ep-export-inner { padding: 0 14px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; overflow: hidden; }
+.ep-json { flex: 1; min-height: 60px; background: var(--bg-0); color: var(--green); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12px; font-family: var(--font-mono); resize: none; line-height: 1.6; overflow-y: auto; }
 .ep-json:focus { outline: none; border-color: var(--green); }
 .ep-export-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .ep-export-actions .btn { flex: 1; text-align: center; font-size: 12px; padding: 7px 14px; }
@@ -230,6 +232,7 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
 /* -- Settings layout -- */
 .ep-settings-layout { display: flex; height: 100%; overflow: hidden; }
 .ep-settings-card { min-width: 160px; display: flex; flex-direction: column; background: var(--bg-0); overflow: hidden; }
+.ep-spacer { flex: 1; min-width: 0; background: var(--bg-0); }
 .ep-settings-card .ep-bar { background: var(--bg-2); }
 .ep-settings-card .ep-fields-scroll { flex: 1; overflow-y: auto; padding: 16px 24px 20px; min-height: 0; }
 
@@ -395,6 +398,7 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
           </div>
         </div>
         <div class="ep-export-drawer collapsed" id="enem-export-drawer">
+          <div class="ep-export-resize" title="Drag to resize"></div>
           <button class="ep-export-toggle" id="enem-export-toggle"><span class="chevron">&#9660;</span> Export JSON <span style="font-family:var(--font-mono);font-size:8px;color:var(--text-3);margin-left:auto">enemies-data.json</span></button>
           <div class="ep-export-inner">
             <textarea id="enem-export" class="ep-json" spellcheck="false" readonly></textarea>
@@ -436,6 +440,7 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
           </div>
         </div>
         <div class="ep-export-drawer collapsed" id="weap-export-drawer">
+          <div class="ep-export-resize" title="Drag to resize"></div>
           <button class="ep-export-toggle" id="weap-export-toggle"><span class="chevron">&#9660;</span> Export JSON <span style="font-family:var(--font-mono);font-size:8px;color:var(--text-3);margin-left:auto">weapons-data.json</span></button>
           <div class="ep-export-inner">
             <textarea id="weap-export" class="ep-json" spellcheck="false" readonly></textarea>
@@ -459,6 +464,7 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
         </div>
         <div class="ep-fields-scroll" id="player-fields"></div>
         <div class="ep-export-drawer collapsed" id="player-export-drawer">
+          <div class="ep-export-resize" title="Drag to resize"></div>
           <button class="ep-export-toggle" id="player-export-toggle"><span class="chevron">&#9660;</span> Export JSON <span style="font-family:var(--font-mono);font-size:8px;color:var(--text-3);margin-left:auto">player-data.json</span></button>
           <div class="ep-export-inner">
             <textarea id="player-export" class="ep-json" spellcheck="false" readonly></textarea>
@@ -477,6 +483,7 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
         </div>
         <div class="ep-fields-scroll" id="waves-fields"></div>
         <div class="ep-export-drawer collapsed" id="waves-export-drawer">
+          <div class="ep-export-resize" title="Drag to resize"></div>
           <button class="ep-export-toggle" id="waves-export-toggle"><span class="chevron">&#9660;</span> Export JSON <span style="font-family:var(--font-mono);font-size:8px;color:var(--text-3);margin-left:auto">waves-data.json</span></button>
           <div class="ep-export-inner">
             <textarea id="waves-export" class="ep-json" spellcheck="false" readonly></textarea>
@@ -487,6 +494,8 @@ body { background: var(--bg-0); color: var(--text-1); font-family: var(--font-ui
           </div>
         </div>
       </div>
+      <div class="ep-drag" id="sett-drag-r" title="Drag to resize"></div>
+      <div class="ep-spacer" id="sett-spacer"></div>
     </div>
   </div>
 </div>
@@ -1577,6 +1586,7 @@ function setupPanelResize(dragId, leftId, minLeft = 160, minRight = 200) {
 setupPanelResize("enem-drag", "enem-sidebar");
 setupPanelResize("weap-drag", "weap-sidebar");
 setupPanelResize("sett-drag", "sett-card-a");
+setupPanelResize("sett-drag-r", "sett-card-b", 250, 0);
 
 // ===========================================================================
 //  DEV Weapon Default (mirrors player.js DEV_WEAPON)
@@ -1592,8 +1602,50 @@ const DEV_SEL = -2; // sentinel index for dev weapon selection
 //  Shared Utilities
 // ===========================================================================
 function setupExportDrawer(toggleId, drawerId) {
-  document.getElementById(toggleId).addEventListener("click", () => {
-    document.getElementById(drawerId).classList.toggle("collapsed");
+  const drawer = document.getElementById(drawerId);
+  const toggle = document.getElementById(toggleId);
+  const COLLAPSED_H = 40;
+  const DEFAULT_H = 260;
+  let expanded = false;
+  let lastH = DEFAULT_H;
+
+  // Initialize collapsed height via inline style
+  drawer.style.height = COLLAPSED_H + "px";
+
+  toggle.addEventListener("click", () => {
+    expanded = !expanded;
+    drawer.classList.toggle("collapsed", !expanded);
+    drawer.style.height = (expanded ? lastH : COLLAPSED_H) + "px";
+  });
+
+  const handle = drawer.querySelector(".ep-export-resize");
+  if (!handle) return;
+  handle.addEventListener("mousedown", e => {
+    if (!expanded) return;
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = drawer.getBoundingClientRect().height;
+    const savedTransition = drawer.style.transition;
+    drawer.style.transition = "none";
+    handle.classList.add("dragging");
+    document.body.style.cursor = "ns-resize";
+    document.body.style.userSelect = "none";
+    const onMove = ev => {
+      const delta = startY - ev.clientY; // drag up = taller
+      const newH = Math.max(80, Math.min(600, startH + delta));
+      drawer.style.height = newH + "px";
+      lastH = newH;
+    };
+    const onUp = () => {
+      drawer.style.transition = savedTransition;
+      handle.classList.remove("dragging");
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
   });
 }
 
