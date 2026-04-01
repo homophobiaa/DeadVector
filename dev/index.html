@@ -1527,25 +1527,46 @@ document.getElementById("btn-import").addEventListener("click", doImport);
 // ===========================================================================
 //  Tab Switching
 // ===========================================================================
+const PAGE_FRAGMENTS = {
+  "page-map": "map",
+  "page-enemies": "enemies",
+  "page-weapons": "weapons",
+  "page-settings": "settings",
+};
+const FRAGMENT_PAGES = Object.fromEntries(Object.entries(PAGE_FRAGMENTS).map(([k,v]) => [v, k]));
+
 let activePage = "page-map";
 
+function switchToPage(pageId, pushState = true) {
+  if (pageId === activePage) return;
+  document.querySelector(".nav-tab.active").classList.remove("active");
+  document.getElementById(activePage).classList.remove("active");
+  activePage = pageId;
+  document.querySelector(`.nav-tab[data-page="${pageId}"]`).classList.add("active");
+  document.getElementById(activePage).classList.add("active");
+  const isMap = activePage === "page-map";
+  document.getElementById("map-toggles").style.display = isMap ? "" : "none";
+  document.getElementById("map-status").style.display = isMap ? "" : "none";
+  if (isMap) { resizeCanvas(); draw(); }
+  if (pushState) history.pushState(null, "", "#" + PAGE_FRAGMENTS[pageId]);
+}
+
 document.querySelectorAll(".nav-tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    if (tab.dataset.page === activePage) return;
-    // Deactivate old
-    document.querySelector(".nav-tab.active").classList.remove("active");
-    document.getElementById(activePage).classList.remove("active");
-    // Activate new
-    activePage = tab.dataset.page;
-    tab.classList.add("active");
-    document.getElementById(activePage).classList.add("active");
-    // Show/hide map-specific nav controls
-    const isMap = activePage === "page-map";
-    document.getElementById("map-toggles").style.display = isMap ? "" : "none";
-    document.getElementById("map-status").style.display = isMap ? "" : "none";
-    if (isMap) { resizeCanvas(); draw(); }
-  });
+  tab.addEventListener("click", () => switchToPage(tab.dataset.page));
 });
+
+window.addEventListener("popstate", () => {
+  const frag = location.hash.slice(1);
+  const pageId = FRAGMENT_PAGES[frag] || "page-map";
+  switchToPage(pageId, false);
+});
+
+// On load, honour existing fragment
+{
+  const frag = location.hash.slice(1);
+  const pageId = FRAGMENT_PAGES[frag];
+  if (pageId) switchToPage(pageId, false);
+}
 
 // ===========================================================================
 //  Panel Resize (drag dividers between sidebar & main)
