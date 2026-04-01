@@ -28,6 +28,7 @@
     0 32px 80px var(--shadow);
   text-align: center;
   animation: panelSlideUp 0.35s var(--ease-bounce) both;
+  overflow: hidden;
 }
 
 .overlay-compact {
@@ -38,11 +39,12 @@
 .menu-title {
   font-family: 'Orbitron', monospace;
   font-weight: 900;
-  font-size: clamp(1.8rem, 5vw, 3rem);
-  letter-spacing: 0.14em;
+  font-size: min(6vw, 2.6rem);
+  letter-spacing: 0.08em;
   line-height: 1;
   color: var(--text-main);
   margin-bottom: 0.35rem;
+  white-space: nowrap;
 }
 
 .overlay-title {

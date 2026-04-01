@@ -11,6 +11,14 @@
   <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
+  <div id="loader" role="status" aria-label="Loading DEADV·ECTOR">
+    <div class="loader-content">
+      <div class="loader-logo">DEAD<span class="loader-accent">V</span>ECTOR</div>
+      <div class="loader-bar-track"><div id="loader-bar"></div></div>
+      <div id="loader-status" class="loader-status">INITIALIZING</div>
+    </div>
+  </div>
+
   <div id="game-wrapper">
     <canvas id="game-canvas" aria-label="DeadVector game arena"></canvas>
 
@@ -19,7 +27,7 @@
       <button id="mute-button" class="icon-btn" type="button" title="Toggle sound">&#9834;</button>
     </div>
 
-    <section id="menu-screen" class="overlay visible">
+    <section id="menu-screen" class="overlay hidden">
       <div class="overlay-inner">
         <h1 class="menu-title">DEAD<span class="brand-accent">V</span>ECTOR</h1>
         <p class="menu-sub">Top-down zombie survival &mdash; FSM-driven AI</p>

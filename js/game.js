@@ -47,6 +47,7 @@ export class Game {
 
     // Background image
     this.bgImg = new Image();
+    this.bgImg.onload = () => this.resize();
     this.bgImg.src = "assets/images/background.png";
     this.bgTransform = { x: 0, y: 0, w: 1280, h: 720 };
 

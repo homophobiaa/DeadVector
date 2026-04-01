@@ -2,6 +2,86 @@
    layout.css — Game wrapper, canvas & brand corner
    ============================================================ */
 
+/* ---- loading screen ---- */
+#loader {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #020803;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.65s ease;
+}
+
+#loader.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loader-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.6rem;
+  text-align: center;
+  width: 100%;
+  padding: 0 1.5rem;
+  box-sizing: border-box;
+}
+
+.loader-logo {
+  font-family: 'Orbitron', monospace;
+  font-weight: 900;
+  font-size: clamp(1.2rem, 7.5vw, 4.8rem);
+  letter-spacing: 0.06em;
+  color: #d8f0d8;
+  white-space: nowrap;
+  width: max-content;
+  max-width: 100%;
+  animation: loaderPulse 2.2s ease-in-out infinite;
+}
+
+.loader-accent {
+  color: #00ff88;
+  text-shadow: 0 0 20px rgba(0, 255, 136, 0.9), 0 0 50px rgba(0, 255, 136, 0.4);
+}
+
+.loader-bar-track {
+  width: min(340px, 62vw);
+  height: 2px;
+  background: rgba(0, 255, 136, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+#loader-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #00ff88, #44d4ff);
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.7);
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.loader-status {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.28em;
+  color: rgba(0, 255, 136, 0.4);
+  animation: loaderBlink 1.4s step-end infinite;
+}
+
+@keyframes loaderPulse {
+  0%, 100% { text-shadow: 0 0 30px rgba(0, 255, 136, 0.2); }
+  50%       { text-shadow: 0 0 60px rgba(0, 255, 136, 0.5), 0 0 120px rgba(0, 255, 136, 0.15); }
+}
+
+@keyframes loaderBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.25; }
+}
+
 /* ---- fullscreen wrapper ---- */
 #game-wrapper {
   position: relative;

@@ -7,14 +7,32 @@ import { preloadZombieParts } from "./entities/zombie-renderer.js";
 import { preloadPlayerParts } from "./entities/player-renderer.js";
 
 const bootstrap = async () => {
+  const loaderBar = document.getElementById("loader-bar");
+  const loaderStatus = document.getElementById("loader-status");
+  const loader = document.getElementById("loader");
+
+  const setProgress = (pct, label) => {
+    loaderBar.style.width = pct + "%";
+    if (label) loaderStatus.textContent = label;
+  };
+
   const mapData = await fetch("./js/map-data.json").then(r => r.json());
   const mapObstacles = Array.isArray(mapData) ? mapData : (mapData.obstacles || []);
   const mapSpawnZones = Array.isArray(mapData) ? [] : (mapData.spawnZones || []);
-  const [,] = await Promise.all([
-    Promise.resolve(),
+  setProgress(25, "LOADING ASSETS");
+
+  await Promise.all([
     preloadZombieParts(),
     preloadPlayerParts(),
   ]);
+  setProgress(60, "LOADING MAP");
+
+  await new Promise(resolve => {
+    const img = new Image();
+    img.onload = img.onerror = resolve;
+    img.src = "./assets/images/background.png";
+  });
+  setProgress(85, "STARTING UP");
 
   const canvas = document.getElementById("game-canvas");
 
@@ -56,6 +74,17 @@ const bootstrap = async () => {
   game.applySettings();
   game.resize();
   game.render();
+
+  setProgress(100, "READY");
+
+  // Show menu then fade out loader simultaneously for a seamless reveal
+  const menuScreen = document.getElementById("menu-screen");
+  menuScreen.classList.remove("hidden");
+  menuScreen.classList.add("visible");
+
+  await new Promise(res => setTimeout(res, 180));
+  loader.classList.add("fade-out");
+  loader.addEventListener("transitionend", () => loader.remove(), { once: true });
 };
 
 window.addEventListener("load", bootstrap);
