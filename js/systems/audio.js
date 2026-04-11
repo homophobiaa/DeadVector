@@ -119,9 +119,46 @@ export class AudioManager {
   stopMusic() { this.stopAllLoops(); }
 
   playShoot(weaponName) {
-    if (weaponName === "Vector SMG") { this.playOneShot(Math.random() > 0.45 ? "smgBurst" : "smg"); return; }
+    if (weaponName === "Vector SMG" || weaponName === "DEV Laser") {
+      this._playAutoShot();
+      return;
+    }
     if (weaponName === "Scatter Cannon") { this.playOneShot("scatter"); return; }
     this.playOneShot("pistol");
+  }
+
+  // Play a one-shot for auto weapons and track it so we can cut it on stop
+  _playAutoShot() {
+    if (!this.soundEnabled || this.muted) return;
+    const template = this.buffers.get("smg");
+    if (!template) return;
+    const instance = template.cloneNode();
+    instance.volume = this.getVolume("smg");
+    instance.currentTime = 0;
+    instance.play().catch(() => {});
+    if (!this._autoShots) this._autoShots = [];
+    this._autoShots.push(instance);
+  }
+
+  // Called each frame that the player is holding fire with an auto weapon
+  markAutoFiring() {
+    this._autoFireActive = true;
+  }
+
+  // Called once per frame — stops all lingering auto-fire sounds when mouse released
+  tickAutoFire() {
+    if (!this._autoFireActive && this._autoShots && this._autoShots.length) {
+      for (const inst of this._autoShots) {
+        inst.pause();
+        inst.currentTime = 0;
+      }
+      this._autoShots = [];
+    }
+    // Prune finished instances
+    if (this._autoShots) {
+      this._autoShots = this._autoShots.filter(i => !i.paused && i.currentTime > 0);
+    }
+    this._autoFireActive = false;
   }
 
   playEnemyHit() { this.playOneShot("enemyHit"); }

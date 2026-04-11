@@ -454,7 +454,11 @@ export class Game {
 
     if (this.state === "playing" && this.input.mouse.leftDown && this.player.weapon.auto) {
       this.firePlayerWeapon();
+      this.audio.markAutoFiring();
     }
+
+    // Stop auto-fire loop if player isn't holding fire this frame
+    this.audio.tickAutoFire();
 
     this.syncHud();
   }
