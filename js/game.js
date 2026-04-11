@@ -218,6 +218,18 @@ export class Game {
     this.waveSpawner.queue = [];
   }
 
+  devSkipToWave(targetWave) {
+    const target = Math.max(1, Math.floor(targetWave));
+    // Clear current wave
+    this.enemies.forEach(e => e.health = 0);
+    this.waveSpawner.queue = [];
+    this.activeBoss = null;
+    // Set wave counter so next startWave() increments to target
+    this.waveSpawner.wave = target - 1;
+    this.awaitingWaveStart = false;
+    this.queueNextWave(200);
+  }
+
   devHeal() {
     this.player.health = this.player.maxHealth;
     this.player.energy = getPlayerStats().maxEnergy;

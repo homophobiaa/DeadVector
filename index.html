@@ -58,6 +58,18 @@
       <div class="overlay-inner overlay-compact">
         <h2 class="overlay-title">PAUSED</h2>
         <p class="overlay-text">Game paused. Focus loss auto-pauses.</p>
+
+        <div id="dev-wave-controls" class="dev-wave-controls hidden">
+          <div class="dev-wave-row">
+            <button id="dev-skip-wave" class="btn-dev" type="button">SKIP WAVE</button>
+          </div>
+          <div class="dev-wave-row">
+            <label class="dev-wave-label">SKIP TO WAVE</label>
+            <input id="dev-skip-to-input" type="number" class="dev-wave-input" min="1" max="999" value="1">
+            <button id="dev-skip-to-go" class="btn-dev btn-dev-sm" type="button">GO</button>
+          </div>
+        </div>
+
         <button id="resume-button" class="btn-primary" type="button">RESUME</button>
         <button id="pause-settings-button" class="btn-secondary" type="button">SETTINGS</button>
       </div>
