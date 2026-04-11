@@ -1,4 +1,4 @@
-import { Enemy } from "../entities/enemy.js";
+import { Enemy, getBossTypes, getBossCycle } from "../entities/enemy.js";
 import { randomRange } from "./collision.js";
 
 const DEFAULT_WAVE_CONFIG = {
@@ -8,7 +8,6 @@ const DEFAULT_WAVE_CONFIG = {
   maxEnemies: 40,
   spawnDelay: [0.2, 0.45],
   bossInterval: 5,
-  bossType: "brute",
   defaultType: "shambler",
   typeThresholds: [
     { type: "screamer", minWave: 7, threshold: 0.92 },
@@ -34,11 +33,47 @@ export class WaveSpawner {
     this.wave = 0;
     this.queue = [];
     this.spawnTimer = 0;
+    this.bossActive = false;
+    this.bossSpawned = false;
+  }
+
+  /** Returns true if the given wave number is a boss wave. */
+  isBossWave(wave) {
+    return this.config.bossInterval > 0 && wave % this.config.bossInterval === 0;
+  }
+
+  /** Get the boss type key for a given wave (cycles through the boss roster). */
+  getBossTypeForWave(wave) {
+    const cycle = getBossCycle();
+    const bossIndex = Math.floor(wave / this.config.bossInterval) - 1;
+    return cycle[bossIndex % cycle.length];
+  }
+
+  /** How many waves until the next boss (0 = this is a boss wave). */
+  wavesUntilBoss() {
+    if (this.config.bossInterval <= 0) return Infinity;
+    const next = this.config.bossInterval - (this.wave % this.config.bossInterval);
+    return next === this.config.bossInterval ? 0 : next;
+  }
+
+  /** Get the type key of the next upcoming boss. */
+  nextBossType() {
+    const remaining = this.wavesUntilBoss();
+    const nextBossWave = remaining === 0 ? this.wave : this.wave + remaining;
+    return this.getBossTypeForWave(nextBossWave);
+  }
+
+  /** Get the config object for the next boss. */
+  nextBossConfig() {
+    const key = this.nextBossType();
+    return getBossTypes()[key] || null;
   }
 
   startWave(bounds, spawnZones = []) {
     this.wave += 1;
     this.spawnZones = spawnZones;
+    this.bossActive = this.isBossWave(this.wave);
+    this.bossSpawned = false;
     this.queue = this.buildWave(this.wave, bounds);
     this.spawnTimer = 0.2;
   }
@@ -57,12 +92,18 @@ export class WaveSpawner {
       });
     }
 
-    // Boss-tier every N waves
-    if (c.bossInterval > 0 && wave % c.bossInterval === 0) {
-      for (let i = 0; i < Math.ceil(wave / c.bossInterval); i++) {
+    // Boss spawn on milestone waves
+    if (this.isBossWave(wave)) {
+      const bossKey = this.getBossTypeForWave(wave);
+      const bossTypes = getBossTypes();
+      const bossConfig = bossTypes[bossKey];
+      if (bossConfig) {
+        // Boss comes after a short delay, after some minions have spawned
         queue.push({
-          type: c.bossType,
-          delay: 0.1,
+          type: bossKey,
+          delay: 0.8,
+          isBoss: true,
+          bossConfig,
           ...this.pickSpawnPoint(bounds),
         });
       }
@@ -105,7 +146,22 @@ export class WaveSpawner {
     this.spawnTimer -= delta;
     while (this.spawnTimer <= 0 && this.queue.length > 0) {
       const next = this.queue.shift();
-      spawned.push(new Enemy({ x: next.x, y: next.y, type: next.type, wave: this.wave }));
+      const enemy = new Enemy({ x: next.x, y: next.y, type: next.type, wave: this.wave });
+
+      // Apply boss stats from BOSS_TYPES if this is a boss spawn
+      if (next.isBoss && next.bossConfig) {
+        const bc = next.bossConfig;
+        // Override with boss config (scaled by wave)
+        enemy.config = { ...bc };
+        enemy.radius = bc.radius;
+        enemy.maxHealth = bc.maxHealth + this.wave * 8;
+        enemy.health = enemy.maxHealth;
+        enemy.speed = bc.speed * (1 + this.wave * 0.012);
+        enemy.isBoss = true;
+        this.bossSpawned = true;
+      }
+
+      spawned.push(enemy);
       this.spawnTimer += next.delay;
     }
     return spawned;

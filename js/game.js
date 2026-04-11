@@ -1,7 +1,7 @@
 import { Player, DEV_WEAPON, setBaseWeapons, getBaseWeapons, setPlayerStats, getPlayerStats } from "./entities/player.js";
 import { circlesOverlap, clamp, keepCircleInBounds, randomRange, separateCircles, resolveCircleRect, pointInRect } from "./systems/collision.js";
 import { WaveSpawner } from "./systems/spawner.js";
-import { Enemy, setEnemyTypes, getEnemyTypes } from "./entities/enemy.js";
+import { Enemy, setEnemyTypes, getEnemyTypes, getBossTypes } from "./entities/enemy.js";
 
 export class Game {
   constructor({ canvas, input, ui, audio, settings, mapObstacles = [], mapSpawnZones = [],
@@ -59,6 +59,12 @@ export class Game {
 
     // Damage vignette
     this.damageVignette = 0;
+
+    // Boss tracking
+    this.activeBoss = null;           // reference to the boss Enemy instance
+    this.bossHealthBarAnim = 0;       // slide-in animation progress (0→1)
+    this.bossDeathFlash = 0;          // screen flash on boss kill
+    this.bossIndicatorPulse = 0;      // accumulated time for indicator animations
 
     // Background image
     this.bgImg = new Image();
@@ -130,6 +136,10 @@ export class Game {
     this.comboTimer = 0;
     this.maxCombo = 0;
     this.damageVignette = 0;
+    this.activeBoss = null;
+    this.bossHealthBarAnim = 0;
+    this.bossDeathFlash = 0;
+    this.bossIndicatorPulse = 0;
     this.waveAnnouncement = { text: "", timer: 0 };
     this.waveSpawner.reset();
     this.player.reset(this.bounds.width / 2, this.bounds.height / 2);
@@ -284,11 +294,24 @@ export class Game {
       this.awaitingWaveStart = false;
       this.audio.playWaveStart();
 
-      // Wave announcement
-      this.waveAnnouncement = {
-        text: `WAVE ${this.waveSpawner.wave}`,
-        timer: 2.5,
-      };
+      // Wave announcement — boss waves get special treatment
+      const isBoss = this.waveSpawner.bossActive;
+      if (isBoss) {
+        const bossConfig = getBossTypes()[this.waveSpawner.getBossTypeForWave(this.waveSpawner.wave)];
+        this.waveAnnouncement = {
+          text: `WAVE ${this.waveSpawner.wave}`,
+          subtext: bossConfig ? `${bossConfig.bossTitle} APPROACHES` : "BOSS INCOMING",
+          timer: 3.5,
+          isBoss: true,
+          bossColor: bossConfig ? bossConfig.bossGlowColor : "#ff3030",
+        };
+        this.screenShake = Math.max(this.screenShake, 15);
+      } else {
+        this.waveAnnouncement = {
+          text: `WAVE ${this.waveSpawner.wave}`,
+          timer: 2.5,
+        };
+      }
 
       window.dispatchEvent(new CustomEvent("levelUp", { detail: { wave: this.waveSpawner.wave } }));
       this.syncHud();
@@ -517,7 +540,27 @@ export class Game {
     // Spawn enemies
     const spawnedEnemies = this.waveSpawner.update(delta);
     this.enemies.push(...spawnedEnemies);
-    for (const e of spawnedEnemies) this.resolveEntityObstacles(e);
+    for (const e of spawnedEnemies) {
+      this.resolveEntityObstacles(e);
+      // Track boss
+      if (e.isBoss) {
+        this.activeBoss = e;
+        this.bossHealthBarAnim = 0;
+      }
+    }
+
+    // Update boss tracking
+    this.bossIndicatorPulse += delta;
+    if (this.bossHealthBarAnim < 1) {
+      this.bossHealthBarAnim = Math.min(1, this.bossHealthBarAnim + delta * 2.0);
+    }
+    if (this.bossDeathFlash > 0) {
+      this.bossDeathFlash = Math.max(0, this.bossDeathFlash - delta * 2.5);
+    }
+    // Clear dead boss reference
+    if (this.activeBoss && this.activeBoss.expired) {
+      this.activeBoss = null;
+    }
 
     // Update bullets — pass through obstacles
     for (const b of this.bullets) {
@@ -700,6 +743,34 @@ export class Game {
               life: 10,
               bobPhase: Math.random() * Math.PI * 2,
             });
+          }
+
+          // Boss death — massive effects
+          if (enemy.isBoss) {
+            this.bossDeathFlash = 1;
+            this.screenShake = Math.max(this.screenShake, 40);
+            // Extra massive gore
+            for (let bi = 0; bi < 3; bi++) {
+              this.spawnDirectionalBlood(enemy.x, enemy.y, Math.random() * Math.PI * 2, 30, 100, 400);
+            }
+            this.spawnGibs(enemy.x, enemy.y, enemy.radius, enemy.config.bodyColor, 20);
+            this.spawnBloodMist(enemy.x, enemy.y, enemy.radius * 2);
+            this.spawnBloodMist(enemy.x, enemy.y, enemy.radius * 1.5);
+            // Guaranteed health drops
+            for (let pi = 0; pi < 3; pi++) {
+              this.pickups.push({
+                x: enemy.x + randomRange(-30, 30),
+                y: enemy.y + randomRange(-30, 30),
+                radius: 8,
+                type: "health",
+                amount: 20,
+                life: 12,
+                bobPhase: Math.random() * Math.PI * 2,
+              });
+            }
+            // Big score popup
+            this.spawnDamageNumber(enemy.x, enemy.y - enemy.radius - 35, "BOSS SLAIN!", "#ff4444");
+            this.activeBoss = null;
           }
         }
         break;
@@ -1244,27 +1315,69 @@ export class Game {
     if (wa.timer <= 0) return;
 
     const { ctx, bounds } = this;
-    const alpha = wa.timer > 2 ? clamp((2.5 - wa.timer) * 2, 0, 1) : clamp(wa.timer / 1.5, 0, 1);
+    const maxTimer = wa.isBoss ? 3.5 : 2.5;
+    const alpha = wa.timer > (maxTimer - 0.5)
+      ? clamp((maxTimer - wa.timer) * 2, 0, 1)
+      : clamp(wa.timer / 1.5, 0, 1);
 
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    // Large title
-    ctx.font = 'bold 64px "Orbitron", "Arial Black", sans-serif';
-    ctx.fillStyle = "rgba(0,0,0,0.4)";
-    ctx.fillText(wa.text, bounds.width / 2 + 2, bounds.height / 2 + 2);
-    ctx.fillStyle = "#00ff88";
-    ctx.shadowBlur = 30;
-    ctx.shadowColor = "rgba(0,255,136,0.5)";
-    ctx.fillText(wa.text, bounds.width / 2, bounds.height / 2);
+    if (wa.isBoss) {
+      // Boss wave — dramatic red-tinted announcement
+      const bossColor = wa.bossColor || "#ff3030";
+      const t = performance.now() * 0.001;
+      const pulse = 0.8 + Math.sin(t * 4) * 0.2;
 
-    // Subtitle
-    ctx.font = '18px "Inter", sans-serif';
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "rgba(0,255,136,0.5)";
-    ctx.fillText("SURVIVE", bounds.width / 2, bounds.height / 2 + 40);
+      // Dark overlay for emphasis
+      ctx.fillStyle = `rgba(0,0,0,${alpha * 0.25})`;
+      ctx.fillRect(0, 0, bounds.width, bounds.height);
+
+      // Large title
+      ctx.font = 'bold 64px "Orbitron", "Arial Black", sans-serif';
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      ctx.fillText(wa.text, bounds.width / 2 + 2, bounds.height / 2 - 12);
+      ctx.fillStyle = bossColor;
+      ctx.shadowBlur = 40;
+      ctx.shadowColor = bossColor;
+      ctx.globalAlpha = alpha * pulse;
+      ctx.fillText(wa.text, bounds.width / 2, bounds.height / 2 - 14);
+
+      // Boss subtitle
+      ctx.globalAlpha = alpha;
+      ctx.font = 'bold 22px "Orbitron", sans-serif';
+      ctx.shadowBlur = 20;
+      ctx.fillStyle = bossColor;
+      ctx.fillText(wa.subtext || "BOSS INCOMING", bounds.width / 2, bounds.height / 2 + 30);
+
+      // Warning lines
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = `rgba(${parseInt(bossColor.slice(1, 3), 16)},${parseInt(bossColor.slice(3, 5), 16)},${parseInt(bossColor.slice(5, 7), 16)},${0.15 * alpha})`;
+      ctx.lineWidth = 1;
+      const lineW = 180;
+      const lineY = bounds.height / 2 + 52;
+      ctx.beginPath();
+      ctx.moveTo(bounds.width / 2 - lineW, lineY);
+      ctx.lineTo(bounds.width / 2 + lineW, lineY);
+      ctx.stroke();
+    } else {
+      // Normal wave announcement
+      ctx.font = 'bold 64px "Orbitron", "Arial Black", sans-serif';
+      ctx.fillStyle = "rgba(0,0,0,0.4)";
+      ctx.fillText(wa.text, bounds.width / 2 + 2, bounds.height / 2 + 2);
+      ctx.fillStyle = "#00ff88";
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = "rgba(0,255,136,0.5)";
+      ctx.fillText(wa.text, bounds.width / 2, bounds.height / 2);
+
+      // Subtitle
+      ctx.font = '18px "Inter", sans-serif';
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "rgba(0,255,136,0.5)";
+      ctx.fillText("SURVIVE", bounds.width / 2, bounds.height / 2 + 40);
+    }
 
     ctx.restore();
   }
@@ -1283,21 +1396,248 @@ export class Game {
     const comboText = `${this.combo}x`;
     const multText = `${this.getComboMultiplier().toFixed(1)}x SCORE`;
 
-    // Combo number
+    // Combo number — offset down when boss indicator is visible
+    const comboY = 20;
     ctx.font = 'bold 42px "Orbitron", "Arial Black", sans-serif';
     ctx.fillStyle = "rgba(0,0,0,0.4)";
-    ctx.fillText(comboText, bounds.width - 22, 22);
+    ctx.fillText(comboText, bounds.width - 22, comboY + 2);
     ctx.fillStyle = this.combo >= 10 ? "#ff3355" : this.combo >= 5 ? "#ffc850" : "#00ff88";
     ctx.shadowBlur = 20;
     ctx.shadowColor = "rgba(0,255,136,0.4)";
-    ctx.fillText(comboText, bounds.width - 20, 20);
+    ctx.fillText(comboText, bounds.width - 20, comboY);
 
     // Multiplier
     ctx.font = '14px "Inter", sans-serif';
     ctx.shadowBlur = 0;
     ctx.fillStyle = "rgba(0,255,136,0.5)";
-    ctx.fillText(multText, bounds.width - 20, 64);
+    ctx.fillText(multText, bounds.width - 20, comboY + 44);
 
+    ctx.restore();
+  }
+
+  /** Render the boss health bar at the top of the screen when a boss is alive. */
+  renderBossHealthBar() {
+    const boss = this.activeBoss;
+    if (!boss || boss.fsm.currentState === "DEAD") return;
+
+    const { ctx, bounds } = this;
+    const t = performance.now() * 0.001;
+    const anim = clamp(this.bossHealthBarAnim, 0, 1);
+    const easeAnim = 1 - Math.pow(1 - anim, 3); // ease-out cubic
+
+    ctx.save();
+
+    // Slide down from top
+    const slideY = -40 + easeAnim * 40;
+    ctx.globalAlpha = easeAnim;
+
+    const barW = Math.min(400, bounds.width * 0.4);
+    const barH = 10;
+    const barX = (bounds.width - barW) / 2;
+    const barY = 28 + slideY;
+    const hpPct = clamp(boss.health / boss.maxHealth, 0, 1);
+
+    const gc = boss.config.bossGlowColor || "#ff3030";
+    const r = parseInt(gc.slice(1, 3), 16);
+    const g = parseInt(gc.slice(3, 5), 16);
+    const b = parseInt(gc.slice(5, 7), 16);
+
+    // Background with subtle dark glow
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.beginPath();
+    ctx.roundRect(barX - 3, barY - 3, barW + 6, barH + 6, 6);
+    ctx.fill();
+
+    // Border with boss color
+    const borderPulse = 0.3 + Math.sin(t * 3) * 0.1;
+    ctx.strokeStyle = `rgba(${r},${g},${b},${borderPulse})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(barX - 3, barY - 3, barW + 6, barH + 6, 6);
+    ctx.stroke();
+
+    // Health fill with gradient
+    if (hpPct > 0) {
+      const fillGrad = ctx.createLinearGradient(barX, barY, barX + barW * hpPct, barY);
+      fillGrad.addColorStop(0, gc);
+      fillGrad.addColorStop(1, `rgba(${Math.min(255, r + 60)},${Math.min(255, g + 30)},${Math.min(255, b + 30)},1)`);
+      ctx.fillStyle = fillGrad;
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = gc;
+      ctx.beginPath();
+      ctx.roundRect(barX, barY, barW * hpPct, barH, 4);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Shiny highlight line
+      ctx.fillStyle = `rgba(255,255,255,0.15)`;
+      ctx.beginPath();
+      ctx.roundRect(barX, barY, barW * hpPct, barH * 0.35, [4, 4, 0, 0]);
+      ctx.fill();
+    }
+
+    // Boss name above bar
+    const bossTitle = boss.config.bossTitle || boss.config.label.toUpperCase();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.font = 'bold 12px "Orbitron", monospace';
+    ctx.fillStyle = `rgba(${r},${g},${b},0.8)`;
+    ctx.fillText(bossTitle, bounds.width / 2, barY - 6 + slideY);
+
+    // HP percentage on the right
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.font = '600 10px "Inter", sans-serif';
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.fillText(`${Math.ceil(hpPct * 100)}%`, barX + barW + 30, barY + barH / 2);
+
+    ctx.restore();
+  }
+
+  /** Render the next-boss indicator widget in the bottom-right corner. */
+  renderBossIndicator() {
+    if (this.state !== "playing" || this.waveSpawner.wave === 0) return;
+    // Don't show if boss is currently alive — the health bar is enough
+    if (this.activeBoss && this.activeBoss.fsm.currentState !== "DEAD") return;
+
+    const wavesLeft = this.waveSpawner.wavesUntilBoss();
+    if (wavesLeft === Infinity || wavesLeft === 0) return;
+
+    const { ctx, bounds } = this;
+    const t = this.bossIndicatorPulse;
+    const nextBossConfig = this.waveSpawner.nextBossConfig();
+    if (!nextBossConfig) return;
+
+    const gc = nextBossConfig.bossGlowColor || "#ff3030";
+    const r = parseInt(gc.slice(1, 3), 16);
+    const g = parseInt(gc.slice(3, 5), 16);
+    const b = parseInt(gc.slice(5, 7), 16);
+
+    // Urgency ramps up as boss gets closer (5→1 waves)
+    const maxDist = this.waveSpawner.config.bossInterval;
+    const urgency = clamp(1 - (wavesLeft - 1) / (maxDist - 1), 0, 1); // 0=far, 1=imminent
+
+    ctx.save();
+
+    // Widget position — bottom-right, above kills
+    const widgetW = 120 + urgency * 20;
+    const widgetH = 48 + urgency * 8;
+    const padding = 16;
+    const wx = bounds.width - widgetW - padding;
+    const wy = bounds.height - widgetH - 44;
+
+    // Background panel — gets more opaque and colored with urgency
+    const panelAlpha = 0.3 + urgency * 0.35;
+    const panelBorderAlpha = 0.15 + urgency * 0.45;
+
+    // Panel shake when very close
+    let shakeX = 0, shakeY = 0;
+    if (urgency > 0.8) {
+      const shakeAmt = (urgency - 0.8) * 10;
+      shakeX = Math.sin(t * 18) * shakeAmt;
+      shakeY = Math.cos(t * 22) * shakeAmt * 0.5;
+    }
+
+    ctx.translate(wx + shakeX, wy + shakeY);
+
+    // Outer glow when urgent
+    if (urgency > 0.4) {
+      const glowAlpha = (urgency - 0.4) * 0.3;
+      ctx.shadowBlur = 15 + urgency * 20;
+      ctx.shadowColor = `rgba(${r},${g},${b},${glowAlpha})`;
+    }
+
+    // Panel background
+    ctx.fillStyle = `rgba(10,10,10,${panelAlpha})`;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, widgetW, widgetH, 8);
+    ctx.fill();
+
+    // Panel border
+    const borderPulse = urgency > 0.6 ? 0.5 + Math.sin(t * 4) * 0.3 : 1;
+    ctx.strokeStyle = `rgba(${r},${g},${b},${panelBorderAlpha * borderPulse})`;
+    ctx.lineWidth = 1 + urgency * 0.5;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, widgetW, widgetH, 8);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Boss icon — procedural skull/danger symbol
+    const iconX = 22;
+    const iconY = widgetH / 2;
+    const iconSize = 10 + urgency * 4;
+    const iconPulse = urgency > 0.5 ? 0.8 + Math.sin(t * 3) * 0.2 : 0.5 + urgency * 0.3;
+
+    ctx.fillStyle = `rgba(${r},${g},${b},${iconPulse})`;
+
+    // Draw a skull-like icon
+    ctx.beginPath();
+    // Head circle
+    ctx.arc(iconX, iconY - 2, iconSize * 0.7, 0, Math.PI * 2);
+    ctx.fill();
+    // Jaw
+    ctx.fillRect(iconX - iconSize * 0.35, iconY + iconSize * 0.3, iconSize * 0.7, iconSize * 0.35);
+
+    // Eye sockets (dark)
+    ctx.fillStyle = `rgba(0,0,0,${0.6 + urgency * 0.3})`;
+    ctx.beginPath();
+    ctx.arc(iconX - iconSize * 0.22, iconY - 3, iconSize * 0.18, 0, Math.PI * 2);
+    ctx.arc(iconX + iconSize * 0.22, iconY - 3, iconSize * 0.18, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eye glow when urgent
+    if (urgency > 0.3) {
+      const eyeGlow = (urgency - 0.3) * 1.2;
+      ctx.fillStyle = `rgba(${r},${g},${b},${eyeGlow * iconPulse})`;
+      ctx.beginPath();
+      ctx.arc(iconX - iconSize * 0.22, iconY - 3, iconSize * 0.1, 0, Math.PI * 2);
+      ctx.arc(iconX + iconSize * 0.22, iconY - 3, iconSize * 0.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Text — boss name
+    const textX = 42;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+
+    const nameAlpha = 0.4 + urgency * 0.5;
+    ctx.font = `bold ${9 + urgency * 2}px "Orbitron", monospace`;
+    ctx.fillStyle = `rgba(${r},${g},${b},${nameAlpha})`;
+    ctx.fillText(nextBossConfig.bossTitle || nextBossConfig.label.toUpperCase(), textX, 8);
+
+    // Waves counter
+    ctx.font = `600 ${10 + urgency * 2}px "Inter", sans-serif`;
+    const counterAlpha = 0.4 + urgency * 0.5;
+
+    if (wavesLeft <= 1) {
+      // Flashing "NEXT WAVE!" text
+      const flashAlpha = 0.6 + Math.sin(t * 6) * 0.4;
+      ctx.fillStyle = `rgba(${r},${g},${b},${flashAlpha})`;
+      ctx.fillText("NEXT WAVE!", textX, widgetH / 2 + 4);
+    } else {
+      ctx.fillStyle = `rgba(255,255,255,${counterAlpha})`;
+      ctx.fillText(`IN ${wavesLeft} WAVES`, textX, widgetH / 2 + 4);
+    }
+
+    // Urgency progress bar at bottom of widget
+    const progBarY = widgetH - 4;
+    const progBarW = widgetW - 12;
+    ctx.fillStyle = `rgba(255,255,255,0.06)`;
+    ctx.fillRect(6, progBarY, progBarW, 2);
+    ctx.fillStyle = `rgba(${r},${g},${b},${0.3 + urgency * 0.5})`;
+    ctx.fillRect(6, progBarY, progBarW * urgency, 2);
+
+    ctx.restore();
+  }
+
+  /** Screen flash when boss is killed. */
+  renderBossDeathFlash() {
+    if (this.bossDeathFlash <= 0) return;
+    const { ctx, bounds } = this;
+    ctx.save();
+    ctx.globalAlpha = this.bossDeathFlash * 0.35;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, bounds.width, bounds.height);
     ctx.restore();
   }
 
@@ -1510,6 +1850,15 @@ export class Game {
 
     // Combo overlay
     this.renderComboOverlay();
+
+    // Boss health bar (top of screen)
+    this.renderBossHealthBar();
+
+    // Boss indicator widget (bottom-right)
+    this.renderBossIndicator();
+
+    // Boss death flash
+    this.renderBossDeathFlash();
 
     // In-game HUD
     this.renderHud();

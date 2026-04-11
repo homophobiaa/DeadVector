@@ -10,6 +10,94 @@ import {
 } from "../systems/collision.js";
 import { renderZombieParts } from "./zombie-renderer.js";
 
+// Boss type definitions — milestone-wave enemies with extreme stats
+const BOSS_TYPES = {
+  juggernaut: {
+    label: "Juggernaut",
+    radius: 36,
+    speed: 55,
+    maxHealth: 600,
+    damage: 30,
+    attackRange: 52,
+    attackWindup: 0.6,
+    attackRecovery: 0.4,
+    attackCooldown: 1.8,
+    noticeRange: 500,
+    retreatThreshold: 0.0,
+    retreatTime: [0, 0],
+    retreatCooldown: 999,
+    bodyColor: "#6e1818",
+    accentColor: "#ff4040",
+    eyeColor: "#ff8844",
+    glowColor: "rgba(255,50,50,0.5)",
+    tintFilter: "hue-rotate(-140deg) saturate(1.5) brightness(0.7)",
+    score: 500,
+    ranged: false,
+    isBoss: true,
+    bossGlowColor: "#ff3030",
+    bossTitle: "THE JUGGERNAUT",
+  },
+  broodmother: {
+    label: "Brood Mother",
+    radius: 30,
+    speed: 48,
+    maxHealth: 500,
+    damage: 15,
+    attackRange: 220,
+    preferredDistance: 170,
+    attackWindup: 0.7,
+    attackRecovery: 0.35,
+    attackCooldown: 1.2,
+    noticeRange: 450,
+    retreatThreshold: 0.5,
+    retreatTime: [0.8, 1.3],
+    retreatCooldown: 2.5,
+    bodyColor: "#2a6625",
+    accentColor: "#55cc44",
+    eyeColor: "#ccff88",
+    glowColor: "rgba(80,200,60,0.5)",
+    tintFilter: "hue-rotate(40deg) saturate(2.0) brightness(0.9)",
+    score: 600,
+    ranged: true,
+    projectileSpeed: 300,
+    isBoss: true,
+    bossGlowColor: "#44ff22",
+    bossTitle: "BROOD MOTHER",
+  },
+  titan: {
+    label: "Titan",
+    radius: 42,
+    speed: 65,
+    maxHealth: 900,
+    damage: 40,
+    attackRange: 60,
+    attackWindup: 0.5,
+    attackRecovery: 0.3,
+    attackCooldown: 1.4,
+    noticeRange: 600,
+    retreatThreshold: 0.0,
+    retreatTime: [0, 0],
+    retreatCooldown: 999,
+    bodyColor: "#3a1a4a",
+    accentColor: "#8844cc",
+    eyeColor: "#dd88ff",
+    glowColor: "rgba(140,70,220,0.5)",
+    tintFilter: "hue-rotate(180deg) saturate(1.8) brightness(0.75)",
+    score: 800,
+    ranged: false,
+    isBoss: true,
+    bossGlowColor: "#aa44ff",
+    bossTitle: "THE TITAN",
+  },
+};
+
+export function getBossTypes() { return BOSS_TYPES; }
+
+/** Return ordered boss cycle list. */
+export function getBossCycle() {
+  return ["juggernaut", "broodmother", "titan"];
+}
+
 // Five enemy types for FSM AI variety — mutable so dev panel can hot-swap
 let ENEMY_TYPES = {
   shambler: {
@@ -138,7 +226,7 @@ export function getEnemyTypes() { return ENEMY_TYPES; }
 export class Enemy {
   constructor({ x, y, type, wave }) {
     this.type = type;
-    this.config = ENEMY_TYPES[type];
+    this.config = ENEMY_TYPES[type] || BOSS_TYPES[type];
     this.x = x;
     this.y = y;
     this.wave = wave;
@@ -687,6 +775,48 @@ export class Enemy {
       ctx.stroke();
     }
 
+    // Boss aura and ground effect
+    if (c.isBoss && this.stateLabel !== "DEAD") {
+      const pulse = 0.5 + Math.sin(t * 2.5) * 0.25;
+
+      // Parse boss glow hex to rgba helper
+      const gc = c.bossGlowColor || "#ff3030";
+      const r = parseInt(gc.slice(1, 3), 16);
+      const g = parseInt(gc.slice(3, 5), 16);
+      const b = parseInt(gc.slice(5, 7), 16);
+      const rgba = (a) => `rgba(${r},${g},${b},${a})`;
+
+      // Outer menacing aura — double-layered
+      const aura1 = ctx.createRadialGradient(0, 0, this.radius * 0.8, 0, 0, this.radius * 3.5);
+      aura1.addColorStop(0, rgba(0.25 * pulse));
+      aura1.addColorStop(0.5, rgba(0.08 * pulse));
+      aura1.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = aura1;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius * 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner pulsing ring
+      ctx.strokeStyle = rgba(0.4 + pulse * 0.3);
+      ctx.lineWidth = 2.5 + Math.sin(t * 4) * 1;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius + 6 + Math.sin(t * 3) * 3, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Orbiting danger particles
+      for (let i = 0; i < 4; i++) {
+        const a = t * 1.8 + (i * Math.PI * 2) / 4;
+        const orbitR = this.radius + 12 + Math.sin(t * 2 + i) * 4;
+        const px = Math.cos(a) * orbitR;
+        const py = Math.sin(a) * orbitR;
+        const pAlpha = 0.5 + Math.sin(t * 5 + i * 1.2) * 0.3;
+        ctx.fillStyle = rgba(pAlpha);
+        ctx.beginPath();
+        ctx.arc(px, py, 2.5 + Math.sin(t * 3 + i) * 1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
     // Zombie body — PNG parts with procedural animation
     if (!renderZombieParts(ctx, this)) {
       // Fallback: simple coloured circle when images haven't loaded
@@ -696,9 +826,9 @@ export class Enemy {
       ctx.fill();
     }
 
-    // Health bar above
+    // Health bar above (skip for bosses — they get a top-screen bar)
     ctx.shadowBlur = 0;
-    if (healthRatio < 1 && this.stateLabel !== "DEAD") {
+    if (healthRatio < 1 && this.stateLabel !== "DEAD" && !c.isBoss) {
       const barW = this.radius * 2.2;
       const barH = 3;
       const barY = -this.radius - 10;
