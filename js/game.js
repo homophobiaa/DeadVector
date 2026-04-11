@@ -627,7 +627,7 @@ export class Game {
       window.dispatchEvent(new CustomEvent("waveComplete", { detail: { wave: this.waveSpawner.wave } }));
       this.player.heal(15);
       this.spawnBurst(this.player.x, this.player.y, "#78ff78", 12, 15, 80);
-      this.queueNextWave(1800);
+      this.queueNextWave(800);
     }
 
     // Game over check
@@ -1482,7 +1482,7 @@ export class Game {
     ctx.textBaseline = "bottom";
     ctx.font = 'bold 12px "Orbitron", monospace';
     ctx.fillStyle = `rgba(${r},${g},${b},0.8)`;
-    ctx.fillText(bossTitle, bounds.width / 2, barY - 6 + slideY);
+    ctx.fillText(bossTitle, bounds.width / 2, barY - 6);
 
     // HP percentage on the right
     ctx.textAlign = "right";
@@ -1497,7 +1497,6 @@ export class Game {
   /** Render the next-boss indicator widget in the bottom-right corner. */
   renderBossIndicator() {
     if (this.state !== "playing" || this.waveSpawner.wave === 0) return;
-    // Don't show if boss is currently alive — the health bar is enough
     if (this.activeBoss && this.activeBoss.fsm.currentState !== "DEAD") return;
 
     const wavesLeft = this.waveSpawner.wavesUntilBoss();
@@ -1509,123 +1508,111 @@ export class Game {
     if (!nextBossConfig) return;
 
     const gc = nextBossConfig.bossGlowColor || "#ff3030";
-    const r = parseInt(gc.slice(1, 3), 16);
-    const g = parseInt(gc.slice(3, 5), 16);
-    const b = parseInt(gc.slice(5, 7), 16);
+    const cr = parseInt(gc.slice(1, 3), 16);
+    const cg = parseInt(gc.slice(3, 5), 16);
+    const cb = parseInt(gc.slice(5, 7), 16);
 
-    // Urgency ramps up as boss gets closer (5→1 waves)
     const maxDist = this.waveSpawner.config.bossInterval;
-    const urgency = clamp(1 - (wavesLeft - 1) / (maxDist - 1), 0, 1); // 0=far, 1=imminent
+    const urgency = clamp(1 - (wavesLeft - 1) / (maxDist - 1), 0, 1);
 
     ctx.save();
 
-    // Widget position — bottom-right, above kills
-    const widgetW = 120 + urgency * 20;
-    const widgetH = 48 + urgency * 8;
-    const padding = 16;
-    const wx = bounds.width - widgetW - padding;
-    const wy = bounds.height - widgetH - 44;
+    // Fixed-size widget — no movement, no shake
+    const W = 156, H = 46;
+    const pad = 14;
+    const x0 = bounds.width - W - pad;
+    const y0 = bounds.height - H - 42;
 
-    // Background panel — gets more opaque and colored with urgency
-    const panelAlpha = 0.3 + urgency * 0.35;
-    const panelBorderAlpha = 0.15 + urgency * 0.45;
-
-    // Panel shake when very close
-    let shakeX = 0, shakeY = 0;
-    if (urgency > 0.8) {
-      const shakeAmt = (urgency - 0.8) * 10;
-      shakeX = Math.sin(t * 18) * shakeAmt;
-      shakeY = Math.cos(t * 22) * shakeAmt * 0.5;
-    }
-
-    ctx.translate(wx + shakeX, wy + shakeY);
-
-    // Outer glow when urgent
-    if (urgency > 0.4) {
-      const glowAlpha = (urgency - 0.4) * 0.3;
-      ctx.shadowBlur = 15 + urgency * 20;
-      ctx.shadowColor = `rgba(${r},${g},${b},${glowAlpha})`;
-    }
-
-    // Panel background
-    ctx.fillStyle = `rgba(10,10,10,${panelAlpha})`;
+    // Panel background — opacity increases with urgency
+    ctx.fillStyle = `rgba(8,8,8,${0.35 + urgency * 0.3})`;
     ctx.beginPath();
-    ctx.roundRect(0, 0, widgetW, widgetH, 8);
+    ctx.roundRect(x0, y0, W, H, 7);
     ctx.fill();
 
-    // Panel border
-    const borderPulse = urgency > 0.6 ? 0.5 + Math.sin(t * 4) * 0.3 : 1;
-    ctx.strokeStyle = `rgba(${r},${g},${b},${panelBorderAlpha * borderPulse})`;
+    // Border with optional glow
+    const borderAlpha = 0.12 + urgency * 0.4;
+    const borderPulse = urgency > 0.5
+      ? borderAlpha + Math.sin(t * 3.5) * urgency * 0.2
+      : borderAlpha;
+    ctx.strokeStyle = `rgba(${cr},${cg},${cb},${clamp(borderPulse, 0, 1)})`;
     ctx.lineWidth = 1 + urgency * 0.5;
+    if (urgency > 0.4) {
+      ctx.shadowBlur = 8 + urgency * 12;
+      ctx.shadowColor = `rgba(${cr},${cg},${cb},${(urgency - 0.4) * 0.5})`;
+    }
     ctx.beginPath();
-    ctx.roundRect(0, 0, widgetW, widgetH, 8);
+    ctx.roundRect(x0, y0, W, H, 7);
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    // Boss icon — procedural skull/danger symbol
-    const iconX = 22;
-    const iconY = widgetH / 2;
-    const iconSize = 10 + urgency * 4;
-    const iconPulse = urgency > 0.5 ? 0.8 + Math.sin(t * 3) * 0.2 : 0.5 + urgency * 0.3;
+    // --- Skull icon ---
+    const ix = x0 + 16;
+    const iy = y0 + H / 2;
+    const iSz = 8 + urgency * 2;
+    const iAlpha = 0.4 + urgency * 0.5;
 
-    ctx.fillStyle = `rgba(${r},${g},${b},${iconPulse})`;
-
-    // Draw a skull-like icon
+    ctx.fillStyle = `rgba(${cr},${cg},${cb},${iAlpha})`;
     ctx.beginPath();
-    // Head circle
-    ctx.arc(iconX, iconY - 2, iconSize * 0.7, 0, Math.PI * 2);
+    ctx.arc(ix, iy - 1, iSz * 0.72, 0, Math.PI * 2);
     ctx.fill();
-    // Jaw
-    ctx.fillRect(iconX - iconSize * 0.35, iconY + iconSize * 0.3, iconSize * 0.7, iconSize * 0.35);
+    ctx.fillRect(ix - iSz * 0.32, iy + iSz * 0.35, iSz * 0.64, iSz * 0.28);
 
-    // Eye sockets (dark)
-    ctx.fillStyle = `rgba(0,0,0,${0.6 + urgency * 0.3})`;
+    // Eye sockets
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
     ctx.beginPath();
-    ctx.arc(iconX - iconSize * 0.22, iconY - 3, iconSize * 0.18, 0, Math.PI * 2);
-    ctx.arc(iconX + iconSize * 0.22, iconY - 3, iconSize * 0.18, 0, Math.PI * 2);
+    ctx.arc(ix - iSz * 0.24, iy - 2, iSz * 0.17, 0, Math.PI * 2);
+    ctx.arc(ix + iSz * 0.24, iy - 2, iSz * 0.17, 0, Math.PI * 2);
     ctx.fill();
 
-    // Eye glow when urgent
     if (urgency > 0.3) {
-      const eyeGlow = (urgency - 0.3) * 1.2;
-      ctx.fillStyle = `rgba(${r},${g},${b},${eyeGlow * iconPulse})`;
+      const eGlow = (urgency - 0.3) * 1.4;
+      ctx.fillStyle = `rgba(${cr},${cg},${cb},${clamp(eGlow, 0, 1)})`;
       ctx.beginPath();
-      ctx.arc(iconX - iconSize * 0.22, iconY - 3, iconSize * 0.1, 0, Math.PI * 2);
-      ctx.arc(iconX + iconSize * 0.22, iconY - 3, iconSize * 0.1, 0, Math.PI * 2);
+      ctx.arc(ix - iSz * 0.24, iy - 2, iSz * 0.09, 0, Math.PI * 2);
+      ctx.arc(ix + iSz * 0.24, iy - 2, iSz * 0.09, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Text — boss name
-    const textX = 42;
+    // --- Text area ---
+    const tx = x0 + 34;
+    const maxTextW = W - 34 - 8;
+
+    // Boss name — truncated if needed
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
+    ctx.font = 'bold 9px "Orbitron", monospace';
+    const name = nextBossConfig.bossTitle || nextBossConfig.label.toUpperCase();
+    let displayName = name;
+    while (ctx.measureText(displayName).width > maxTextW && displayName.length > 4) {
+      displayName = displayName.slice(0, -1);
+    }
+    if (displayName !== name) displayName += "\u2026";
+    ctx.fillStyle = `rgba(${cr},${cg},${cb},${0.5 + urgency * 0.45})`;
+    ctx.fillText(displayName, tx, y0 + 8);
 
-    const nameAlpha = 0.4 + urgency * 0.5;
-    ctx.font = `bold ${9 + urgency * 2}px "Orbitron", monospace`;
-    ctx.fillStyle = `rgba(${r},${g},${b},${nameAlpha})`;
-    ctx.fillText(nextBossConfig.bossTitle || nextBossConfig.label.toUpperCase(), textX, 8);
-
-    // Waves counter
-    ctx.font = `600 ${10 + urgency * 2}px "Inter", sans-serif`;
-    const counterAlpha = 0.4 + urgency * 0.5;
-
+    // Wave counter or "NEXT WAVE!" flash
+    ctx.font = '600 10px "Inter", sans-serif';
     if (wavesLeft <= 1) {
-      // Flashing "NEXT WAVE!" text
-      const flashAlpha = 0.6 + Math.sin(t * 6) * 0.4;
-      ctx.fillStyle = `rgba(${r},${g},${b},${flashAlpha})`;
-      ctx.fillText("NEXT WAVE!", textX, widgetH / 2 + 4);
+      const flash = 0.5 + Math.sin(t * 5) * 0.5;
+      ctx.fillStyle = `rgba(${cr},${cg},${cb},${clamp(flash, 0, 1)})`;
+      ctx.fillText("NEXT WAVE!", tx, y0 + 22);
     } else {
-      ctx.fillStyle = `rgba(255,255,255,${counterAlpha})`;
-      ctx.fillText(`IN ${wavesLeft} WAVES`, textX, widgetH / 2 + 4);
+      ctx.fillStyle = `rgba(255,255,255,${0.35 + urgency * 0.35})`;
+      ctx.fillText(`IN ${wavesLeft} WAVES`, tx, y0 + 22);
     }
 
-    // Urgency progress bar at bottom of widget
-    const progBarY = widgetH - 4;
-    const progBarW = widgetW - 12;
-    ctx.fillStyle = `rgba(255,255,255,0.06)`;
-    ctx.fillRect(6, progBarY, progBarW, 2);
-    ctx.fillStyle = `rgba(${r},${g},${b},${0.3 + urgency * 0.5})`;
-    ctx.fillRect(6, progBarY, progBarW * urgency, 2);
+    // Progress bar at bottom
+    const pbX = x0 + 6;
+    const pbY = y0 + H - 5;
+    const pbW = W - 12;
+    ctx.fillStyle = "rgba(255,255,255,0.05)";
+    ctx.beginPath();
+    ctx.roundRect(pbX, pbY, pbW, 2, 1);
+    ctx.fill();
+    ctx.fillStyle = `rgba(${cr},${cg},${cb},${0.25 + urgency * 0.5})`;
+    ctx.beginPath();
+    ctx.roundRect(pbX, pbY, pbW * urgency, 2, 1);
+    ctx.fill();
 
     ctx.restore();
   }

@@ -11,18 +11,20 @@ import {
 import { renderZombieParts } from "./zombie-renderer.js";
 
 // Boss type definitions — milestone-wave enemies with extreme stats
+// attackRange must exceed bossRadius + playerRadius (17) for melee to connect.
+// noticeRange set very high so bosses never disengage.
 const BOSS_TYPES = {
   juggernaut: {
     label: "Juggernaut",
     radius: 36,
-    speed: 55,
+    speed: 72,
     maxHealth: 600,
-    damage: 30,
-    attackRange: 52,
-    attackWindup: 0.6,
-    attackRecovery: 0.4,
-    attackCooldown: 1.8,
-    noticeRange: 500,
+    damage: 35,
+    attackRange: 95,
+    attackWindup: 0.45,
+    attackRecovery: 0.35,
+    attackCooldown: 1.3,
+    noticeRange: 1500,
     retreatThreshold: 0.0,
     retreatTime: [0, 0],
     retreatCooldown: 999,
@@ -36,22 +38,23 @@ const BOSS_TYPES = {
     isBoss: true,
     bossGlowColor: "#ff3030",
     bossTitle: "THE JUGGERNAUT",
+    slamRadius: 80,
   },
   broodmother: {
     label: "Brood Mother",
     radius: 30,
-    speed: 48,
+    speed: 55,
     maxHealth: 500,
-    damage: 15,
-    attackRange: 220,
-    preferredDistance: 170,
-    attackWindup: 0.7,
-    attackRecovery: 0.35,
-    attackCooldown: 1.2,
-    noticeRange: 450,
-    retreatThreshold: 0.5,
-    retreatTime: [0.8, 1.3],
-    retreatCooldown: 2.5,
+    damage: 14,
+    attackRange: 350,
+    preferredDistance: 250,
+    attackWindup: 0.5,
+    attackRecovery: 0.3,
+    attackCooldown: 0.9,
+    noticeRange: 1500,
+    retreatThreshold: 0.0,
+    retreatTime: [0, 0],
+    retreatCooldown: 999,
     bodyColor: "#2a6625",
     accentColor: "#55cc44",
     eyeColor: "#ccff88",
@@ -59,22 +62,25 @@ const BOSS_TYPES = {
     tintFilter: "hue-rotate(40deg) saturate(2.0) brightness(0.9)",
     score: 600,
     ranged: true,
-    projectileSpeed: 300,
+    projectileSpeed: 480,
     isBoss: true,
     bossGlowColor: "#44ff22",
     bossTitle: "BROOD MOTHER",
+    burstCount: 5,
+    burstSpread: 0.5,
+    projectileColor: "#88ff44",
   },
   titan: {
     label: "Titan",
     radius: 42,
-    speed: 65,
+    speed: 70,
     maxHealth: 900,
-    damage: 40,
-    attackRange: 60,
-    attackWindup: 0.5,
+    damage: 45,
+    attackRange: 110,
+    attackWindup: 0.4,
     attackRecovery: 0.3,
-    attackCooldown: 1.4,
-    noticeRange: 600,
+    attackCooldown: 1.1,
+    noticeRange: 1500,
     retreatThreshold: 0.0,
     retreatTime: [0, 0],
     retreatCooldown: 999,
@@ -88,6 +94,8 @@ const BOSS_TYPES = {
     isBoss: true,
     bossGlowColor: "#aa44ff",
     bossTitle: "THE TITAN",
+    slamRadius: 100,
+    shockwaveCount: 8,
   },
 };
 
@@ -340,6 +348,7 @@ export class Enemy {
           {
             to: "WANDER",
             when: (owner, ctx, machine) =>
+              !owner.config.isBoss &&
               machine.stateTime > 1.3 &&
               owner.distanceToPlayer(ctx.player) > owner.config.noticeRange * 1.65,
           },
@@ -503,16 +512,18 @@ export class Enemy {
 
     // Update perceived player position — lags behind real pos with random drift
     if (context.player) {
-      // Tracking rate: sprinters react faster, shamblers are sluggish
-      const trackRate = this.type === "sprinter" ? 4.5
+      // Tracking rate: sprinters react faster, shamblers are sluggish, bosses lock on
+      const trackRate = this.config.isBoss ? 6.0
+        : this.type === "sprinter" ? 4.5
         : this.type === "brute" ? 1.8
         : this.type === "screamer" ? 3.2
         : this.type === "spitter" ? 2.8
         : 2.2; // shambler
       const lerpT = Math.min(1, trackRate * delta);
       // Slowly wander the drift offset so zombies don't perfectly converge
+      // Bosses have minimal drift so they aim precisely
       this.driftAngle += delta * (0.5 + Math.sin(this.wobble * 0.7) * 0.3);
-      const driftR = this.config.radius * 1.2;
+      const driftR = this.config.isBoss ? this.config.radius * 0.25 : this.config.radius * 1.2;
       const driftX = Math.cos(this.driftAngle) * driftR;
       const driftY = Math.sin(this.driftAngle) * driftR;
       this.perceivedPlayer.x += ((context.player.x + driftX) - this.perceivedPlayer.x) * lerpT;
@@ -547,6 +558,7 @@ export class Enemy {
   }
 
   shouldRetreat(player) {
+    if (this.config.isBoss) return false;
     return (
       this.retreatCooldown <= 0 &&
       this.health / this.maxHealth <= this.config.retreatThreshold &&
@@ -640,6 +652,12 @@ export class Enemy {
       this.retreatTimer = 0;
     }
 
+    // Boss-specific enhanced attacks
+    if (this.config.isBoss) {
+      this._performBossAttack(context);
+      return;
+    }
+
     if (this.config.ranged) {
       const leadX = context.player.x + context.player.vx * 0.15;
       const leadY = context.player.y + context.player.vy * 0.15;
@@ -676,6 +694,75 @@ export class Enemy {
         context.player.y + (Math.random() - 0.5) * 16,
         4 + Math.random() * 5
       );
+    }
+  }
+
+  _performBossAttack(context) {
+    const player = context.player;
+
+    if (this.config.ranged) {
+      // --- Ranged boss: burst fire spread pattern ---
+      const burstCount = this.config.burstCount || 3;
+      const burstSpread = this.config.burstSpread || 0.4;
+      const leadTime = 0.3;
+      const leadX = player.x + (player.vx || 0) * leadTime;
+      const leadY = player.y + (player.vy || 0) * leadTime;
+      const baseAngle = Math.atan2(leadY - this.y, leadX - this.x);
+      const pColor = this.config.projectileColor || "#a7ff7c";
+      const pSpeed = this.config.projectileSpeed;
+
+      for (let i = 0; i < burstCount; i++) {
+        const offset = burstCount > 1
+          ? ((i / (burstCount - 1)) - 0.5) * burstSpread
+          : 0;
+        const angle = baseAngle + offset;
+        context.spawnEnemyProjectile(new Bullet({
+          x: this.x + Math.cos(angle) * (this.radius + 8),
+          y: this.y + Math.sin(angle) * (this.radius + 8),
+          vx: Math.cos(angle) * pSpeed,
+          vy: Math.sin(angle) * pSpeed,
+          radius: 8,
+          damage: this.config.damage,
+          life: 2.5,
+          color: pColor,
+          friendly: false,
+        }));
+      }
+      context.spawnBurst(this.x, this.y, pColor, 14, 30, 90);
+      return;
+    }
+
+    // --- Melee boss: ground slam AoE ---
+    const slamRadius = this.config.slamRadius || this.radius * 2;
+    if (this.distanceToPlayer(player) <= slamRadius + player.radius) {
+      context.damagePlayer(this.config.damage);
+      context.spawnBurst(player.x, player.y, "#ffd1b0", 22, 40, 160);
+      context.spawnBurst(player.x, player.y, "#8b0000", 18, 30, 130);
+      context.leaveBlood(player.x, player.y, 10 + Math.random() * 12);
+    }
+
+    // Ground slam visual — always shows
+    context.spawnBurst(this.x, this.y, this.config.accentColor, 28, 60, 220);
+    context.spawnBurst(this.x, this.y, "#443322", 18, 35, 140);
+
+    // Titan: shockwave ring of projectiles on every slam
+    if (this.config.shockwaveCount) {
+      const count = this.config.shockwaveCount;
+      const waveColor = this.config.bossGlowColor || "#aa44ff";
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2 + Math.random() * 0.12;
+        context.spawnEnemyProjectile(new Bullet({
+          x: this.x + Math.cos(angle) * (this.radius + 6),
+          y: this.y + Math.sin(angle) * (this.radius + 6),
+          vx: Math.cos(angle) * 220,
+          vy: Math.sin(angle) * 220,
+          radius: 6,
+          damage: Math.floor(this.config.damage * 0.35),
+          life: 1.4,
+          color: waveColor,
+          friendly: false,
+        }));
+      }
     }
   }
 
