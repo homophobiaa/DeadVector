@@ -164,6 +164,11 @@ export class UIManager {
   }
   showSettings(visible) { this.toggleElement(this.elements.settingsScreen, visible); }
 
+  showLevelUp(visible) { this.toggleElement(this.elements.levelupScreen, visible); }
+  showBossReward(visible) { this.toggleElement(this.elements.bossRewardScreen, visible); }
+  showLoadout(visible) { this.toggleElement(this.elements.loadoutScreen, visible); }
+  showHudHint(visible) { this.toggleElement(this.elements.hudHint, visible); }
+
   showGameOver(visible, summary = "") {
     this.toggleElement(this.elements.gameOverScreen, visible);
     if (summary) this.elements.finalSummary.textContent = summary;

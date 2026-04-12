@@ -74,6 +74,16 @@ const bootstrap = async () => {
     devSkipWave: document.getElementById("dev-skip-wave"),
     devSkipToInput: document.getElementById("dev-skip-to-input"),
     devSkipToGo: document.getElementById("dev-skip-to-go"),
+    // Progression screens
+    levelupScreen: document.getElementById("levelup-screen"),
+    levelupCards: document.getElementById("levelup-cards"),
+    bossRewardScreen: document.getElementById("boss-reward-screen"),
+    bossRewardCards: document.getElementById("boss-reward-cards"),
+    loadoutScreen: document.getElementById("loadout-screen"),
+    loadoutWeapons: document.getElementById("loadout-weapons"),
+    loadoutUpgrades: document.getElementById("loadout-upgrades"),
+    loadoutStats: document.getElementById("loadout-stats"),
+    hudHint: document.getElementById("hud-hint"),
   });
 
   const input = new InputManager(canvas);

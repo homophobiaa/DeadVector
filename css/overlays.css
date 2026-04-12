@@ -112,3 +112,314 @@
   95%           { transform: translate(2px, -1px); }
   97%           { transform: translate(-1px, -1px); }
 }
+
+/* ============================================================
+   Progression UI — Level-up cards, boss rewards, loadout menu
+   ============================================================ */
+
+/* ---- HUD hint (bottom-left "TAB / E") ---- */
+.hud-hint {
+  position: absolute;
+  left: 16px;
+  bottom: 60px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  color: rgba(0, 255, 136, 0.25);
+  z-index: 10;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ---- Level-up / Boss reward overlay ---- */
+.levelup-overlay {
+  background: rgba(2, 4, 2, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.levelup-inner {
+  text-align: center;
+  animation: panelSlideUp 0.25s var(--ease-out) both;
+}
+
+.levelup-title {
+  font-family: 'Orbitron', monospace;
+  font-weight: 900;
+  font-size: 1.4rem;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  text-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+  margin-bottom: 0.2rem;
+}
+
+.boss-reward-title {
+  color: #ffc850;
+  text-shadow: 0 0 20px rgba(255, 200, 80, 0.4);
+}
+
+.levelup-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  margin-bottom: 1.1rem;
+  letter-spacing: 0.04em;
+}
+
+.levelup-sub kbd {
+  font-size: 0.58rem;
+  padding: 0.08rem 0.28rem;
+}
+
+/* ---- Upgrade cards row ---- */
+.levelup-cards {
+  display: flex;
+  justify-content: center;
+  gap: 0.85rem;
+}
+
+.upgrade-card {
+  width: 175px;
+  padding: 1rem 0.8rem 0.85rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(0, 255, 136, 0.04), transparent 50%),
+    rgba(10, 18, 10, 0.92);
+  cursor: pointer;
+  text-align: center;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    transform 0.12s var(--ease-out),
+    box-shadow 0.15s;
+  position: relative;
+  animation: cardPop 0.3s var(--ease-bounce) both;
+}
+
+.upgrade-card:nth-child(1) { animation-delay: 0.05s; }
+.upgrade-card:nth-child(2) { animation-delay: 0.12s; }
+.upgrade-card:nth-child(3) { animation-delay: 0.19s; }
+
+@keyframes cardPop {
+  from { opacity: 0; transform: translateY(12px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.upgrade-card:hover {
+  border-color: var(--accent);
+  background:
+    linear-gradient(180deg, rgba(0, 255, 136, 0.1), transparent 50%),
+    rgba(10, 18, 10, 0.95);
+  transform: translateY(-3px);
+  box-shadow: 0 0 24px rgba(0, 255, 136, 0.12), 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.upgrade-card:active {
+  transform: translateY(0);
+}
+
+.upgrade-card.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.upgrade-card .card-key {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+
+.upgrade-card .card-category {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-dim);
+  margin-bottom: 0.45rem;
+}
+
+.upgrade-card .card-category.cat-rare {
+  color: #ffc850;
+}
+
+.upgrade-card .card-name {
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--text-main);
+  margin-bottom: 0.3rem;
+}
+
+.upgrade-card .card-desc {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.62rem;
+  color: var(--text-soft);
+  line-height: 1.35;
+}
+
+.upgrade-card .card-cost {
+  margin-top: 0.4rem;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.58rem;
+  color: #ffc850;
+  letter-spacing: 0.06em;
+}
+
+.upgrade-card .card-cost.insufficient {
+  color: var(--danger);
+}
+
+/* ---- Loadout panel ---- */
+.loadout-panel {
+  width: min(580px, calc(100% - 2rem));
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+  text-align: left;
+}
+
+.loadout-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.loadout-heading {
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  color: var(--accent-dim);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.55rem;
+}
+
+.loadout-weapons {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.loadout-weapon-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(0, 255, 136, 0.02);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.loadout-weapon-item.active {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+
+.loadout-weapon-item.locked {
+  opacity: 0.35;
+  color: var(--text-dim);
+}
+
+.loadout-weapon-item .weapon-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-dim);
+}
+
+.loadout-weapon-item.active .weapon-dot {
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(0, 255, 136, 0.5);
+}
+
+.loadout-weapon-item .weapon-lock {
+  font-size: 0.55rem;
+  color: var(--danger);
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 0.08em;
+}
+
+.loadout-upgrades {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.loadout-upgrade-group {
+  margin-bottom: 0.35rem;
+}
+
+.loadout-upgrade-group-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  margin-bottom: 0.2rem;
+}
+
+.loadout-upgrade-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.5rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.62rem;
+  color: var(--text-soft);
+}
+
+.loadout-upgrade-item .upgrade-pip {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.loadout-no-upgrades {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.loadout-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem 1rem;
+}
+
+.loadout-stat {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.62rem;
+  color: var(--text-soft);
+}
+
+.loadout-stat .stat-value {
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--accent);
+}
+
+.loadout-dismiss {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+}
+
+.loadout-dismiss kbd {
+  font-size: 0.52rem;
+  padding: 0.06rem 0.22rem;
+}

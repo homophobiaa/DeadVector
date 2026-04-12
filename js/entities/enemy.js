@@ -288,8 +288,11 @@ export function setEnemyTypes(types) { ENEMY_TYPES = types; }
 /** Return current enemy type configs (for export). */
 export function getEnemyTypes() { return ENEMY_TYPES; }
 
+let _enemyIdCounter = 0;
+
 export class Enemy {
   constructor({ x, y, type, wave }) {
+    this.id = ++_enemyIdCounter;
     this.type = type;
     this.config = ENEMY_TYPES[type] || BOSS_TYPES[type];
     this.x = x;

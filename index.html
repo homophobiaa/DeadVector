@@ -27,6 +27,49 @@
       <button id="mute-button" class="icon-btn" type="button" title="Toggle sound">&#9834;</button>
     </div>
 
+    <!-- HUD hint for loadout key -->
+    <div id="hud-hint" class="hud-hint hidden">TAB / E — Loadout</div>
+
+    <!-- Level-up card selection -->
+    <section id="levelup-screen" class="overlay levelup-overlay hidden">
+      <div class="levelup-inner">
+        <h2 class="levelup-title">LEVEL UP</h2>
+        <p class="levelup-sub">Choose an upgrade — <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></p>
+        <div id="levelup-cards" class="levelup-cards"></div>
+      </div>
+    </section>
+
+    <!-- Boss reward card selection -->
+    <section id="boss-reward-screen" class="overlay levelup-overlay hidden">
+      <div class="levelup-inner">
+        <h2 class="levelup-title boss-reward-title">BOSS REWARD</h2>
+        <p class="levelup-sub">Choose a reward — <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></p>
+        <div id="boss-reward-cards" class="levelup-cards"></div>
+      </div>
+    </section>
+
+    <!-- Loadout / Stats menu (TAB / E) -->
+    <section id="loadout-screen" class="overlay hidden">
+      <div class="overlay-inner loadout-panel">
+        <h2 class="overlay-title">LOADOUT</h2>
+        <div class="loadout-grid">
+          <div class="loadout-section">
+            <h3 class="loadout-heading">WEAPONS</h3>
+            <div id="loadout-weapons" class="loadout-weapons"></div>
+          </div>
+          <div class="loadout-section">
+            <h3 class="loadout-heading">UPGRADES</h3>
+            <div id="loadout-upgrades" class="loadout-upgrades"></div>
+          </div>
+          <div class="loadout-section">
+            <h3 class="loadout-heading">STATS</h3>
+            <div id="loadout-stats" class="loadout-stats"></div>
+          </div>
+        </div>
+        <p class="loadout-dismiss">Press <kbd>TAB</kbd> / <kbd>E</kbd> / <kbd>Esc</kbd> to close</p>
+      </div>
+    </section>
+
     <section id="menu-screen" class="overlay hidden">
       <div class="overlay-inner">
         <h1 class="menu-title">DEAD<span class="brand-accent">V</span>ECTOR</h1>
