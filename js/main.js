@@ -70,6 +70,10 @@ const bootstrap = async () => {
     setDevInvincible: document.getElementById("set-dev-invincible"),
     setDevNoclip: document.getElementById("set-dev-noclip"),
     setDevObstacles: document.getElementById("set-dev-obstacles"),
+    devWaveControls: document.getElementById("dev-wave-controls"),
+    devSkipWave: document.getElementById("dev-skip-wave"),
+    devSkipToInput: document.getElementById("dev-skip-to-input"),
+    devSkipToGo: document.getElementById("dev-skip-to-go"),
   });
 
   const input = new InputManager(canvas);

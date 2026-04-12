@@ -30,6 +30,27 @@ export class UIManager {
       this.game.resume();
     });
 
+    // Dev wave controls
+    this.elements.devSkipWave.addEventListener("click", () => {
+      this.game.devSkipWave();
+      this.game.resume();
+    });
+
+    this.elements.devSkipToGo.addEventListener("click", () => {
+      const target = parseInt(this.elements.devSkipToInput.value, 10);
+      if (target >= 1) {
+        this.game.devSkipToWave(target);
+        this.game.resume();
+      }
+    });
+
+    this.elements.devSkipToInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.elements.devSkipToGo.click();
+      }
+    });
+
     this.elements.restartButton.addEventListener("click", async () => {
       await this.game.startNewRun();
     });
@@ -131,7 +152,16 @@ export class UIManager {
   updateHud() { /* HUD is now rendered on canvas by Game */ }
 
   showMenu(visible) { this.toggleElement(this.elements.menuScreen, visible); }
-  showPause(visible) { this.toggleElement(this.elements.pauseScreen, visible); }
+  showPause(visible) {
+    this.toggleElement(this.elements.pauseScreen, visible);
+    if (visible && this.settings) {
+      const devOn = this.settings.get("devMode");
+      this.elements.devWaveControls.classList.toggle("hidden", !devOn);
+      if (devOn && this.game) {
+        this.elements.devSkipToInput.value = this.game.waveSpawner.wave + 1;
+      }
+    }
+  }
   showSettings(visible) { this.toggleElement(this.elements.settingsScreen, visible); }
 
   showGameOver(visible, summary = "") {

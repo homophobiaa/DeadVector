@@ -115,71 +115,62 @@
   cursor: crosshair;
 }
 
-/* ---- brand corner chip ---- */
+/* ---- brand corner ---- */
 #brand-corner {
   position: absolute;
   top: 0;
   left: 0;
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.45rem 0.8rem;
-  background:
-    linear-gradient(135deg, rgba(0, 255, 136, 0.07), transparent 55%),
-    rgba(6, 10, 6, 0.75);
-  border-bottom-right-radius: 10px;
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  backdrop-filter: blur(10px);
+  gap: 0.35rem;
+  padding: 0.28rem 0.5rem 0.26rem 0.45rem;
+  background: rgba(4, 8, 4, 0.7);
+  border-bottom-right-radius: 5px;
+  border-right: 1px solid rgba(0, 255, 136, 0.05);
+  border-bottom: 1px solid rgba(0, 255, 136, 0.05);
   z-index: 10;
   pointer-events: auto;
-  transition: opacity 0.3s var(--ease-out);
-}
-
-#brand-corner:hover {
-  opacity: 0.7;
 }
 
 .brand-title {
   font-family: 'Orbitron', monospace;
   font-weight: 900;
-  font-size: 0.78rem;
-  letter-spacing: 0.2em;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
   color: var(--text-soft);
   text-transform: uppercase;
 }
 
 .brand-accent {
   color: var(--accent);
-  text-shadow: 0 0 12px var(--accent-glow);
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.25);
 }
 
 /* ---- icon button (mute) ---- */
 .icon-btn {
   appearance: none;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: rgba(0, 255, 136, 0.04);
+  border: none;
+  border-left: 1px solid rgba(0, 255, 136, 0.08);
+  border-radius: 0;
+  background: transparent;
   color: var(--text-dim);
-  font-size: 0.85rem;
-  width: 26px;
-  height: 26px;
+  font-size: 0.65rem;
+  width: 18px;
+  height: 18px;
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition:
-    border-color 0.15s,
-    color 0.15s,
-    background 0.15s;
+  opacity: 0.4;
+  padding-left: 0.3rem;
+  transition: opacity 0.15s, color 0.15s;
 }
 
 .icon-btn:hover {
-  border-color: var(--accent-dim);
+  opacity: 1;
   color: var(--accent);
-  background: rgba(0, 255, 136, 0.08);
 }
 
 .icon-btn:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 1px solid var(--accent);
   outline-offset: 2px;
 }

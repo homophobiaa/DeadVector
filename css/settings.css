@@ -209,6 +209,93 @@
   opacity: 0.9;
 }
 
+/* ---- dev wave controls (pause screen) ---- */
+.dev-wave-controls {
+  margin: 0.6rem 0 1rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid rgba(255, 0, 255, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 0, 255, 0.05);
+}
+
+.dev-wave-controls.hidden {
+  display: none;
+}
+
+.dev-wave-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.dev-wave-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: rgba(255, 0, 255, 0.7);
+}
+
+.dev-wave-input {
+  width: 56px;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid rgba(255, 0, 255, 0.3);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  color: #ff00ff;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.78rem;
+  text-align: center;
+  outline: none;
+}
+
+.dev-wave-input:focus {
+  border-color: #ff00ff;
+  box-shadow: 0 0 6px rgba(255, 0, 255, 0.3);
+}
+
+/* hide number spinner */
+.dev-wave-input::-webkit-inner-spin-button,
+.dev-wave-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.dev-wave-input { -moz-appearance: textfield; }
+
+.btn-dev {
+  appearance: none;
+  padding: 0.35rem 1rem;
+  border: 1px solid rgba(255, 0, 255, 0.35);
+  border-radius: 6px;
+  background: rgba(255, 0, 255, 0.1);
+  color: #ff00ff;
+  font-family: 'Orbitron', monospace;
+  font-weight: 600;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 0.2s var(--ease-out),
+    border-color 0.2s var(--ease-out);
+}
+
+.btn-dev:hover {
+  background: rgba(255, 0, 255, 0.2);
+  border-color: #ff00ff;
+}
+
+.btn-dev:active {
+  background: rgba(255, 0, 255, 0.3);
+}
+
+.btn-dev-sm {
+  padding: 0.25rem 0.7rem;
+  font-size: 0.58rem;
+}
+
 .setting-row-sub .setting-label {
   font-size: 0.72rem;
   color: rgba(255, 180, 255, 0.85);

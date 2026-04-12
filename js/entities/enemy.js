@@ -10,6 +10,159 @@ import {
 } from "../systems/collision.js";
 import { renderZombieParts } from "./zombie-renderer.js";
 
+// Boss type definitions — milestone-wave enemies with extreme stats
+// attackRange must exceed bossRadius + playerRadius (17) for melee to connect.
+// noticeRange set very high so bosses never disengage.
+const BOSS_TYPES = {
+  juggernaut: {
+    label: "Juggernaut",
+    radius: 36,
+    speed: 72,
+    maxHealth: 600,
+    damage: 35,
+    attackRange: 95,
+    attackWindup: 0.45,
+    attackRecovery: 0.35,
+    attackCooldown: 1.3,
+    noticeRange: 1500,
+    retreatThreshold: 0.0,
+    retreatTime: [0, 0],
+    retreatCooldown: 999,
+    bodyColor: "#6e1818",
+    accentColor: "#ff4040",
+    eyeColor: "#ff8844",
+    glowColor: "rgba(255,50,50,0.5)",
+    tintFilter: "hue-rotate(-140deg) saturate(1.5) brightness(0.7)",
+    score: 500,
+    ranged: false,
+    isBoss: true,
+    bossGlowColor: "#ff3030",
+    bossTitle: "THE JUGGERNAUT",
+    slamRadius: 80,
+  },
+  broodmother: {
+    label: "Brood Mother",
+    radius: 30,
+    speed: 55,
+    maxHealth: 500,
+    damage: 14,
+    attackRange: 350,
+    preferredDistance: 250,
+    attackWindup: 0.5,
+    attackRecovery: 0.3,
+    attackCooldown: 0.9,
+    noticeRange: 1500,
+    retreatThreshold: 0.0,
+    retreatTime: [0, 0],
+    retreatCooldown: 999,
+    bodyColor: "#2a6625",
+    accentColor: "#55cc44",
+    eyeColor: "#ccff88",
+    glowColor: "rgba(80,200,60,0.5)",
+    tintFilter: "hue-rotate(40deg) saturate(2.0) brightness(0.9)",
+    score: 600,
+    ranged: true,
+    projectileSpeed: 480,
+    isBoss: true,
+    bossGlowColor: "#44ff22",
+    bossTitle: "THE BROODMOTHER",
+    burstCount: 5,
+    burstSpread: 0.5,
+    projectileColor: "#88ff44",
+  },
+  titan: {
+    label: "Titan",
+    radius: 42,
+    speed: 90,
+    maxHealth: 900,
+    damage: 45,
+    attackRange: 110,
+    attackWindup: 0.4,
+    attackRecovery: 0.3,
+    attackCooldown: 1.1,
+    noticeRange: 1500,
+    retreatThreshold: 0.0,
+    retreatTime: [0, 0],
+    retreatCooldown: 999,
+    bodyColor: "#3a1a4a",
+    accentColor: "#8844cc",
+    eyeColor: "#dd88ff",
+    glowColor: "rgba(140,70,220,0.5)",
+    tintFilter: "hue-rotate(180deg) saturate(1.8) brightness(0.75)",
+    score: 800,
+    ranged: false,
+    isBoss: true,
+    bossGlowColor: "#aa44ff",
+    bossTitle: "THE TITAN",
+    slamRadius: 100,
+    shockwaveCount: 12,
+    chaseAttackInterval: 2.0,
+  },
+};
+
+export function getBossTypes() { return BOSS_TYPES; }
+
+/**
+ * Boss schedule — defines which boss appears at each milestone wave.
+ * Entries beyond the schedule repeat the last entry with scaling.
+ * Each entry has a `base` key into BOSS_TYPES and optional stat overrides.
+ */
+const BOSS_SCHEDULE = [
+  // Boss #1 (wave 5) — intro melee
+  { base: "juggernaut" },
+  // Boss #2 (wave 10) — intro ranged
+  { base: "broodmother" },
+  // Boss #3 (wave 15) — AoE + shockwave
+  { base: "titan" },
+  // Boss #4 (wave 20) — evolved juggernaut
+  { base: "juggernaut", bossTitle: "WARLORD GRIM", label: "Warlord Grim",
+    speed: 88, damage: 42, maxHealth: 950, slamRadius: 100, attackCooldown: 1.0,
+    radius: 40, score: 700, bodyColor: "#8a1010", accentColor: "#ff6644",
+    bossGlowColor: "#ff5522" },
+  // Boss #5 (wave 25) — evolved broodmother
+  { base: "broodmother", bossTitle: "QUEEN VESPERA", label: "Queen Vespera",
+    speed: 65, damage: 18, maxHealth: 850, burstCount: 8, burstSpread: 0.85,
+    projectileSpeed: 540, attackCooldown: 0.7, radius: 34, score: 850,
+    bodyColor: "#1a5520", accentColor: "#33ee22", bossGlowColor: "#22ff44" },
+  // Boss #6 (wave 30) — evolved titan
+  { base: "titan", bossTitle: "THE MONOLITH", label: "Monolith",
+    speed: 100, damage: 55, maxHealth: 1500, slamRadius: 130,
+    shockwaveCount: 16, attackCooldown: 0.85, radius: 48, score: 1100,
+    bodyColor: "#2a0d3a", accentColor: "#aa55ee", bossGlowColor: "#bb44ff",
+    chaseAttackInterval: 1.6, eyeColor: "#eeccff" },
+  // Boss #7 (wave 35) — hybrid: ranged burst + melee slam + shockwave
+  { base: "broodmother", bossTitle: "THE AMALGAM", label: "Amalgam",
+    speed: 80, damage: 22, maxHealth: 1800, burstCount: 6, burstSpread: 0.7,
+    projectileSpeed: 500, attackCooldown: 0.65, radius: 40, score: 1400,
+    bodyColor: "#4a2010", accentColor: "#ff8833", bossGlowColor: "#ff6600",
+    projectileColor: "#ffaa44", slamRadius: 90, shockwaveCount: 6,
+    dualMode: true, eyeColor: "#ffcc66" },
+  // Boss #8 (wave 40) — ultimate melee juggernaut
+  { base: "titan", bossTitle: "OMEGA", label: "Omega",
+    speed: 105, damage: 55, maxHealth: 2500, slamRadius: 140,
+    shockwaveCount: 18, attackCooldown: 0.6, radius: 50, score: 2000,
+    bodyColor: "#1a0a0a", accentColor: "#ff2222", bossGlowColor: "#ff1111",
+    eyeColor: "#ff4444", chaseAttackInterval: 1.3 },
+];
+
+export function getBossSchedule() { return BOSS_SCHEDULE; }
+
+/** Get merged boss config for the Nth boss occurrence (0-based). */
+export function getBossConfigForOccurrence(n) {
+  const idx = Math.min(n, BOSS_SCHEDULE.length - 1);
+  const { base, ...overrides } = BOSS_SCHEDULE[idx];
+  const config = { ...BOSS_TYPES[base], ...overrides };
+  // Beyond-schedule: scale up the last archetype
+  if (n >= BOSS_SCHEDULE.length) {
+    const extra = n - BOSS_SCHEDULE.length + 1;
+    config.maxHealth = Math.floor(config.maxHealth * (1 + extra * 0.25));
+    config.damage = Math.floor(config.damage * (1 + extra * 0.15));
+    config.speed = Math.floor(config.speed * (1 + extra * 0.05));
+    config.score = Math.floor(config.score * (1 + extra * 0.2));
+  }
+  return config;
+}
+
 // Five enemy types for FSM AI variety — mutable so dev panel can hot-swap
 let ENEMY_TYPES = {
   shambler: {
@@ -22,7 +175,7 @@ let ENEMY_TYPES = {
     attackWindup: 0.42,
     attackRecovery: 0.28,
     attackCooldown: 1.05,
-    noticeRange: 250,
+    noticeRange: 340,
     retreatThreshold: 0.18,
     retreatTime: [0.75, 1.1],
     retreatCooldown: 3.1,
@@ -44,7 +197,7 @@ let ENEMY_TYPES = {
     attackWindup: 0.26,
     attackRecovery: 0.18,
     attackCooldown: 0.75,
-    noticeRange: 315,
+    noticeRange: 400,
     retreatThreshold: 0.08,
     retreatTime: [0.45, 0.7],
     retreatCooldown: 2.2,
@@ -67,7 +220,7 @@ let ENEMY_TYPES = {
     attackWindup: 0.6,
     attackRecovery: 0.28,
     attackCooldown: 1.45,
-    noticeRange: 360,
+    noticeRange: 420,
     retreatThreshold: 0.74,
     retreatTime: [0.8, 1.2],
     retreatCooldown: 2.6,
@@ -90,7 +243,7 @@ let ENEMY_TYPES = {
     attackWindup: 0.72,
     attackRecovery: 0.36,
     attackCooldown: 1.55,
-    noticeRange: 270,
+    noticeRange: 360,
     retreatThreshold: 0.12,
     retreatTime: [0.55, 0.85],
     retreatCooldown: 3.4,
@@ -113,7 +266,7 @@ let ENEMY_TYPES = {
     attackWindup: 0.8,
     attackRecovery: 0.4,
     attackCooldown: 2.0,
-    noticeRange: 340,
+    noticeRange: 410,
     retreatThreshold: 0.35,
     retreatTime: [0.9, 1.4],
     retreatCooldown: 2.8,
@@ -138,7 +291,7 @@ export function getEnemyTypes() { return ENEMY_TYPES; }
 export class Enemy {
   constructor({ x, y, type, wave }) {
     this.type = type;
-    this.config = ENEMY_TYPES[type];
+    this.config = ENEMY_TYPES[type] || BOSS_TYPES[type];
     this.x = x;
     this.y = y;
     this.wave = wave;
@@ -146,6 +299,7 @@ export class Enemy {
     this.maxHealth = this.config.maxHealth + wave * 3;
     this.health = this.maxHealth;
     this.speed = this.config.speed * (1 + wave * 0.018);
+    this.noticeRange = this.config.noticeRange * (1 + wave * 0.012);
     this.attackCooldown = 0;
     this.damageFlash = 0;
     this.opacity = 1;
@@ -195,7 +349,7 @@ export class Enemy {
           {
             to: "CHASE",
             when: (owner, ctx) =>
-              owner.spawnTimer <= 0 && owner.distanceToPlayer(ctx.player) < owner.config.noticeRange,
+              owner.spawnTimer <= 0 && owner.distanceToPlayer(ctx.player) < owner.noticeRange,
           },
           { to: "WANDER", when: (owner) => owner.spawnTimer <= 0 },
         ],
@@ -204,21 +358,21 @@ export class Enemy {
       WANDER: {
         enter: (owner, context) => {
           owner.stateLabel = "WANDER";
-          owner.wanderTimer = randomRange(0.9, 1.8);
+          owner.wanderTimer = randomRange(0.6, 1.3);
           owner.pickWanderTarget(context.bounds, context.obstacles);
         },
         update: (owner, context, delta) => {
           owner.wanderTimer -= delta;
           if (owner.wanderTimer <= 0 || owner.distanceTo(owner.wanderTarget) < 12) {
             owner.pickWanderTarget(context.bounds, context.obstacles);
-            owner.wanderTimer = randomRange(0.9, 1.8);
+            owner.wanderTimer = randomRange(0.6, 1.3);
           }
           owner.moveToward(owner.wanderTarget.x, owner.wanderTarget.y, owner.speed * 0.52, delta, context.bounds);
         },
         transitions: [
           {
             to: "CHASE",
-            when: (owner, ctx) => owner.distanceToPlayer(ctx.player) < owner.config.noticeRange,
+            when: (owner, ctx) => owner.distanceToPlayer(ctx.player) < owner.noticeRange,
           },
           {
             to: "RETREAT",
@@ -241,6 +395,14 @@ export class Enemy {
           } else {
             owner.moveToward(pp.x, pp.y, owner.speed, delta, context.bounds);
           }
+          // Boss chase-attack: periodic ranged pressure while pursuing
+          if (owner.config.isBoss && owner.config.chaseAttackInterval) {
+            owner._chaseAttackTimer = (owner._chaseAttackTimer ?? owner.config.chaseAttackInterval) - delta;
+            if (owner._chaseAttackTimer <= 0) {
+              owner._chaseAttackTimer = owner.config.chaseAttackInterval;
+              owner._performChaseAttack(context);
+            }
+          }
         },
         transitions: [
           {
@@ -252,8 +414,9 @@ export class Enemy {
           {
             to: "WANDER",
             when: (owner, ctx, machine) =>
+              !owner.config.isBoss &&
               machine.stateTime > 1.3 &&
-              owner.distanceToPlayer(ctx.player) > owner.config.noticeRange * 1.65,
+              owner.distanceToPlayer(ctx.player) > owner.noticeRange * 2.2,
           },
         ],
       },
@@ -291,7 +454,7 @@ export class Enemy {
             when: (owner, ctx) =>
               owner.attackPerformed &&
               owner.attackRecovery <= 0 &&
-              owner.distanceToPlayer(ctx.player) <= owner.config.noticeRange * 1.4,
+              owner.distanceToPlayer(ctx.player) <= owner.noticeRange * 1.8,
           },
           {
             to: "WANDER",
@@ -322,7 +485,7 @@ export class Enemy {
           {
             to: "CHASE",
             when: (owner, ctx) =>
-              owner.retreatTimer <= 0 && owner.distanceToPlayer(ctx.player) <= owner.config.noticeRange,
+              owner.retreatTimer <= 0 && owner.distanceToPlayer(ctx.player) <= owner.noticeRange,
           },
           { to: "WANDER", when: (owner) => owner.retreatTimer <= 0 },
         ],
@@ -415,16 +578,18 @@ export class Enemy {
 
     // Update perceived player position — lags behind real pos with random drift
     if (context.player) {
-      // Tracking rate: sprinters react faster, shamblers are sluggish
-      const trackRate = this.type === "sprinter" ? 4.5
+      // Tracking rate: sprinters react faster, shamblers are sluggish, bosses lock on
+      const trackRate = this.config.isBoss ? 6.0
+        : this.type === "sprinter" ? 4.5
         : this.type === "brute" ? 1.8
         : this.type === "screamer" ? 3.2
         : this.type === "spitter" ? 2.8
         : 2.2; // shambler
       const lerpT = Math.min(1, trackRate * delta);
       // Slowly wander the drift offset so zombies don't perfectly converge
+      // Bosses have minimal drift so they aim precisely
       this.driftAngle += delta * (0.5 + Math.sin(this.wobble * 0.7) * 0.3);
-      const driftR = this.config.radius * 1.2;
+      const driftR = this.config.isBoss ? this.config.radius * 0.25 : this.config.radius * 1.2;
       const driftX = Math.cos(this.driftAngle) * driftR;
       const driftY = Math.sin(this.driftAngle) * driftR;
       this.perceivedPlayer.x += ((context.player.x + driftX) - this.perceivedPlayer.x) * lerpT;
@@ -459,10 +624,11 @@ export class Enemy {
   }
 
   shouldRetreat(player) {
+    if (this.config.isBoss) return false;
     return (
       this.retreatCooldown <= 0 &&
       this.health / this.maxHealth <= this.config.retreatThreshold &&
-      this.distanceToPlayer(player) < this.config.noticeRange
+      this.distanceToPlayer(player) < this.noticeRange
     );
   }
 
@@ -552,6 +718,12 @@ export class Enemy {
       this.retreatTimer = 0;
     }
 
+    // Boss-specific enhanced attacks
+    if (this.config.isBoss) {
+      this._performBossAttack(context);
+      return;
+    }
+
     if (this.config.ranged) {
       const leadX = context.player.x + context.player.vx * 0.15;
       const leadY = context.player.y + context.player.vy * 0.15;
@@ -589,6 +761,129 @@ export class Enemy {
         4 + Math.random() * 5
       );
     }
+  }
+
+  _performBossAttack(context) {
+    const player = context.player;
+
+    // --- Dual-mode boss: fires burst AND does AoE slam ---
+    if (this.config.dualMode) {
+      this._fireBurst(context, player);
+      // AoE slam if close
+      const slamR = this.config.slamRadius || this.radius * 2;
+      if (this.distanceToPlayer(player) <= slamR + player.radius) {
+        context.damagePlayer(this.config.damage);
+        context.spawnBurst(player.x, player.y, "#ffd1b0", 22, 40, 160);
+        context.spawnBurst(player.x, player.y, "#8b0000", 18, 30, 130);
+        context.leaveBlood(player.x, player.y, 10 + Math.random() * 12);
+      }
+      context.addScreenShake(12);
+      context.spawnBurst(this.x, this.y, this.config.accentColor, 24, 50, 180);
+      if (this.config.shockwaveCount) this._fireShockwave(context);
+      return;
+    }
+
+    if (this.config.ranged) {
+      this._fireBurst(context, player);
+      return;
+    }
+
+    // --- Melee boss: ground slam AoE ---
+    const slamRadius = this.config.slamRadius || this.radius * 2;
+    if (this.distanceToPlayer(player) <= slamRadius + player.radius) {
+      context.damagePlayer(this.config.damage);
+      context.spawnBurst(player.x, player.y, "#ffd1b0", 22, 40, 160);
+      context.spawnBurst(player.x, player.y, "#8b0000", 18, 30, 130);
+      context.leaveBlood(player.x, player.y, 10 + Math.random() * 12);
+    }
+    // Ground-pound impact — always visible/felt
+    context.addScreenShake(12);
+    context.spawnBurst(this.x, this.y, this.config.accentColor, 28, 60, 220);
+    context.spawnBurst(this.x, this.y, "#443322", 18, 35, 140);
+    // Rage aura when low HP
+    if (this.health / this.maxHealth < 0.3) {
+      context.spawnBurst(this.x, this.y, "#ff2200", 14, 30, 120);
+    }
+    if (this.config.shockwaveCount) this._fireShockwave(context);
+  }
+
+  /** Ranged burst fire pattern (used by ranged + dual bosses). */
+  _fireBurst(context, player) {
+    const burstCount = this.config.burstCount || 3;
+    const burstSpread = this.config.burstSpread || 0.4;
+    const leadX = player.x + (player.vx || 0) * 0.3;
+    const leadY = player.y + (player.vy || 0) * 0.3;
+    const baseAngle = Math.atan2(leadY - this.y, leadX - this.x);
+    const pColor = this.config.projectileColor || "#a7ff7c";
+    const pSpeed = this.config.projectileSpeed;
+    for (let i = 0; i < burstCount; i++) {
+      const offset = burstCount > 1 ? ((i / (burstCount - 1)) - 0.5) * burstSpread : 0;
+      const jitter = (Math.random() - 0.5) * 0.08;
+      const angle = baseAngle + offset + jitter;
+      context.spawnEnemyProjectile(new Bullet({
+        x: this.x + Math.cos(angle) * (this.radius + 8),
+        y: this.y + Math.sin(angle) * (this.radius + 8),
+        vx: Math.cos(angle) * pSpeed,
+        vy: Math.sin(angle) * pSpeed,
+        radius: 8,
+        damage: this.config.damage,
+        life: 2.5,
+        color: pColor,
+        friendly: false,
+      }));
+    }
+    context.spawnBurst(this.x, this.y, pColor, 14, 30, 90);
+  }
+
+  /** Fire radial shockwave ring of projectiles. */
+  _fireShockwave(context) {
+    const count = this.config.shockwaveCount;
+    const waveColor = this.config.bossGlowColor || "#aa44ff";
+    const speed = 280;
+    const ringOffset = Math.random() * Math.PI * 2;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + ringOffset;
+      const altRadius = i % 2 === 0 ? 6 : 5;
+      context.spawnEnemyProjectile(new Bullet({
+        x: this.x + Math.cos(angle) * (this.radius + 6),
+        y: this.y + Math.sin(angle) * (this.radius + 6),
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        radius: altRadius,
+        damage: Math.floor(this.config.damage * 0.3),
+        life: 1.4,
+        color: waveColor,
+        friendly: false,
+      }));
+    }
+  }
+
+  /** Periodic ranged pressure while chasing (boss-only). */
+  _performChaseAttack(context) {
+    const count = this.config.shockwaveCount || 8;
+    const waveColor = this.config.bossGlowColor || "#aa44ff";
+    const speed = 260;
+    const dist = this.distanceToPlayer(context.player);
+    const aimAngle = Math.atan2(context.player.y - this.y, context.player.x - this.x);
+    // Close: focused half-ring toward player; Far: full 360 ring
+    const focused = dist < 200;
+    const startAngle = focused ? aimAngle - Math.PI * 0.5 : 0;
+    const arcSpan = focused ? Math.PI : Math.PI * 2;
+    for (let i = 0; i < count; i++) {
+      const angle = startAngle + (i / count) * arcSpan + Math.random() * 0.1;
+      context.spawnEnemyProjectile(new Bullet({
+        x: this.x + Math.cos(angle) * (this.radius + 6),
+        y: this.y + Math.sin(angle) * (this.radius + 6),
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        radius: 5,
+        damage: Math.floor(this.config.damage * 0.2),
+        life: 1.3,
+        color: waveColor,
+        friendly: false,
+      }));
+    }
+    context.spawnBurst(this.x, this.y, this.config.accentColor, 14, 35, 130);
   }
 
   render(ctx) {
@@ -687,6 +982,48 @@ export class Enemy {
       ctx.stroke();
     }
 
+    // Boss aura and ground effect
+    if (c.isBoss && this.stateLabel !== "DEAD") {
+      const pulse = 0.5 + Math.sin(t * 2.5) * 0.25;
+
+      // Parse boss glow hex to rgba helper
+      const gc = c.bossGlowColor || "#ff3030";
+      const r = parseInt(gc.slice(1, 3), 16);
+      const g = parseInt(gc.slice(3, 5), 16);
+      const b = parseInt(gc.slice(5, 7), 16);
+      const rgba = (a) => `rgba(${r},${g},${b},${a})`;
+
+      // Outer menacing aura — double-layered
+      const aura1 = ctx.createRadialGradient(0, 0, this.radius * 0.8, 0, 0, this.radius * 3.5);
+      aura1.addColorStop(0, rgba(0.25 * pulse));
+      aura1.addColorStop(0.5, rgba(0.08 * pulse));
+      aura1.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = aura1;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius * 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner pulsing ring
+      ctx.strokeStyle = rgba(0.4 + pulse * 0.3);
+      ctx.lineWidth = 2.5 + Math.sin(t * 4) * 1;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius + 6 + Math.sin(t * 3) * 3, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Orbiting danger particles
+      for (let i = 0; i < 4; i++) {
+        const a = t * 1.8 + (i * Math.PI * 2) / 4;
+        const orbitR = this.radius + 12 + Math.sin(t * 2 + i) * 4;
+        const px = Math.cos(a) * orbitR;
+        const py = Math.sin(a) * orbitR;
+        const pAlpha = 0.5 + Math.sin(t * 5 + i * 1.2) * 0.3;
+        ctx.fillStyle = rgba(pAlpha);
+        ctx.beginPath();
+        ctx.arc(px, py, 2.5 + Math.sin(t * 3 + i) * 1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
     // Zombie body — PNG parts with procedural animation
     if (!renderZombieParts(ctx, this)) {
       // Fallback: simple coloured circle when images haven't loaded
@@ -696,9 +1033,9 @@ export class Enemy {
       ctx.fill();
     }
 
-    // Health bar above
+    // Health bar above (skip for bosses — they get a top-screen bar)
     ctx.shadowBlur = 0;
-    if (healthRatio < 1 && this.stateLabel !== "DEAD") {
+    if (healthRatio < 1 && this.stateLabel !== "DEAD" && !c.isBoss) {
       const barW = this.radius * 2.2;
       const barH = 3;
       const barY = -this.radius - 10;
