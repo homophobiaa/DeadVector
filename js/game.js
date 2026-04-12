@@ -565,10 +565,19 @@ export class Game {
     if (mods.overdriveRamp > 0) cooldown *= (1 - mods.overdriveRamp * 0.4);
 
     // Apply spread modifiers
-    const spread = wpn.spread * mods.spreadMultiplier;
+    let spread = wpn.spread * mods.spreadMultiplier;
+    // Tracking Spray: reduce spread while player is moving
+    if (mods._trackingSpray && (Math.abs(this.player.vx) > 10 || Math.abs(this.player.vy) > 10)) {
+      spread *= 0.8;
+    }
 
     // Calculate damage
     let damage = wpn.damage * mods.damageMultiplier;
+    // Adrenaline: +30% when below 40% HP
+    const adrenBonus = this.progression.getAdrenalineBonus(this.player.health, this.player.maxHealth);
+    if (adrenBonus > 0) damage *= (1 + adrenBonus);
+    // Heat Build: up to +30% based on overdrive ramp
+    if (mods.heatDmgBonus > 0) damage *= (1 + mods.heatDmgBonus);
     const isCrit = Math.random() < mods.critChance;
     if (isCrit) damage *= mods.critMultiplier;
     damage = Math.round(damage);
@@ -600,9 +609,13 @@ export class Game {
         color: isCrit ? "#ffffff" : wpn.color,
         friendly: true,
         _ricochet: mods.ricochet ? 1 : 0,
+        _piercing: mods.piercing || 0,
         _knockback: mods.knockback,
         _blastRadius: mods.blastRadius,
         _isCrit: isCrit,
+        _markTarget: mods.markTarget,
+        _lightningChain: mods.lightningChain || 0,
+        _shockwave: mods.shockwave,
       }));
     }
 
@@ -621,9 +634,13 @@ export class Game {
           color: wpn.color,
           friendly: true,
           _ricochet: mods.ricochet ? 1 : 0,
+          _piercing: mods.piercing || 0,
           _knockback: mods.knockback,
           _blastRadius: mods.blastRadius,
           _isCrit: false,
+          _markTarget: mods.markTarget,
+          _lightningChain: mods.lightningChain || 0,
+          _shockwave: mods.shockwave,
         }));
       }
     }
@@ -728,53 +745,67 @@ export class Game {
   populateLoadout() {
     const el = this.ui.elements;
 
-    // Weapons
-    const allWeapons = [
-      { name: "Service Pistol", key: "pistol" },
-      { name: "Scatter Cannon", key: "shotgun" },
-      { name: "Vector SMG", key: "smg" },
+    // ---- Weapon + upgrade columns ----
+    const columns = [
+      { label: "PISTOL",  key: "pistol",  weaponName: "Service Pistol",  color: "#00ff88" },
+      { label: "SHOTGUN", key: "shotgun", weaponName: "Scatter Cannon",  color: "#ff6633" },
+      { label: "SMG",     key: "smg",     weaponName: "Vector SMG",      color: "#6be0d6" },
+      { label: "GLOBAL",  key: null,      weaponName: null,              color: "#ffc850" },
     ];
-    el.loadoutWeapons.innerHTML = "";
-    for (const w of allWeapons) {
-      const unlocked = this.progression.weaponsUnlocked[w.key];
-      const active = this.player.weapons.some(pw => pw.name === w.name);
-      const div = document.createElement("div");
-      div.className = "loadout-weapon-item" + (active ? " active" : "") + (!unlocked ? " locked" : "");
-      div.innerHTML = `<span class="weapon-dot"></span><span>${w.name}</span>${!unlocked ? '<span class="weapon-lock">LOCKED</span>' : ""}`;
-      el.loadoutWeapons.appendChild(div);
-    }
 
-    // Upgrades
     const groups = this.progression.getAcquiredGrouped();
-    el.loadoutUpgrades.innerHTML = "";
-    for (const [cat, items] of Object.entries(groups)) {
-      if (items.length === 0) continue;
-      const group = document.createElement("div");
-      group.className = "loadout-upgrade-group";
-      group.innerHTML = `<span class="loadout-upgrade-group-label">${cat}</span>`;
-      for (const item of items) {
-        const pip = document.createElement("div");
-        pip.className = "loadout-upgrade-item";
-        pip.innerHTML = `<span class="upgrade-pip"></span><span>${item.name}</span>`;
-        group.appendChild(pip);
+
+    el.loadoutColumns.innerHTML = "";
+    for (const col of columns) {
+      const div = document.createElement("div");
+      const isWeapon = col.key !== null;
+      const unlocked = isWeapon ? this.progression.weaponsUnlocked[col.key] : true;
+      const locked = isWeapon && !unlocked;
+
+      div.className = "loadout-col" + (locked ? " col-locked" : "");
+
+      // Icon area (colored circle)
+      const icon = `<div class="col-icon" style="--col-color:${col.color}">
+        <span class="col-icon-glyph">${isWeapon ? "⬡" : "✦"}</span>
+      </div>`;
+
+      // Name
+      const name = `<div class="col-name">${col.label}</div>`;
+
+      // Status
+      const status = locked
+        ? `<div class="col-status locked">LOCKED</div>`
+        : `<div class="col-status unlocked">ACTIVE</div>`;
+
+      // Upgrades list
+      const catKey = isWeapon ? col.label.charAt(0) + col.label.slice(1).toLowerCase() : "Global";
+      const catUpgrades = groups[catKey] || [];
+      // Also include Rare upgrades in Global column
+      const extras = col.key === null ? (groups["Rare"] || []) : [];
+      const allUpgrades = [...catUpgrades, ...extras];
+
+      let upgradeHTML = "";
+      if (allUpgrades.length > 0) {
+        upgradeHTML = allUpgrades.map(u =>
+          `<div class="col-upgrade"><span class="col-upgrade-pip" style="background:${col.color}"></span><span>${u.name}</span></div>`
+        ).join("");
+      } else {
+        upgradeHTML = `<div class="col-upgrade col-upgrade-none">${locked ? "—" : "None yet"}</div>`;
       }
-      el.loadoutUpgrades.appendChild(group);
-    }
-    if (this.progression.acquired.length === 0) {
-      el.loadoutUpgrades.innerHTML = '<span class="loadout-no-upgrades">No upgrades yet</span>';
+
+      div.innerHTML = `${icon}${name}${status}<div class="col-upgrades">${upgradeHTML}</div>`;
+      el.loadoutColumns.appendChild(div);
     }
 
-    // Stats
+    // ---- Stats bar (bottom) ----
     const stats = this.progression.getDisplayStats(this.player);
     el.loadoutStats.innerHTML = `
-      <div class="loadout-stat"><span>DAMAGE</span><span class="stat-value">${stats.damage}</span></div>
-      <div class="loadout-stat"><span>FIRE RATE</span><span class="stat-value">${stats.fireRate}/s</span></div>
-      <div class="loadout-stat"><span>MOVE SPD</span><span class="stat-value">${stats.moveSpeed}</span></div>
-      <div class="loadout-stat"><span>CRIT</span><span class="stat-value">${stats.critChance}%</span></div>
-      <div class="loadout-stat"><span>XP BONUS</span><span class="stat-value">+${stats.comboXpBonus}%</span></div>
-      <div class="loadout-stat"><span>DMG BONUS</span><span class="stat-value">+${stats.comboDmgBonus}%</span></div>
-      <div class="loadout-stat"><span>LEVEL</span><span class="stat-value">${this.progression.level}</span></div>
-      <div class="loadout-stat"><span>SCRAP</span><span class="stat-value">${this.progression.scrap}</span></div>
+      <div class="loadout-stat"><span class="stat-label">DAMAGE</span><span class="stat-value">${stats.damage}</span></div>
+      <div class="loadout-stat"><span class="stat-label">FIRE RATE</span><span class="stat-value">${stats.fireRate}/s</span></div>
+      <div class="loadout-stat"><span class="stat-label">MOVE SPD</span><span class="stat-value">${stats.moveSpeed}</span></div>
+      <div class="loadout-stat"><span class="stat-label">CRIT</span><span class="stat-value">${stats.critChance}%</span></div>
+      <div class="loadout-stat"><span class="stat-label">LEVEL</span><span class="stat-value">${this.progression.level}</span></div>
+      <div class="loadout-stat"><span class="stat-label">SCRAP</span><span class="stat-value scrap-val">${this.progression.scrap}</span></div>
     `;
   }
 
@@ -820,6 +851,9 @@ export class Game {
 
     // Progression: update combo bonuses
     this.progression.updateComboBonuses(this.combo);
+
+    // Progression: tick mark target timers
+    this.progression.tickMarks(delta);
 
     // Combo timer
     if (this.comboTimer > 0) {
@@ -965,10 +999,23 @@ export class Game {
         if (shredBonus > 0) bulletDmg = Math.round(bulletDmg * (1 + shredBonus));
         this.progression.addShredderStack(enemy.id);
 
-        bullet.alive = false;
+        // Mark Target bonus — marked enemies take +20% damage
+        const markBonus = this.progression.getMarkBonus(enemy.id);
+        if (markBonus > 0) bulletDmg = Math.round(bulletDmg * (1 + markBonus));
+
+        // Mark Target — mark this enemy on hit
+        if (bullet._markTarget) this.progression.markEnemy(enemy.id);
+
+        // Piercing — bullet passes through instead of dying
+        if (bullet._piercing > 0) {
+          bullet._piercing -= 1;
+          bullet.damage = Math.round(bullet.damage * 0.7); // reduce for next hit
+        } else {
+          bullet.alive = false;
+        }
 
         // Ricochet — bounce toward next nearest enemy
-        if (bullet._ricochet > 0) {
+        if (!bullet.alive && bullet._ricochet > 0) {
           let nearest = null, nearDist = 300;
           for (const other of this.enemies) {
             if (other === enemy || other.fsm.currentState === "DEAD") continue;
@@ -987,6 +1034,12 @@ export class Game {
               color: bullet.color,
               friendly: true,
               _ricochet: bullet._ricochet - 1,
+              _piercing: 0,
+              _knockback: bullet._knockback,
+              _blastRadius: bullet._blastRadius,
+              _markTarget: bullet._markTarget,
+              _lightningChain: 0,
+              _shockwave: bullet._shockwave,
             }));
           }
         }
@@ -1052,6 +1105,27 @@ export class Game {
                   this.handleEnemyKill(other, bullet);
                 }
               }
+            }
+          }
+          // Lightning Chain — spawn chain bolts to nearby enemies
+          if (bullet._lightningChain > 0) {
+            const chainTargets = [];
+            for (const other of this.enemies) {
+              if (other === enemy || other.fsm.currentState === "DEAD") continue;
+              const d = Math.hypot(other.x - enemy.x, other.y - enemy.y);
+              if (d < 150) chainTargets.push({ enemy: other, dist: d });
+            }
+            chainTargets.sort((a, b) => a.dist - b.dist);
+            const chainCount = Math.min(bullet._lightningChain, chainTargets.length);
+            for (let ci = 0; ci < chainCount; ci++) {
+              const target = chainTargets[ci].enemy;
+              const chainDmg = Math.round(bulletDmg * 0.35);
+              const chainResult = target.takeDamage(chainDmg);
+              if (chainResult.hit) {
+                this.spawnDamageNumber(target.x, target.y - target.radius - 8, chainDmg, "#88ccff");
+                this.spawnBurst(target.x, target.y, "#88ccff", 6, 15, 60);
+              }
+              if (chainResult.killed) this.handleEnemyKill(target, bullet);
             }
           }
         }
@@ -1211,6 +1285,37 @@ export class Game {
           // Chain kills don't re-trigger chain to prevent infinite cascades
         }
       }
+    }
+
+    // Shockwave — kills push nearby enemies back (shotgun upgrade)
+    if (bullet._shockwave && !enemy.isBoss) {
+      const swRadius = 80;
+      for (const other of this.enemies) {
+        if (other === enemy || other.fsm.currentState === "DEAD" || other.isBoss) continue;
+        const d = Math.hypot(other.x - enemy.x, other.y - enemy.y);
+        if (d < swRadius && d > 0) {
+          const pushAngle = Math.atan2(other.y - enemy.y, other.x - enemy.x);
+          const pushForce = 90 * (1 - d / swRadius);
+          other.x += Math.cos(pushAngle) * pushForce;
+          other.y += Math.sin(pushAngle) * pushForce;
+          keepCircleInBounds(other, this.bounds);
+        }
+      }
+      this.spawnBurst(enemy.x, enemy.y, "#ffaa33", 10, 30, 100);
+    }
+
+    // Freeze Field — kills slow nearby enemies for 1.5s
+    if (this.progression.hasFreezeField()) {
+      const freezeRadius = 100;
+      for (const other of this.enemies) {
+        if (other === enemy || other.fsm.currentState === "DEAD") continue;
+        const d = Math.hypot(other.x - enemy.x, other.y - enemy.y);
+        if (d < freezeRadius) {
+          other.slowTimer = 1.5;
+          other.slowFactor = 0.4; // 60% slower
+        }
+      }
+      this.spawnBurst(enemy.x, enemy.y, "#88ddff", 12, 25, 90);
     }
 
     // Boss death — massive effects + boss reward
@@ -2158,66 +2263,71 @@ export class Game {
     ctx.save();
 
     // ---- Health bar (bottom-center) ----
-    const barW = 200;
-    const barH = 8;
+    const barW = 220;
+    const barH = 10;
     const barX = (bounds.width - barW) / 2;
-    const barY = bounds.height - 32;
+    const barY = bounds.height - 38;
     const pct = clamp(this.player.health / this.player.maxHealth, 0, 1);
 
     // Background
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
     ctx.beginPath();
-    ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 4);
+    ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 5);
     ctx.fill();
 
     // Border
-    ctx.strokeStyle = "rgba(0,255,136,0.25)";
+    ctx.strokeStyle = "rgba(255,255,255,0.12)";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 4);
+    ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 5);
     ctx.stroke();
 
     // Fill
     const hpColor = pct > 0.6 ? "#00ff88" : pct > 0.3 ? "#ffcc00" : "#ff3355";
     ctx.fillStyle = hpColor;
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur = 10;
     ctx.shadowColor = hpColor;
     ctx.beginPath();
-    ctx.roundRect(barX, barY, barW * pct, barH, 3);
+    ctx.roundRect(barX, barY, barW * pct, barH, 4);
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // HP text
+    // HP label + value
+    ctx.font = '700 10px "Share Tech Mono", monospace';
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    ctx.fillStyle = "rgba(255,255,255,0.4)";
+    ctx.fillText("HP", barX, barY - 4);
     ctx.font = '600 11px "Inter", sans-serif';
     ctx.textAlign = "center";
-    ctx.textBaseline = "bottom";
-    ctx.fillStyle = "rgba(255,255,255,0.6)";
-    ctx.fillText(`${Math.ceil(this.player.health)} / ${this.player.maxHealth}`, bounds.width / 2, barY - 5);
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.fillText(`${Math.ceil(this.player.health)} / ${this.player.maxHealth}`, bounds.width / 2, barY - 4);
 
     // ---- XP bar (below health bar) ----
-    const xpW = 200;
-    const xpH = 5;
-    const xpX = (bounds.width - xpW) / 2;
+    const xpW = barW;
+    const xpH = 6;
+    const xpX = barX;
     const xpY = barY + barH + 8;
     const xpPct = clamp(this.progression.xp / this.progression.xpMax, 0, 1);
 
     // Background
-    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
     ctx.beginPath();
     ctx.roundRect(xpX - 1, xpY - 1, xpW + 2, xpH + 2, 3);
     ctx.fill();
 
     // Border
-    ctx.strokeStyle = "rgba(107,224,214,0.18)";
+    ctx.strokeStyle = "rgba(140,120,255,0.15)";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.roundRect(xpX - 1, xpY - 1, xpW + 2, xpH + 2, 3);
     ctx.stroke();
 
+    // Fill — distinct purple color
     if (xpPct > 0) {
-      ctx.fillStyle = "#6be0d6";
-      ctx.shadowBlur = 6;
-      ctx.shadowColor = "rgba(107,224,214,0.4)";
+      ctx.fillStyle = "#a78bfa";
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = "rgba(167,139,250,0.5)";
       ctx.beginPath();
       ctx.roundRect(xpX, xpY, xpW * xpPct, xpH, 2);
       ctx.fill();
@@ -2225,16 +2335,28 @@ export class Game {
     }
 
     // Level badge (left of XP bar)
-    ctx.font = '700 11px "Inter", sans-serif';
+    ctx.font = '700 10px "Share Tech Mono", monospace';
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "rgba(107,224,214,0.85)";
-    ctx.fillText(`LV ${this.progression.level}`, xpX - 8, xpY + xpH / 2);
+    ctx.fillStyle = "rgba(167,139,250,0.9)";
+    ctx.fillText(`LV ${this.progression.level}`, xpX - 6, xpY + xpH / 2);
 
-    // Scrap counter (right of XP bar)
+    // XP label (right of bar)
     ctx.textAlign = "left";
-    ctx.fillStyle = "rgba(255,200,80,0.85)";
-    ctx.fillText(`${this.progression.scrap} SCRAP`, xpX + xpW + 8, xpY + xpH / 2);
+    ctx.fillStyle = "rgba(167,139,250,0.55)";
+    ctx.font = '600 9px "Share Tech Mono", monospace';
+    ctx.fillText("XP", xpX + xpW + 6, xpY + xpH / 2);
+
+    // ---- Scrap counter (below XP bar, centered) ----
+    const scrapY = xpY + xpH + 8;
+    ctx.font = '700 11px "Share Tech Mono", monospace';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = "rgba(255,200,80,0.9)";
+    ctx.shadowBlur = 6;
+    ctx.shadowColor = "rgba(255,200,80,0.3)";
+    ctx.fillText(`\u25C6 ${this.progression.scrap} SCRAP`, bounds.width / 2, scrapY);
+    ctx.shadowBlur = 0;
 
     // ---- Top-left: Score + Wave (below brand corner) ----
     const tlX = 16;

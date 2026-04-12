@@ -80,8 +80,7 @@ const bootstrap = async () => {
     bossRewardScreen: document.getElementById("boss-reward-screen"),
     bossRewardCards: document.getElementById("boss-reward-cards"),
     loadoutScreen: document.getElementById("loadout-screen"),
-    loadoutWeapons: document.getElementById("loadout-weapons"),
-    loadoutUpgrades: document.getElementById("loadout-upgrades"),
+    loadoutColumns: document.getElementById("loadout-columns"),
     loadoutStats: document.getElementById("loadout-stats"),
     hudHint: document.getElementById("hud-hint"),
   });

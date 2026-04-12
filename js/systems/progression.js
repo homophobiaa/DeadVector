@@ -12,35 +12,49 @@
 // ── Upgrade definitions ───────────────────────────────────────────
 
 const UPGRADES = [
-  // PISTOL (6)
+  // PISTOL (9)
   { id: "precision_core",  name: "Precision Core",  desc: "+15% crit chance",            category: "Pistol",  weapon: "pistol",  scrapCost: 0 },
   { id: "double_tap",      name: "Double Tap",      desc: "Fires 2 bullets quickly",     category: "Pistol",  weapon: "pistol",  scrapCost: 0 },
   { id: "ricochet",        name: "Ricochet I",      desc: "Bullets bounce once",          category: "Pistol",  weapon: "pistol",  scrapCost: 0 },
   { id: "high_caliber",    name: "High Caliber",    desc: "+25% damage",                  category: "Pistol",  weapon: "pistol",  scrapCost: 0 },
   { id: "rapid_trigger",   name: "Rapid Trigger",   desc: "+20% fire rate",               category: "Pistol",  weapon: "pistol",  scrapCost: 0 },
   { id: "deadeye",         name: "Deadeye",         desc: "Crits deal +50% damage",       category: "Pistol",  weapon: "pistol",  scrapCost: 0 },
+  { id: "piercing_shot",   name: "Piercing Shot",   desc: "Bullets pass through 1 enemy", category: "Pistol",  weapon: "pistol",  scrapCost: 0 },
+  { id: "fast_hands",      name: "Fast Hands",      desc: "+30% fire rate",               category: "Pistol",  weapon: "pistol",  scrapCost: 0 },
+  { id: "mark_target",     name: "Mark Target",     desc: "Hit enemies take +20% dmg for 2s", category: "Pistol", weapon: "pistol", scrapCost: 5 },
 
-  // SHOTGUN unlocked (5)
+  // SHOTGUN (8)
   { id: "unlock_shotgun",  name: "Unlock Shotgun",  desc: "Adds Scatter Cannon to loadout", category: "Shotgun", weapon: "shotgun", scrapCost: 0, isUnlock: true },
   { id: "dense_shells",    name: "Dense Shells",    desc: "+2 pellets per shot",          category: "Shotgun", weapon: "shotgun", scrapCost: 0 },
   { id: "knockback_core",  name: "Knockback Core",  desc: "Pushes enemies on hit",        category: "Shotgun", weapon: "shotgun", scrapCost: 0 },
   { id: "tight_spread",    name: "Tight Spread",    desc: "More focused cone",            category: "Shotgun", weapon: "shotgun", scrapCost: 0 },
   { id: "blast_core",      name: "Blast Core",      desc: "Small explosion on hit",       category: "Shotgun", weapon: "shotgun", scrapCost: 10 },
+  { id: "wide_blast",      name: "Wide Blast",      desc: "+40% spread, +3 pellets",      category: "Shotgun", weapon: "shotgun", scrapCost: 0 },
+  { id: "heavy_shells",    name: "Heavy Shells",    desc: "+40% damage, -25% fire rate",  category: "Shotgun", weapon: "shotgun", scrapCost: 5 },
+  { id: "shockwave",       name: "Shockwave",       desc: "Kills push nearby enemies back", category: "Shotgun", weapon: "shotgun", scrapCost: 10 },
 
-  // SMG unlocked (5)
+  // SMG (8)
   { id: "unlock_smg",      name: "Unlock Vector SMG", desc: "Adds Vector SMG to loadout",   category: "SMG",   weapon: "smg",     scrapCost: 0, isUnlock: true },
   { id: "overdrive",       name: "Overdrive",       desc: "Fire rate ramps while shooting", category: "SMG",   weapon: "smg",     scrapCost: 0 },
   { id: "stabilizer",      name: "Stabilizer",      desc: "Reduce spread by 30%",         category: "SMG",    weapon: "smg",     scrapCost: 0 },
   { id: "shredder",        name: "Shredder",        desc: "Damage increases per hit on same target", category: "SMG", weapon: "smg", scrapCost: 0 },
   { id: "spray_boost",     name: "Spray Boost",     desc: "Wider spread but more bullets", category: "SMG",   weapon: "smg",     scrapCost: 0 },
+  { id: "bullet_storm",    name: "Bullet Storm",    desc: "+4 pellets, +50% spread",      category: "SMG",    weapon: "smg",     scrapCost: 5 },
+  { id: "heat_buildup",    name: "Heat Build",      desc: "Continuous fire ramps damage +30%", category: "SMG", weapon: "smg",    scrapCost: 0 },
+  { id: "tracking_spray",  name: "Tracking Spray",  desc: "-20% spread while moving",     category: "SMG",    weapon: "smg",     scrapCost: 0 },
 
-  // GLOBAL (3)
+  // GLOBAL (6)
   { id: "speed_boost",     name: "Speed Boost",     desc: "+15% movement speed",          category: "Global", weapon: null,      scrapCost: 0 },
   { id: "magnet_core",     name: "Magnet Core",     desc: "Increased pickup radius",      category: "Global", weapon: null,      scrapCost: 0 },
   { id: "vital_surge",     name: "Vital Surge",     desc: "Small heal on kill",           category: "Global", weapon: null,      scrapCost: 0 },
+  { id: "adrenaline",      name: "Adrenaline",      desc: "Below 40% HP: +30% damage",    category: "Global", weapon: null,      scrapCost: 0 },
+  { id: "scavenger",       name: "Scavenger",       desc: "Double scrap drop chance",     category: "Global", weapon: null,      scrapCost: 0 },
+  { id: "efficiency",      name: "Efficiency",      desc: "+10% damage, +10% fire rate",  category: "Global", weapon: null,      scrapCost: 5 },
 
-  // RARE (1)
+  // RARE (3)
   { id: "chain_reaction",  name: "Chain Reaction",  desc: "Enemies explode on death",     category: "Rare",   weapon: null,      scrapCost: 20 },
+  { id: "lightning_chain", name: "Lightning Chain",  desc: "Bullets chain to 2 nearby enemies", category: "Rare", weapon: null,   scrapCost: 25 },
+  { id: "freeze_field",    name: "Freeze Field",    desc: "Kills slow nearby enemies for 1.5s", category: "Rare", weapon: null,  scrapCost: 20 },
 ];
 
 export function getUpgradePool() { return UPGRADES; }
@@ -75,6 +89,9 @@ export class Progression {
 
     // Shredder tracking (per-enemy hit stacks)
     this.shredderStacks = new Map(); // enemyId → hitCount
+
+    // Mark Target tracking
+    this.markedEnemies = new Map();  // enemyId → remaining seconds
 
     // Combo-based bonuses (recalculated each frame)
     this.comboXpBonus = 0;         // multiplier: 0, 0.1, or 0.2
@@ -113,7 +130,8 @@ export class Progression {
 
   getScrapFromKill(enemy) {
     if (enemy.isBoss) return 20 + Math.floor(Math.random() * 11); // 20-30
-    return Math.random() < 0.125 ? 1 : 0; // ~12.5% chance for 1 scrap
+    const chance = this.has("scavenger") ? 0.25 : 0.125;
+    return Math.random() < chance ? 1 : 0;
   }
 
   // ── Upgrade Selection Logic ──────────────────────────────────
@@ -225,13 +243,27 @@ export class Progression {
       critMultiplier: 1.5,
       doubleTap: false,
       ricochet: false,
+      piercing: 0,
       knockback: false,
       blastRadius: 0,
       overdriveRamp: 0,
       shredder: false,
+      markTarget: false,
+      shockwave: false,
+      heatDmgBonus: 0,
+      lightningChain: 0,
     };
 
     const lowerName = weaponName.toLowerCase();
+
+    // Global upgrades (apply to all weapons)
+    if (this.has("efficiency")) {
+      mods.damageMultiplier += 0.10;
+      mods.cooldownMultiplier *= 0.9;
+    }
+    if (this.has("adrenaline")) {
+      mods._adrenaline = true; // resolved at fire time with player HP check
+    }
 
     // Pistol upgrades
     if (lowerName.includes("pistol")) {
@@ -241,6 +273,9 @@ export class Progression {
       if (this.has("high_caliber"))   mods.damageMultiplier += 0.25;
       if (this.has("rapid_trigger"))  mods.cooldownMultiplier *= 0.8;
       if (this.has("deadeye"))        mods.critMultiplier += 0.5;
+      if (this.has("piercing_shot"))  mods.piercing = 1;
+      if (this.has("fast_hands"))     mods.cooldownMultiplier *= 0.7;
+      if (this.has("mark_target"))    mods.markTarget = true;
     }
 
     // Shotgun upgrades
@@ -249,6 +284,9 @@ export class Progression {
       if (this.has("knockback_core")) mods.knockback = true;
       if (this.has("tight_spread"))   mods.spreadMultiplier *= 0.65;
       if (this.has("blast_core"))     mods.blastRadius = 45;
+      if (this.has("wide_blast"))   { mods.spreadMultiplier *= 1.4; mods.pelletBonus += 3; }
+      if (this.has("heavy_shells")) { mods.damageMultiplier += 0.4; mods.cooldownMultiplier *= 1.25; }
+      if (this.has("shockwave"))      mods.shockwave = true;
     }
 
     // SMG upgrades
@@ -260,7 +298,13 @@ export class Progression {
         mods.spreadMultiplier *= 1.35;
         mods.pelletBonus += 2;
       }
+      if (this.has("bullet_storm")) { mods.pelletBonus += 4; mods.spreadMultiplier *= 1.5; }
+      if (this.has("heat_buildup"))   mods.heatDmgBonus = this.overdriveRamp * 0.3; // up to +30%
+      if (this.has("tracking_spray")) mods._trackingSpray = true; // resolved at fire time
     }
+
+    // Rare
+    if (this.has("lightning_chain"))   mods.lightningChain = 2;
 
     return mods;
   }
@@ -314,6 +358,40 @@ export class Progression {
 
   clearShredderStacks(enemyId) {
     this.shredderStacks.delete(enemyId);
+  }
+
+  // ── Mark Target Tracking ─────────────────────────────────────
+
+  /** Mark an enemy — takes +20% damage for 2 seconds. */
+  markEnemy(enemyId) {
+    if (!this.has("mark_target")) return;
+    this.markedEnemies.set(enemyId, 2.0);
+  }
+
+  getMarkBonus(enemyId) {
+    if (!this.has("mark_target")) return 0;
+    return this.markedEnemies.has(enemyId) ? 0.2 : 0;
+  }
+
+  tickMarks(delta) {
+    for (const [id, ttl] of this.markedEnemies) {
+      const remaining = ttl - delta;
+      if (remaining <= 0) this.markedEnemies.delete(id);
+      else this.markedEnemies.set(id, remaining);
+    }
+  }
+
+  // ── Freeze Field ─────────────────────────────────────────────
+
+  hasFreezeField() {
+    return this.has("freeze_field");
+  }
+
+  // ── Adrenaline ───────────────────────────────────────────────
+
+  getAdrenalineBonus(playerHp, playerMaxHp) {
+    if (!this.has("adrenaline")) return 0;
+    return (playerHp / playerMaxHp) < 0.4 ? 0.3 : 0;
   }
 
   // ── Grouped upgrades for display ─────────────────────────────
