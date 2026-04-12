@@ -73,6 +73,7 @@ export class Game {
     this.progression = new Progression();
     this.gameSpeed = 1;                // 1 = normal, ~0.27 = level-up slowdown
     this.loadoutOpen = false;
+    this.levelUpReadyAt = 0;           // misclick prevention timestamp
 
     // Background image
     this.bgImg = new Image();
@@ -155,8 +156,7 @@ export class Game {
     this.progression.reset();
     this.gameSpeed = 1;
     this.loadoutOpen = false;
-    this.player.weapons = [getBaseWeapons()[0]]; // Pistol only
-    this.player.weaponIndex = 0;
+    this.levelUpReadyAt = 0;
     this.bullets = [];
     this.enemyProjectiles = [];
     this.enemies = [];
@@ -178,6 +178,8 @@ export class Game {
     this.ui.showHudHint(true);
 
     this.applySettings();
+    // Sync weapons from progression AFTER applySettings to override setDevMode's weapon reset
+    this.syncWeaponsFromProgression();
 
     // setInterval event: periodic stats sync
     this.statsInterval = setInterval(() => {
@@ -275,12 +277,7 @@ export class Game {
 
   applyWeaponsData(data) {
     setBaseWeapons(data);
-    if (this.player.devMode) {
-      this.player.weapons = [...data, DEV_WEAPON];
-    } else {
-      this.player.weapons = [...data];
-    }
-    this.player.weaponIndex = Math.min(this.player.weaponIndex, this.player.weapons.length - 1);
+    this.syncWeaponsFromProgression();
   }
 
   applyEnemiesData(data) {
@@ -308,8 +305,7 @@ export class Game {
 
   resetWeaponsData() {
     setBaseWeapons(JSON.parse(JSON.stringify(this._defaultWeapons)));
-    this.player.weapons = this.player.devMode ? [...getBaseWeapons(), DEV_WEAPON] : [...getBaseWeapons()];
-    this.player.weaponIndex = Math.min(this.player.weaponIndex, this.player.weapons.length - 1);
+    this.syncWeaponsFromProgression();
   }
   resetEnemiesData()   { setEnemyTypes(JSON.parse(JSON.stringify(this._defaultEnemies))); }
   resetWavesData()     { this.waveSpawner.setConfig(JSON.parse(JSON.stringify(this._defaultWaves))); }
@@ -472,6 +468,13 @@ export class Game {
       }
     }
 
+    // TAB / E: toggle loadout (only while playing, not during level-up/boss reward)
+    if ((this.input.wasPressed("tab") || this.input.wasPressed("e")) && this.state === "playing") {
+      if (!this.progression.levelUpActive && !this.progression.bossRewardActive) {
+        this.toggleLoadout();
+      }
+    }
+
     // Block gameplay input during level-up, boss reward, or loadout
     const inputBlocked = this.progression.levelUpActive || this.progression.bossRewardActive || this.loadoutOpen;
 
@@ -535,12 +538,6 @@ export class Game {
         return;
       }
       return; // Block other keys during level-up
-    }
-
-    // Loadout menu toggle
-    if ((key === "tab" || key === "e") && this.state === "playing") {
-      this.toggleLoadout();
-      return;
     }
 
     if (key === "1" || key === "2" || key === "3" || key === "4") {
@@ -640,6 +637,9 @@ export class Game {
   // ---- Progression helpers ----
 
   selectUpgradeCard(index) {
+    // Block input during the misclick-prevention delay
+    if (Date.now() < this.levelUpReadyAt) return;
+
     const cards = this.progression.levelUpActive
       ? this.progression.levelUpCards
       : this.progression.bossRewardCards;
@@ -674,16 +674,14 @@ export class Game {
     this.progression.levelUpCards = cards;
     this.progression.levelUpActive = true;
     this.gameSpeed = 0.27;
+    this.levelUpReadyAt = Date.now() + 350;
     this.populateCards(cards, this.ui.elements.levelupCards);
     this.ui.showLevelUp(true);
   }
 
   triggerBossReward(enemy) {
-    // Grant scrap + XP burst
-    const scrapAmt = this.progression.getScrapFromKill(enemy);
-    this.progression.scrap += scrapAmt;
+    // Grant XP burst — don't trigger another level-up from the burst itself
     const xpAmt = this.progression.getXpFromKill(enemy);
-    // XP burst — don't trigger another level-up from the burst itself
     this.progression.xp = Math.min(this.progression.xp + xpAmt, this.progression.xpMax - 1);
 
     const cards = this.progression.buildBossRewardCards();
@@ -691,6 +689,7 @@ export class Game {
     this.progression.bossRewardCards = cards;
     this.progression.bossRewardActive = true;
     this.gameSpeed = 0.27;
+    this.levelUpReadyAt = Date.now() + 350;
     this.populateCards(cards, this.ui.elements.bossRewardCards);
     this.ui.showBossReward(true);
   }
@@ -1134,16 +1133,21 @@ export class Game {
 
     // Progression: Scrap
     const scrapAmt = this.progression.getScrapFromKill(enemy);
-    if (scrapAmt > 0 && !enemy.isBoss) {
-      this.pickups.push({
-        x: enemy.x + randomRange(-10, 10),
-        y: enemy.y + randomRange(-10, 10),
-        radius: 6,
-        type: "scrap",
-        amount: scrapAmt,
-        life: 12,
-        bobPhase: Math.random() * Math.PI * 2,
-      });
+    if (scrapAmt > 0) {
+      // Bosses drop multiple scrap pickups spread around, normal enemies drop one
+      const pickupCount = enemy.isBoss ? 5 : 1;
+      const perPickup = Math.ceil(scrapAmt / pickupCount);
+      for (let si = 0; si < pickupCount; si++) {
+        this.pickups.push({
+          x: enemy.x + randomRange(-20, 20),
+          y: enemy.y + randomRange(-20, 20),
+          radius: 6,
+          type: "scrap",
+          amount: perPickup,
+          life: 12,
+          bobPhase: Math.random() * Math.PI * 2,
+        });
+      }
     }
 
     // Progression: Heal on kill
@@ -2191,16 +2195,24 @@ export class Game {
     ctx.fillText(`${Math.ceil(this.player.health)} / ${this.player.maxHealth}`, bounds.width / 2, barY - 5);
 
     // ---- XP bar (below health bar) ----
-    const xpW = 160;
-    const xpH = 4;
+    const xpW = 200;
+    const xpH = 5;
     const xpX = (bounds.width - xpW) / 2;
-    const xpY = barY + barH + 6;
+    const xpY = barY + barH + 8;
     const xpPct = clamp(this.progression.xp / this.progression.xpMax, 0, 1);
 
-    ctx.fillStyle = "rgba(0,0,0,0.4)";
+    // Background
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
     ctx.beginPath();
-    ctx.roundRect(xpX - 1, xpY - 1, xpW + 2, xpH + 2, 2);
+    ctx.roundRect(xpX - 1, xpY - 1, xpW + 2, xpH + 2, 3);
     ctx.fill();
+
+    // Border
+    ctx.strokeStyle = "rgba(107,224,214,0.18)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(xpX - 1, xpY - 1, xpW + 2, xpH + 2, 3);
+    ctx.stroke();
 
     if (xpPct > 0) {
       ctx.fillStyle = "#6be0d6";
@@ -2212,17 +2224,17 @@ export class Game {
       ctx.shadowBlur = 0;
     }
 
-    // Level badge
-    ctx.font = '600 9px "Inter", sans-serif';
-    ctx.textAlign = "left";
+    // Level badge (left of XP bar)
+    ctx.font = '700 11px "Inter", sans-serif';
+    ctx.textAlign = "right";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "rgba(107,224,214,0.6)";
-    ctx.fillText(`LV ${this.progression.level}`, xpX - 30, xpY + xpH / 2);
+    ctx.fillStyle = "rgba(107,224,214,0.85)";
+    ctx.fillText(`LV ${this.progression.level}`, xpX - 8, xpY + xpH / 2);
 
     // Scrap counter (right of XP bar)
-    ctx.textAlign = "right";
-    ctx.fillStyle = "rgba(255,200,80,0.6)";
-    ctx.fillText(`${this.progression.scrap} SCRAP`, xpX + xpW + 50, xpY + xpH / 2);
+    ctx.textAlign = "left";
+    ctx.fillStyle = "rgba(255,200,80,0.85)";
+    ctx.fillText(`${this.progression.scrap} SCRAP`, xpX + xpW + 8, xpY + xpH / 2);
 
     // ---- Top-left: Score + Wave (below brand corner) ----
     const tlX = 16;

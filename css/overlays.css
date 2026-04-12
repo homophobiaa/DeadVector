@@ -123,9 +123,10 @@
   left: 16px;
   bottom: 60px;
   font-family: 'Share Tech Mono', monospace;
-  font-size: 0.6rem;
+  font-size: 0.72rem;
   letter-spacing: 0.12em;
-  color: rgba(0, 255, 136, 0.25);
+  color: rgba(0, 255, 136, 0.5);
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.2);
   z-index: 10;
   pointer-events: none;
   -webkit-user-select: none;
@@ -278,22 +279,34 @@
 
 /* ---- Loadout panel ---- */
 .loadout-panel {
-  width: min(580px, calc(100% - 2rem));
+  width: min(620px, calc(100% - 2rem));
   max-height: calc(100vh - 4rem);
   overflow-y: auto;
   text-align: left;
+  padding: 1.8rem 2rem 1.4rem;
 }
 
 .loadout-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 1.2rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 1.4rem;
+}
+
+.loadout-grid .loadout-section:first-child {
+  grid-column: 1 / -1;
+}
+
+.loadout-section {
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(0, 255, 136, 0.015);
 }
 
 .loadout-heading {
   font-family: 'Orbitron', monospace;
   font-weight: 700;
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   letter-spacing: 0.18em;
   color: var(--accent-dim);
   border-bottom: 1px solid var(--line);
@@ -395,8 +408,8 @@
 
 .loadout-stats {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.3rem 1rem;
+  grid-template-columns: 1fr;
+  gap: 0.25rem;
 }
 
 .loadout-stat {

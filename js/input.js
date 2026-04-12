@@ -28,6 +28,7 @@ export class InputManager {
 
   handleKeyDown = (e) => {
     const key = e.key.toLowerCase();
+    if (key === "tab") e.preventDefault();
     if (!this.keysDown.has(key)) this.keysPressed.add(key);
     this.keysDown.add(key);
     this.queueEvent("keydown", { key, code: e.code, repeat: e.repeat });
