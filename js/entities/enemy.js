@@ -65,7 +65,7 @@ const BOSS_TYPES = {
     projectileSpeed: 480,
     isBoss: true,
     bossGlowColor: "#44ff22",
-    bossTitle: "BROOD MOTHER",
+    bossTitle: "THE BROODMOTHER",
     burstCount: 5,
     burstSpread: 0.5,
     projectileColor: "#88ff44",
@@ -115,30 +115,30 @@ const BOSS_SCHEDULE = [
   // Boss #3 (wave 15) — AoE + shockwave
   { base: "titan" },
   // Boss #4 (wave 20) — evolved juggernaut
-  { base: "juggernaut", bossTitle: "THE WARLORD", label: "Warlord",
+  { base: "juggernaut", bossTitle: "WARLORD GRIM", label: "Warlord Grim",
     speed: 88, damage: 42, maxHealth: 950, slamRadius: 100, attackCooldown: 1.0,
     radius: 40, score: 700, bodyColor: "#8a1010", accentColor: "#ff6644",
     bossGlowColor: "#ff5522" },
   // Boss #5 (wave 25) — evolved broodmother
-  { base: "broodmother", bossTitle: "HIVE QUEEN", label: "Hive Queen",
+  { base: "broodmother", bossTitle: "QUEEN VESPERA", label: "Queen Vespera",
     speed: 65, damage: 18, maxHealth: 850, burstCount: 8, burstSpread: 0.85,
     projectileSpeed: 540, attackCooldown: 0.7, radius: 34, score: 850,
     bodyColor: "#1a5520", accentColor: "#33ee22", bossGlowColor: "#22ff44" },
   // Boss #6 (wave 30) — evolved titan
-  { base: "titan", bossTitle: "THE COLOSSUS", label: "Colossus",
+  { base: "titan", bossTitle: "THE MONOLITH", label: "Monolith",
     speed: 100, damage: 55, maxHealth: 1500, slamRadius: 130,
     shockwaveCount: 16, attackCooldown: 0.85, radius: 48, score: 1100,
     bodyColor: "#2a0d3a", accentColor: "#aa55ee", bossGlowColor: "#bb44ff",
     chaseAttackInterval: 1.6, eyeColor: "#eeccff" },
   // Boss #7 (wave 35) — hybrid: ranged burst + melee slam + shockwave
-  { base: "broodmother", bossTitle: "ABOMINATION", label: "Abomination",
+  { base: "broodmother", bossTitle: "THE AMALGAM", label: "Amalgam",
     speed: 80, damage: 22, maxHealth: 1800, burstCount: 6, burstSpread: 0.7,
     projectileSpeed: 500, attackCooldown: 0.65, radius: 40, score: 1400,
     bodyColor: "#4a2010", accentColor: "#ff8833", bossGlowColor: "#ff6600",
     projectileColor: "#ffaa44", slamRadius: 90, shockwaveCount: 6,
     dualMode: true, eyeColor: "#ffcc66" },
   // Boss #8 (wave 40) — ultimate melee juggernaut
-  { base: "titan", bossTitle: "APEX PREDATOR", label: "Apex Predator",
+  { base: "titan", bossTitle: "OMEGA", label: "Omega",
     speed: 105, damage: 55, maxHealth: 2500, slamRadius: 140,
     shockwaveCount: 18, attackCooldown: 0.6, radius: 50, score: 2000,
     bodyColor: "#1a0a0a", accentColor: "#ff2222", bossGlowColor: "#ff1111",
@@ -777,6 +777,7 @@ export class Enemy {
         context.spawnBurst(player.x, player.y, "#8b0000", 18, 30, 130);
         context.leaveBlood(player.x, player.y, 10 + Math.random() * 12);
       }
+      context.addScreenShake(12);
       context.spawnBurst(this.x, this.y, this.config.accentColor, 24, 50, 180);
       if (this.config.shockwaveCount) this._fireShockwave(context);
       return;
@@ -795,8 +796,14 @@ export class Enemy {
       context.spawnBurst(player.x, player.y, "#8b0000", 18, 30, 130);
       context.leaveBlood(player.x, player.y, 10 + Math.random() * 12);
     }
+    // Ground-pound impact — always visible/felt
+    context.addScreenShake(12);
     context.spawnBurst(this.x, this.y, this.config.accentColor, 28, 60, 220);
     context.spawnBurst(this.x, this.y, "#443322", 18, 35, 140);
+    // Rage aura when low HP
+    if (this.health / this.maxHealth < 0.3) {
+      context.spawnBurst(this.x, this.y, "#ff2200", 14, 30, 120);
+    }
     if (this.config.shockwaveCount) this._fireShockwave(context);
   }
 
@@ -811,7 +818,8 @@ export class Enemy {
     const pSpeed = this.config.projectileSpeed;
     for (let i = 0; i < burstCount; i++) {
       const offset = burstCount > 1 ? ((i / (burstCount - 1)) - 0.5) * burstSpread : 0;
-      const angle = baseAngle + offset;
+      const jitter = (Math.random() - 0.5) * 0.08;
+      const angle = baseAngle + offset + jitter;
       context.spawnEnemyProjectile(new Bullet({
         x: this.x + Math.cos(angle) * (this.radius + 8),
         y: this.y + Math.sin(angle) * (this.radius + 8),
@@ -832,14 +840,16 @@ export class Enemy {
     const count = this.config.shockwaveCount;
     const waveColor = this.config.bossGlowColor || "#aa44ff";
     const speed = 280;
+    const ringOffset = Math.random() * Math.PI * 2;
     for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.1;
+      const angle = (i / count) * Math.PI * 2 + ringOffset;
+      const altRadius = i % 2 === 0 ? 6 : 5;
       context.spawnEnemyProjectile(new Bullet({
         x: this.x + Math.cos(angle) * (this.radius + 6),
         y: this.y + Math.sin(angle) * (this.radius + 6),
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        radius: 6,
+        radius: altRadius,
         damage: Math.floor(this.config.damage * 0.3),
         life: 1.4,
         color: waveColor,
@@ -853,8 +863,14 @@ export class Enemy {
     const count = this.config.shockwaveCount || 8;
     const waveColor = this.config.bossGlowColor || "#aa44ff";
     const speed = 260;
+    const dist = this.distanceToPlayer(context.player);
+    const aimAngle = Math.atan2(context.player.y - this.y, context.player.x - this.x);
+    // Close: focused half-ring toward player; Far: full 360 ring
+    const focused = dist < 200;
+    const startAngle = focused ? aimAngle - Math.PI * 0.5 : 0;
+    const arcSpan = focused ? Math.PI : Math.PI * 2;
     for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.1;
+      const angle = startAngle + (i / count) * arcSpan + Math.random() * 0.1;
       context.spawnEnemyProjectile(new Bullet({
         x: this.x + Math.cos(angle) * (this.radius + 6),
         y: this.y + Math.sin(angle) * (this.radius + 6),

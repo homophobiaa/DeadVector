@@ -597,6 +597,7 @@ export class Game {
       damagePlayer: (amount) => this.damagePlayer(amount),
       spawnEnemyProjectile: (p) => this.enemyProjectiles.push(p),
       spawnBurst: (x, y, color, count, sMin, sMax) => this.spawnBurst(x, y, color, count, sMin, sMax),
+      addScreenShake: (amount) => { this.screenShake = Math.max(this.screenShake, amount); },
       leaveBlood: (x, y, r) => this.leaveBlood(x, y, r),
     };
 
@@ -640,7 +641,13 @@ export class Game {
       window.dispatchEvent(new CustomEvent("waveComplete", { detail: { wave: this.waveSpawner.wave } }));
       this.player.heal(15);
       this.spawnBurst(this.player.x, this.player.y, "#78ff78", 12, 15, 80);
-      this.queueNextWave(800);
+      // Longer delay before boss waves for dramatic pacing,
+      // and after boss waves to let effects and pickups settle
+      const nextWave = this.waveSpawner.wave + 1;
+      const isBossNext = nextWave % this.waveSpawner.config.bossInterval === 0;
+      const wasBossWave = this.waveSpawner.wave % this.waveSpawner.config.bossInterval === 0;
+      const delay = isBossNext ? 1400 : wasBossWave ? 1200 : 800;
+      this.queueNextWave(delay);
     }
 
     // Game over check
@@ -653,7 +660,9 @@ export class Game {
     const hit = this.player.takeDamage(amount);
     if (hit) {
       this.audio.playPlayerHit();
-      this.screenShake = Math.max(this.screenShake, 10);
+      // Scale shake with damage — boss hits feel heavier
+      const shake = Math.min(25, 8 + amount * 0.4);
+      this.screenShake = Math.max(this.screenShake, shake);
       this.damageVignette = 1;
     }
   }
@@ -1410,7 +1419,12 @@ export class Game {
     const multText = `${this.getComboMultiplier().toFixed(1)}x SCORE`;
 
     // Combo number — offset down when boss indicator is visible
-    const comboY = 20;
+    let comboY = 20;
+    if (this.state === "playing" && this.waveSpawner.wave > 0) {
+      const noActiveBoss = !this.activeBoss || this.activeBoss.fsm.currentState === "DEAD";
+      const wl = this.waveSpawner.wavesUntilBoss();
+      if (noActiveBoss && wl !== Infinity && wl !== 0) comboY = 78;
+    }
     ctx.font = 'bold 42px "Orbitron", "Arial Black", sans-serif';
     ctx.fillStyle = "rgba(0,0,0,0.4)";
     ctx.fillText(comboText, bounds.width - 22, comboY + 2);
@@ -1786,11 +1800,18 @@ export class Game {
 
     // ---- FPS counter (top-right) ----
     if (this.settings.get("showFps")) {
+      let fpsY = 16;
+      // Push below boss indicator widget when it's visible
+      if (this.state === "playing" && this.waveSpawner.wave > 0) {
+        const noActiveBoss = !this.activeBoss || this.activeBoss.fsm.currentState === "DEAD";
+        const wl = this.waveSpawner.wavesUntilBoss();
+        if (noActiveBoss && wl !== Infinity && wl !== 0) fpsY = 78;
+      }
       ctx.textAlign = "right";
       ctx.textBaseline = "top";
       ctx.font = '600 11px "Share Tech Mono", monospace';
       ctx.fillStyle = "rgba(0,255,136,0.45)";
-      ctx.fillText(`${this.fpsDisplay} FPS`, bounds.width - 16, 16);
+      ctx.fillText(`${this.fpsDisplay} FPS`, bounds.width - 16, fpsY);
     }
 
     // ---- Dev mode indicator ----
