@@ -499,6 +499,14 @@ export class Game {
 
       if (event.type === "keypress") this.handleKeyPress(event.key);
 
+      // Wheel in loadout: switch weapon and refresh stats
+      if (event.type === "wheel" && this.loadoutOpen) {
+        const weapon = this.player.switchWeaponByStep(event.deltaY > 0 ? 1 : -1);
+        this.ui.pushEvent(`${weapon.name} selected.`);
+        this.populateLoadout();
+        continue;
+      }
+
       if (this.state !== "playing" || inputBlocked) continue;
 
       if (event.type === "wheel") {
@@ -2279,16 +2287,17 @@ export class Game {
   renderHud() {
     if (this.state === "menu") return;
     const { ctx, bounds } = this;
+    const s = this.settings.get("uiScale") || 1.0;
 
     ctx.save();
 
     // ---- Bottom-center HUD: [ HEALTH ] [ SCRAP ] [ XP ] ----
-    const hudY = bounds.height - 32;          // vertical center of the HUD row
-    const barH = 12;
-    const healthW = 180;
-    const scrapW = 90;
-    const xpW = 180;
-    const gap = 16;
+    const hudY = bounds.height - Math.round(36 * s);
+    const barH = Math.round(16 * s);
+    const healthW = Math.round(220 * s);
+    const scrapW = Math.round(100 * s);
+    const xpW = Math.round(220 * s);
+    const gap = Math.round(22 * s);
     const totalW = healthW + gap + scrapW + gap + xpW;
     const startX = (bounds.width - totalW) / 2;
 
@@ -2299,168 +2308,180 @@ export class Game {
     const hpFill = pct > 0.6 ? "#e8364f" : pct > 0.3 ? "#ffcc00" : "#ff2244";
 
     // Background
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
     ctx.beginPath();
-    ctx.roundRect(hpX - 2, hpY - 2, healthW + 4, barH + 4, 5);
+    ctx.roundRect(hpX - 2, hpY - 2, healthW + 4, barH + 4, Math.round(5 * s));
     ctx.fill();
 
     // Border
-    ctx.strokeStyle = "rgba(255,80,100,0.15)";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(255,80,100,0.18)";
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(hpX - 2, hpY - 2, healthW + 4, barH + 4, 5);
+    ctx.roundRect(hpX - 2, hpY - 2, healthW + 4, barH + 4, Math.round(5 * s));
     ctx.stroke();
 
     // Fill — red tones
     ctx.fillStyle = hpFill;
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = Math.round(12 * s);
     ctx.shadowColor = hpFill;
     ctx.beginPath();
-    ctx.roundRect(hpX, hpY, healthW * pct, barH, 4);
+    ctx.roundRect(hpX, hpY, healthW * pct, barH, Math.round(4 * s));
     ctx.fill();
     ctx.shadowBlur = 0;
 
     // HP label (left above bar)
-    ctx.font = '700 10px "Share Tech Mono", monospace';
+    ctx.font = `700 ${Math.round(12 * s)}px "Share Tech Mono", monospace`;
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
-    ctx.fillStyle = "rgba(255,100,120,0.6)";
-    ctx.fillText("HP", hpX, hpY - 3);
+    ctx.fillStyle = "rgba(255,100,120,0.65)";
+    ctx.fillText("HP", hpX, hpY - Math.round(4 * s));
 
     // HP value (center above bar)
-    ctx.font = '600 10px "Inter", sans-serif';
+    ctx.font = `600 ${Math.round(12 * s)}px "Inter", sans-serif`;
     ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(255,255,255,0.75)";
-    ctx.fillText(`${Math.ceil(this.player.health)} / ${this.player.maxHealth}`, hpX + healthW / 2, hpY - 3);
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.shadowBlur = 2;
+    ctx.shadowColor = "rgba(0,0,0,0.6)";
+    ctx.fillText(`${Math.ceil(this.player.health)} / ${this.player.maxHealth}`, hpX + healthW / 2, hpY - Math.round(4 * s));
+    ctx.shadowBlur = 0;
 
     // == SCRAP (center) ==
     const scrapX = hpX + healthW + gap;
-    ctx.font = '700 13px "Share Tech Mono", monospace';
+    ctx.font = `700 ${Math.round(16 * s)}px "Share Tech Mono", monospace`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = "rgba(255,200,80,0.95)";
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = "rgba(255,200,80,0.35)";
-    ctx.fillText(`\u25C6 ${this.progression.scrap}`, scrapX + scrapW / 2, hudY);
+    ctx.shadowBlur = Math.round(10 * s);
+    ctx.shadowColor = "rgba(255,200,80,0.4)";
+    ctx.fillText(`\u25C6 ${this.progression.scrap}`, scrapX + scrapW / 2, hudY - Math.round(2 * s));
     ctx.shadowBlur = 0;
 
     // SCRAP label below
-    ctx.font = '600 8px "Share Tech Mono", monospace';
-    ctx.fillStyle = "rgba(255,200,80,0.5)";
-    ctx.fillText("SCRAP", scrapX + scrapW / 2, hudY + 12);
+    ctx.font = `600 ${Math.round(9 * s)}px "Share Tech Mono", monospace`;
+    ctx.fillStyle = "rgba(255,200,80,0.55)";
+    ctx.fillText("SCRAP", scrapX + scrapW / 2, hudY + Math.round(12 * s));
 
     // == XP BAR (right) ==
-    const xpBarH = 8;
+    const xpBarH = Math.round(12 * s);
     const xpX = scrapX + scrapW + gap;
     const xpY = hudY - xpBarH / 2;
     const xpPct = clamp(this.progression.xp / this.progression.xpMax, 0, 1);
 
     // Background
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
     ctx.beginPath();
-    ctx.roundRect(xpX - 1, xpY - 1, xpW + 2, xpBarH + 2, 4);
+    ctx.roundRect(xpX - 1, xpY - 1, xpW + 2, xpBarH + 2, Math.round(4 * s));
     ctx.fill();
 
     // Border
-    ctx.strokeStyle = "rgba(140,120,255,0.15)";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(140,120,255,0.18)";
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(xpX - 1, xpY - 1, xpW + 2, xpBarH + 2, 4);
+    ctx.roundRect(xpX - 1, xpY - 1, xpW + 2, xpBarH + 2, Math.round(4 * s));
     ctx.stroke();
 
     // Fill — purple
     if (xpPct > 0) {
       ctx.fillStyle = "#a78bfa";
-      ctx.shadowBlur = 8;
+      ctx.shadowBlur = Math.round(10 * s);
       ctx.shadowColor = "rgba(167,139,250,0.5)";
       ctx.beginPath();
-      ctx.roundRect(xpX, xpY, xpW * xpPct, xpBarH, 3);
+      ctx.roundRect(xpX, xpY, xpW * xpPct, xpBarH, Math.round(3 * s));
       ctx.fill();
       ctx.shadowBlur = 0;
     }
 
     // Level badge (left above XP bar)
-    ctx.font = '700 10px "Share Tech Mono", monospace';
+    ctx.font = `700 ${Math.round(12 * s)}px "Share Tech Mono", monospace`;
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
     ctx.fillStyle = "rgba(167,139,250,0.9)";
-    ctx.fillText(`LV ${this.progression.level}`, xpX, xpY - 3);
+    ctx.shadowBlur = 2;
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.fillText(`LV ${this.progression.level}`, xpX, xpY - Math.round(4 * s));
+    ctx.shadowBlur = 0;
 
     // XP label (right above bar)
     ctx.textAlign = "right";
-    ctx.fillStyle = "rgba(167,139,250,0.5)";
-    ctx.font = '600 9px "Share Tech Mono", monospace';
-    ctx.fillText("XP", xpX + xpW, xpY - 3);
+    ctx.fillStyle = "rgba(167,139,250,0.55)";
+    ctx.font = `600 ${Math.round(10 * s)}px "Share Tech Mono", monospace`;
+    ctx.fillText("XP", xpX + xpW, xpY - Math.round(4 * s));
 
     // ---- Top-left: Score + Wave (below brand corner) ----
-    const tlX = 16;
-    const tlY = 34;
+    const tlX = Math.round(16 * s);
+    const tlY = Math.round(34 * s);
 
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
 
     // Score
-    ctx.font = 'bold 18px "Orbitron", monospace';
+    ctx.font = `bold ${Math.round(20 * s)}px "Orbitron", monospace`;
     ctx.fillStyle = "#00ff88";
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = Math.round(10 * s);
     ctx.shadowColor = "rgba(0,255,136,0.3)";
     ctx.fillText(this.score.toLocaleString(), tlX, tlY);
     ctx.shadowBlur = 0;
 
     // Wave label
-    ctx.font = '500 11px "Inter", sans-serif';
+    ctx.font = `500 ${Math.round(12 * s)}px "Inter", sans-serif`;
     ctx.fillStyle = "rgba(0,255,136,0.45)";
-    ctx.fillText(`WAVE ${this.waveSpawner.wave}`, tlX, tlY + 24);
+    ctx.fillText(`WAVE ${this.waveSpawner.wave}`, tlX, tlY + Math.round(26 * s));
 
     // ---- Bottom-left: Weapon ----
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
-    ctx.font = '600 12px "Inter", sans-serif';
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.fillText(this.player.weapon.name.toUpperCase(), 22, bounds.height - 18);
+    ctx.font = `600 ${Math.round(13 * s)}px "Inter", sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.shadowBlur = 2;
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.fillText(this.player.weapon.name.toUpperCase(), Math.round(22 * s), bounds.height - Math.round(18 * s));
+    ctx.shadowBlur = 0;
 
     // Weapon indicator dots
     const weapons = this.player.weapons || [];
     for (let i = 0; i < weapons.length; i++) {
-      const dotX = 22 + i * 14;
-      const dotY = bounds.height - 38;
+      const dotX = Math.round(22 * s) + i * Math.round(16 * s);
+      const dotY = bounds.height - Math.round(40 * s);
       const active = weapons[i] === this.player.weapon;
       ctx.fillStyle = active ? "#00ff88" : "rgba(255,255,255,0.2)";
       ctx.beginPath();
-      ctx.arc(dotX + 4, dotY, 3, 0, Math.PI * 2);
+      ctx.arc(dotX + Math.round(4 * s), dotY, Math.round(3.5 * s), 0, Math.PI * 2);
       ctx.fill();
     }
 
     // ---- Bottom-right: Kills ----
     ctx.textAlign = "right";
     ctx.textBaseline = "bottom";
-    ctx.font = '600 12px "Inter", sans-serif';
-    ctx.fillStyle = "rgba(255,255,255,0.4)";
-    ctx.fillText(`${this.player.kills} KILLS`, bounds.width - 22, bounds.height - 18);
+    ctx.font = `600 ${Math.round(13 * s)}px "Inter", sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.shadowBlur = 2;
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.fillText(`${this.player.kills} KILLS`, bounds.width - Math.round(22 * s), bounds.height - Math.round(18 * s));
+    ctx.shadowBlur = 0;
 
     // ---- FPS counter (top-right) ----
     if (this.settings.get("showFps")) {
-      let fpsY = 16;
+      let fpsY = Math.round(16 * s);
       // Push below boss indicator widget when it's visible
       if (this.state === "playing" && this.waveSpawner.wave > 0) {
         const noActiveBoss = !this.activeBoss || this.activeBoss.fsm.currentState === "DEAD";
         const wl = this.waveSpawner.wavesUntilBoss();
-        if (noActiveBoss && wl !== Infinity && wl !== 0) fpsY = 78;
+        if (noActiveBoss && wl !== Infinity && wl !== 0) fpsY = Math.round(78 * s);
       }
       ctx.textAlign = "right";
       ctx.textBaseline = "top";
-      ctx.font = '600 11px "Share Tech Mono", monospace';
+      ctx.font = `600 ${Math.round(12 * s)}px "Share Tech Mono", monospace`;
       ctx.fillStyle = "rgba(0,255,136,0.45)";
-      ctx.fillText(`${this.fpsDisplay} FPS`, bounds.width - 16, fpsY);
+      ctx.fillText(`${this.fpsDisplay} FPS`, bounds.width - Math.round(16 * s), fpsY);
     }
 
     // ---- Dev mode indicator ----
     if (this.settings.get("devMode")) {
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
-      ctx.font = 'bold 10px "Share Tech Mono", monospace';
+      ctx.font = `bold ${Math.round(10 * s)}px "Share Tech Mono", monospace`;
       ctx.fillStyle = "rgba(255,0,255,0.6)";
-      ctx.fillText("DEV MODE", 16, bounds.height - 58);
+      ctx.fillText("DEV MODE", Math.round(16 * s), bounds.height - Math.round(58 * s));
     }
 
     ctx.restore();

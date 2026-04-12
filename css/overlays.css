@@ -117,16 +117,17 @@
    Progression UI — Level-up cards, boss rewards, loadout menu
    ============================================================ */
 
-/* ---- HUD hint (bottom-left "TAB / E") ---- */
+/* ---- HUD hint (bottom-left keybind) ---- */
 .hud-hint {
   position: absolute;
-  left: 16px;
-  bottom: 60px;
+  left: calc(16px * var(--ui-scale, 1));
+  bottom: calc(60px * var(--ui-scale, 1));
   display: flex;
-  align-items: center;
-  gap: 0.35rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
   font-family: 'Share Tech Mono', monospace;
-  font-size: 0.72rem;
+  font-size: calc(0.72rem * var(--ui-scale, 1));
   letter-spacing: 0.12em;
   color: rgba(0, 255, 136, 0.5);
   text-shadow: 0 0 8px rgba(0, 255, 136, 0.2);
@@ -136,25 +137,30 @@
   user-select: none;
 }
 
+.hud-hint-label {
+  font-size: calc(0.62rem * var(--ui-scale, 1));
+  font-weight: 600;
+  color: rgba(0, 255, 136, 0.45);
+  letter-spacing: 0.1em;
+}
+
+.hud-hint-keys {
+  display: flex;
+  gap: 0.3rem;
+}
+
 .hud-key {
   display: inline-block;
   font-family: 'Share Tech Mono', monospace;
-  font-size: 0.6rem;
+  font-size: calc(0.58rem * var(--ui-scale, 1));
   font-weight: 700;
   letter-spacing: 0.06em;
   color: rgba(0, 255, 136, 0.7);
   background: rgba(0, 255, 136, 0.06);
   border: 1px solid rgba(0, 255, 136, 0.2);
   border-radius: 3px;
-  padding: 0.12rem 0.4rem;
+  padding: 0.15rem 0.45rem;
   line-height: 1.1;
-}
-
-.hud-hint-label {
-  margin-left: 0.15rem;
-  font-size: 0.65rem;
-  color: rgba(0, 255, 136, 0.4);
-  letter-spacing: 0.1em;
 }
 
 /* ---- Level-up / Boss reward overlay ---- */
@@ -204,8 +210,8 @@
 }
 
 .upgrade-card {
-  width: 175px;
-  padding: 1rem 0.8rem 0.85rem;
+  width: calc(175px * var(--ui-scale, 1));
+  padding: calc(1rem * var(--ui-scale, 1)) calc(0.8rem * var(--ui-scale, 1)) calc(0.85rem * var(--ui-scale, 1));
   border: 1px solid var(--line-strong);
   border-radius: 10px;
   background:
@@ -303,11 +309,11 @@
 
 /* ---- Loadout panel ---- */
 .loadout-panel {
-  width: min(780px, calc(100% - 2rem));
+  width: min(calc(780px * var(--ui-scale, 1)), calc(100% - 2rem));
   max-height: calc(100vh - 3rem);
   overflow-y: auto;
   text-align: left;
-  padding: 1.6rem 2rem 1.2rem;
+  padding: calc(1.6rem * var(--ui-scale, 1)) calc(2rem * var(--ui-scale, 1)) calc(1.2rem * var(--ui-scale, 1));
 }
 
 .loadout-title {
@@ -351,8 +357,8 @@
 
 /* Column icon */
 .col-icon {
-  width: 40px;
-  height: 40px;
+  width: calc(40px * var(--ui-scale, 1));
+  height: calc(40px * var(--ui-scale, 1));
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -373,7 +379,7 @@
 .col-name {
   font-family: 'Orbitron', monospace;
   font-weight: 700;
-  font-size: 0.68rem;
+  font-size: calc(0.68rem * var(--ui-scale, 1));
   letter-spacing: 0.14em;
   color: var(--text-main);
   margin-bottom: 0.2rem;
@@ -382,7 +388,7 @@
 /* Status badge */
 .col-status {
   font-family: 'Share Tech Mono', monospace;
-  font-size: 0.48rem;
+  font-size: calc(0.48rem * var(--ui-scale, 1));
   letter-spacing: 0.1em;
   padding: 0.1rem 0.4rem;
   border-radius: 3px;
@@ -420,7 +426,7 @@
   align-items: center;
   gap: 0.35rem;
   font-family: 'Inter', sans-serif;
-  font-size: 0.58rem;
+  font-size: calc(0.58rem * var(--ui-scale, 1));
   color: var(--text-soft);
   padding: 0.12rem 0.25rem;
 }
@@ -447,7 +453,7 @@
 
 .loadout-weapon-label {
   font-family: 'Share Tech Mono', monospace;
-  font-size: 0.6rem;
+  font-size: calc(0.6rem * var(--ui-scale, 1));
   font-weight: 700;
   letter-spacing: 0.14em;
   color: var(--accent);
@@ -467,7 +473,7 @@
   justify-content: space-between;
   align-items: center;
   font-family: 'Inter', sans-serif;
-  font-size: 0.62rem;
+  font-size: calc(0.62rem * var(--ui-scale, 1));
   color: var(--text-soft);
   padding: 0.15rem 0;
 }
@@ -489,11 +495,27 @@
 .loadout-dismiss {
   text-align: center;
   margin-top: 1rem;
-  font-size: 0.6rem;
+  font-size: calc(0.6rem * var(--ui-scale, 1));
   color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.loadout-hint-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .loadout-dismiss kbd {
-  font-size: 0.52rem;
-  padding: 0.06rem 0.22rem;
+  font-size: calc(0.52rem * var(--ui-scale, 1));
+  padding: 0.1rem 0.3rem;
+  background: rgba(0, 255, 136, 0.06);
+  border: 1px solid rgba(0, 255, 136, 0.18);
+  border-radius: 3px;
+  font-family: 'Share Tech Mono', monospace;
+  font-weight: 700;
+  color: var(--text-soft);
 }

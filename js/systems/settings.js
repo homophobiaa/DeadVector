@@ -8,6 +8,7 @@ const DEFAULTS = {
   damageNumbers: true,
   blood: true,
   showFps: false,
+  uiScale: 1.0,
   devMode: false,
   devInvincible: true,
   devNoclip: false,

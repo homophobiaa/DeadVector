@@ -84,6 +84,8 @@ const bootstrap = async () => {
     loadoutWeaponLabel: document.getElementById("loadout-weapon-label"),
     loadoutStats: document.getElementById("loadout-stats"),
     hudHint: document.getElementById("hud-hint"),
+    setUiScale: document.getElementById("set-ui-scale"),
+    uiScaleVal: document.getElementById("ui-scale-val"),
   });
 
   const input = new InputManager(canvas);
