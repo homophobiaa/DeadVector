@@ -71,9 +71,14 @@ export class Game {
 
     // Progression system
     this.progression = new Progression();
-    this.gameSpeed = 1;                // 1 = normal, ~0.27 = level-up slowdown
+    this.gameSpeed = 1;                // 1 = normal, 0 = fully paused
     this.loadoutOpen = false;
     this.levelUpReadyAt = 0;           // misclick prevention timestamp
+    this.levelUpQueue = 0;             // queued level-up count
+    this.upgradeCountdown = 0;         // seconds remaining on pause countdown
+    this.upgradeTransition = 0;        // seconds remaining on speed-return transition
+    this.upgradeTransitionDur = 5;     // total transition duration
+    this.upgradePauseDur = 4;          // total pause countdown duration
 
     // Background image
     this.bgImg = new Image();
@@ -157,6 +162,9 @@ export class Game {
     this.gameSpeed = 1;
     this.loadoutOpen = false;
     this.levelUpReadyAt = 0;
+    this.levelUpQueue = 0;
+    this.upgradeCountdown = 0;
+    this.upgradeTransition = 0;
     this.bullets = [];
     this.enemyProjectiles = [];
     this.enemies = [];
@@ -450,6 +458,42 @@ export class Game {
     }
 
     this.handleInput();
+
+    // Upgrade countdown & time-return transition (runs in real time)
+    if (this.state === "playing") {
+      const isUpgradeOpen = this.progression.levelUpActive || this.progression.bossRewardActive;
+      if (isUpgradeOpen) {
+        if (this.upgradeCountdown > 0) {
+          // Full pause phase — countdown ticking
+          this.upgradeCountdown -= delta;
+          this.gameSpeed = 0;
+          if (this.upgradeCountdown <= 0) {
+            this.upgradeCountdown = 0;
+            this.upgradeTransition = this.upgradeTransitionDur;
+          }
+        } else if (this.upgradeTransition > 0) {
+          // Transition phase — speed eases from 0 to 1 over upgradeTransitionDur
+          this.upgradeTransition -= delta;
+          if (this.upgradeTransition <= 0) {
+            this.upgradeTransition = 0;
+            this.gameSpeed = 1;
+            // Auto-pick first affordable card if player didn't choose
+            if (this.progression.levelUpActive || this.progression.bossRewardActive) {
+              const cards = this.progression.levelUpActive
+                ? this.progression.levelUpCards
+                : this.progression.bossRewardCards;
+              const pick = cards.findIndex(c => c.scrapCost <= 0 || this.progression.scrap >= c.scrapCost);
+              this.selectUpgradeCard(pick >= 0 ? pick : 0);
+            }
+          } else {
+            const t = 1 - (this.upgradeTransition / this.upgradeTransitionDur);
+            // Ease-in: slow at first, accelerates
+            this.gameSpeed = t * t;
+          }
+        }
+      }
+    }
+
     if (this.state === "playing") this.update(delta * this.gameSpeed);
     this.render();
     this.input.endFrame();
@@ -679,11 +723,12 @@ export class Game {
     this.syncWeaponsFromProgression();
 
     // Dismiss UI
-    const wasLevelUp = this.progression.levelUpActive;
     this.progression.levelUpActive = false;
     this.progression.bossRewardActive = false;
     this.progression.levelUpCards = [];
     this.progression.bossRewardCards = [];
+    this.upgradeCountdown = 0;
+    this.upgradeTransition = 0;
     this.gameSpeed = 1;
 
     this.ui.showLevelUp(false);
@@ -691,20 +736,41 @@ export class Game {
 
     this.ui.pushEvent(`${card.name} acquired.`);
     this.audio.playConfirm();
+
+    // If more queued level-ups remain, trigger the next one
+    if (this.levelUpQueue > 0) {
+      // Small delay so the player sees the dismiss
+      setTimeout(() => this.triggerLevelUp(), 250);
+    }
   }
 
   triggerLevelUp() {
+    if (this.progression.levelUpActive || this.progression.bossRewardActive) return;
+    if (this.levelUpQueue <= 0) return;
+    this.levelUpQueue -= 1;
+
     const cards = this.progression.buildLevelUpCards();
     if (cards.length === 0) return;  // Pool exhausted
     this.progression.levelUpCards = cards;
     this.progression.levelUpActive = true;
-    this.gameSpeed = 0.27;
+    this.gameSpeed = 0;                       // FULL PAUSE
+    this.upgradeCountdown = this.upgradePauseDur;
+    this.upgradeTransition = 0;
     this.levelUpReadyAt = Date.now() + 350;
     this.populateCards(cards, this.ui.elements.levelupCards);
     this.ui.showLevelUp(true);
   }
 
   triggerBossReward(enemy) {
+    // If a level-up or boss reward is already active, defer boss reward
+    if (this.progression.levelUpActive || this.progression.bossRewardActive) {
+      // Retry after a short delay
+      setTimeout(() => {
+        if (this.state === "playing") this.triggerBossReward(enemy);
+      }, 400);
+      return;
+    }
+
     // Grant XP burst — don't trigger another level-up from the burst itself
     const xpAmt = this.progression.getXpFromKill(enemy);
     this.progression.xp = Math.min(this.progression.xp + xpAmt, this.progression.xpMax - 1);
@@ -713,7 +779,9 @@ export class Game {
     if (cards.length === 0) return;
     this.progression.bossRewardCards = cards;
     this.progression.bossRewardActive = true;
-    this.gameSpeed = 0.27;
+    this.gameSpeed = 0;                       // FULL PAUSE
+    this.upgradeCountdown = this.upgradePauseDur;
+    this.upgradeTransition = 0;
     this.levelUpReadyAt = Date.now() + 350;
     this.populateCards(cards, this.ui.elements.bossRewardCards);
     this.ui.showBossReward(true);
@@ -817,6 +885,27 @@ export class Game {
       }
 
       div.innerHTML = `${icon}${name}${statusText}<div class="col-upgrades">${upgradeHTML}</div>`;
+
+      // Click to select weapon for inspection
+      if (isWeapon && unlocked) {
+        div.style.cursor = "pointer";
+        div.addEventListener("click", () => {
+          // Find the weapon in player.weapons by matching key
+          const idx = this.player.weapons.findIndex(w => {
+            const n = w.name.toLowerCase();
+            if (col.key === "pistol") return n.includes("pistol");
+            if (col.key === "shotgun") return n.includes("scatter") || n.includes("shotgun");
+            if (col.key === "smg") return n.includes("vector") || n.includes("smg");
+            return false;
+          });
+          if (idx >= 0) {
+            this.player.selectWeapon(idx);
+            this.ui.pushEvent(`${this.player.weapon.name} selected.`);
+            this.populateLoadout();
+          }
+        });
+      }
+
       el.loadoutColumns.appendChild(div);
     }
 
@@ -1229,8 +1318,13 @@ export class Game {
 
     // Progression: XP
     const xp = this.progression.getXpFromKill(enemy);
-    if (this.progression.addXp(xp)) {
-      this.triggerLevelUp();
+    const levelUps = this.progression.addXp(xp);
+    if (levelUps > 0) {
+      // Queue all level-ups; triggerLevelUp will show the first
+      this.levelUpQueue = (this.levelUpQueue || 0) + levelUps;
+      if (!this.progression.levelUpActive && !this.progression.bossRewardActive) {
+        this.triggerLevelUp();
+      }
     }
 
     // Progression: Scrap
@@ -2305,7 +2399,7 @@ export class Game {
     const hpX = startX;
     const hpY = hudY - barH / 2;
     const pct = clamp(this.player.health / this.player.maxHealth, 0, 1);
-    const hpFill = pct > 0.6 ? "#e8364f" : pct > 0.3 ? "#ffcc00" : "#ff2244";
+    const hpFill = pct > 0.6 ? "#00e050" : pct > 0.3 ? "#ffcc00" : "#ff2244";
 
     // Background
     ctx.fillStyle = "rgba(0,0,0,0.65)";
@@ -2314,13 +2408,14 @@ export class Game {
     ctx.fill();
 
     // Border
-    ctx.strokeStyle = "rgba(255,80,100,0.18)";
+    const hpBorder = pct > 0.6 ? "rgba(0,224,80,0.18)" : pct > 0.3 ? "rgba(255,204,0,0.18)" : "rgba(255,80,100,0.18)";
+    ctx.strokeStyle = hpBorder;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.roundRect(hpX - 2, hpY - 2, healthW + 4, barH + 4, Math.round(5 * s));
     ctx.stroke();
 
-    // Fill — red tones
+    // Fill
     ctx.fillStyle = hpFill;
     ctx.shadowBlur = Math.round(12 * s);
     ctx.shadowColor = hpFill;
@@ -2333,7 +2428,7 @@ export class Game {
     ctx.font = `700 ${Math.round(12 * s)}px "Share Tech Mono", monospace`;
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
-    ctx.fillStyle = "rgba(255,100,120,0.65)";
+    ctx.fillStyle = pct > 0.6 ? "rgba(0,224,80,0.65)" : pct > 0.3 ? "rgba(255,204,0,0.65)" : "rgba(255,100,120,0.65)";
     ctx.fillText("HP", hpX, hpY - Math.round(4 * s));
 
     // HP value (center above bar)
@@ -2482,6 +2577,59 @@ export class Game {
       ctx.font = `bold ${Math.round(10 * s)}px "Share Tech Mono", monospace`;
       ctx.fillStyle = "rgba(255,0,255,0.6)";
       ctx.fillText("DEV MODE", Math.round(16 * s), bounds.height - Math.round(58 * s));
+    }
+
+    // ---- Upgrade countdown / time-return indicator ----
+    const isUpgradeOpen = this.progression.levelUpActive || this.progression.bossRewardActive;
+    if (isUpgradeOpen) {
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+
+      if (this.upgradeCountdown > 0) {
+        // Countdown phase — show seconds remaining
+        const secs = Math.ceil(this.upgradeCountdown);
+        ctx.font = `bold ${Math.round(28 * s)}px "Orbitron", monospace`;
+        ctx.fillStyle = "rgba(0,255,136,0.7)";
+        ctx.shadowBlur = Math.round(16 * s);
+        ctx.shadowColor = "rgba(0,255,136,0.4)";
+        ctx.fillText(secs.toString(), bounds.width / 2, Math.round(50 * s));
+        ctx.shadowBlur = 0;
+
+        // Label
+        ctx.font = `600 ${Math.round(10 * s)}px "Share Tech Mono", monospace`;
+        ctx.fillStyle = "rgba(0,255,136,0.45)";
+        ctx.fillText("PAUSED — CHOOSE NOW", bounds.width / 2, Math.round(82 * s));
+      } else if (this.upgradeTransition > 0) {
+        // Transition phase — show speed returning
+        const pctDone = 1 - (this.upgradeTransition / this.upgradeTransitionDur);
+        const speedPct = Math.round(pctDone * pctDone * 100);
+
+        // Speed bar
+        const barW = Math.round(120 * s);
+        const barH2 = Math.round(6 * s);
+        const bx = bounds.width / 2 - barW / 2;
+        const by = Math.round(58 * s);
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.beginPath();
+        ctx.roundRect(bx, by, barW, barH2, 3);
+        ctx.fill();
+        ctx.fillStyle = `rgba(255,200,80,${0.5 + pctDone * 0.5})`;
+        ctx.beginPath();
+        ctx.roundRect(bx, by, barW * pctDone, barH2, 3);
+        ctx.fill();
+
+        // Label
+        ctx.font = `600 ${Math.round(10 * s)}px "Share Tech Mono", monospace`;
+        ctx.fillStyle = "rgba(255,200,80,0.6)";
+        ctx.fillText(`RESUMING ${speedPct}%`, bounds.width / 2, by + Math.round(12 * s));
+      }
+
+      // Queue indicator — show remaining level-ups
+      if (this.levelUpQueue > 0) {
+        ctx.font = `600 ${Math.round(10 * s)}px "Share Tech Mono", monospace`;
+        ctx.fillStyle = "rgba(167,139,250,0.6)";
+        ctx.fillText(`+${this.levelUpQueue} MORE LEVEL-UP${this.levelUpQueue > 1 ? "S" : ""}`, bounds.width / 2, Math.round(98 * s));
+      }
     }
 
     ctx.restore();

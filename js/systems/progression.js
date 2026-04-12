@@ -100,16 +100,18 @@ export class Progression {
 
   // ── XP & Leveling ────────────────────────────────────────────
 
-  /** Add XP. Returns true if a level-up was triggered. */
+  /** Add XP. Returns the number of NEW level-ups triggered (0, 1, or more).
+   *  XP always accumulates. Level-ups that occur during an active upgrade menu
+   *  are counted but returned as 0 — the caller must queue them separately. */
   addXp(amount) {
-    if (this.levelUpActive || this.bossRewardActive) return false;
     this.xp += amount;
-    if (this.xp >= this.xpMax) {
+    let levels = 0;
+    while (this.xp >= this.xpMax) {
       this.xp -= this.xpMax;
       this.level += 1;
-      return true;
+      levels += 1;
     }
-    return false;
+    return levels;
   }
 
   /** Calculate XP earned from an enemy kill. */
@@ -193,21 +195,29 @@ export class Progression {
   }
 
   // Upgrade level-tier restrictions
-  // Early (1-4): basic upgrades only
-  // Mid (5-9): stronger upgrades unlocked
+  // Early (1-4): basic stat upgrades only (precision_core, rapid_trigger, speed_boost, etc.)
+  // Mid (5-9): stronger mechanics and weapon specializations
   // Late (10+): full pool including all rare
   static UPGRADE_MIN_LEVEL = {
     // Mid-game (level 5+): stronger mechanics
-    blast_core:     5,
-    heavy_shells:   5,
-    bullet_storm:   5,
-    shockwave:      5,
-    mark_target:    5,
-    efficiency:     5,
-    deadeye:        5,
+    double_tap:     5,     // was early — 2 bullets is a big power spike
+    ricochet:       5,     // was early — bouncing bullets is strong
+    piercing_shot:  5,     // was early — pass-through is powerful
+    fast_hands:     5,     // was early — +30% fire rate is huge
+    high_caliber:   5,     // was early — +25% damage is a big flat boost
+    dense_shells:   5,     // was early — +2 pellets is significant
+    knockback_core: 5,     // was early — free CC is strong early
     wide_blast:     5,
-    heat_buildup:   5,
-    adrenaline:     5,
+    blast_core:     6,
+    heavy_shells:   6,
+    bullet_storm:   6,
+    shockwave:      7,
+    mark_target:    7,
+    efficiency:     6,
+    deadeye:        7,
+    heat_buildup:   6,
+    adrenaline:     6,
+    spray_boost:    5,
     // Late-game (level 10+): high-impact / rare
     chain_reaction: 10,
     lightning_chain: 10,
@@ -225,9 +235,9 @@ export class Progression {
       if (u.isUnlock) {
         if (u.weapon === "shotgun" && this.weaponsUnlocked.shotgun) return false;
         if (u.weapon === "smg" && this.weaponsUnlocked.smg) return false;
-        // Shotgun unlock available after level 2, SMG after level 4
+        // Shotgun unlock available after level 2, SMG after level 4 AND shotgun must be unlocked first
         if (u.weapon === "shotgun" && this.level < 2) return false;
-        if (u.weapon === "smg" && this.level < 4) return false;
+        if (u.weapon === "smg" && (this.level < 4 || !this.weaponsUnlocked.shotgun)) return false;
         return true;
       }
       // Upgrades for locked weapons are hidden

@@ -345,6 +345,18 @@
   border-color: var(--line-strong);
 }
 
+.loadout-col[style*="cursor"] {
+  transition: border-color 0.2s, background 0.2s, transform 0.12s;
+}
+
+.loadout-col[style*="cursor"]:hover {
+  transform: translateY(-2px);
+}
+
+.loadout-col[style*="cursor"]:active {
+  transform: translateY(0);
+}
+
 .loadout-col.col-locked {
   opacity: 0.4;
 }
