@@ -1754,7 +1754,7 @@ export class Game {
 
     // ---- Top-left: Score + Wave (below brand corner) ----
     const tlX = 16;
-    const tlY = 46;
+    const tlY = 34;
 
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
