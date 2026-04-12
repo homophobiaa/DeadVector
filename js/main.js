@@ -81,6 +81,7 @@ const bootstrap = async () => {
     bossRewardCards: document.getElementById("boss-reward-cards"),
     loadoutScreen: document.getElementById("loadout-screen"),
     loadoutColumns: document.getElementById("loadout-columns"),
+    loadoutWeaponLabel: document.getElementById("loadout-weapon-label"),
     loadoutStats: document.getElementById("loadout-stats"),
     hudHint: document.getElementById("hud-hint"),
   });

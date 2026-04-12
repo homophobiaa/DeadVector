@@ -122,6 +122,9 @@
   position: absolute;
   left: 16px;
   bottom: 60px;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   font-family: 'Share Tech Mono', monospace;
   font-size: 0.72rem;
   letter-spacing: 0.12em;
@@ -131,6 +134,27 @@
   pointer-events: none;
   -webkit-user-select: none;
   user-select: none;
+}
+
+.hud-key {
+  display: inline-block;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(0, 255, 136, 0.7);
+  background: rgba(0, 255, 136, 0.06);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 3px;
+  padding: 0.12rem 0.4rem;
+  line-height: 1.1;
+}
+
+.hud-hint-label {
+  margin-left: 0.15rem;
+  font-size: 0.65rem;
+  color: rgba(0, 255, 136, 0.4);
+  letter-spacing: 0.1em;
 }
 
 /* ---- Level-up / Boss reward overlay ---- */
@@ -319,6 +343,12 @@
   opacity: 0.4;
 }
 
+.loadout-col.col-equipped {
+  border-color: var(--accent-dim);
+  background: rgba(0, 255, 136, 0.04);
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.06);
+}
+
 /* Column icon */
 .col-icon {
   width: 40px;
@@ -364,6 +394,12 @@
   background: rgba(0, 255, 136, 0.08);
 }
 
+.col-status.equipped {
+  color: #fff;
+  background: rgba(0, 255, 136, 0.22);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
 .col-status.locked {
   color: var(--danger);
   background: rgba(255, 51, 85, 0.1);
@@ -407,6 +443,17 @@
 .loadout-stats-bar {
   border-top: 1px solid var(--line);
   padding-top: 0.65rem;
+}
+
+.loadout-weapon-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  text-align: center;
+  margin-bottom: 0.45rem;
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.2);
 }
 
 .loadout-stats {

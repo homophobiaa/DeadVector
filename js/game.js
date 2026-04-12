@@ -745,6 +745,13 @@ export class Game {
   populateLoadout() {
     const el = this.ui.elements;
 
+    // ---- Determine equipped weapon key ----
+    const wpnName = this.player.weapon.name.toLowerCase();
+    const equippedKey = wpnName.includes("pistol") ? "pistol"
+      : (wpnName.includes("scatter") || wpnName.includes("shotgun")) ? "shotgun"
+      : (wpnName.includes("vector") || wpnName.includes("smg")) ? "smg"
+      : "pistol";
+
     // ---- Weapon + upgrade columns ----
     const columns = [
       { label: "PISTOL",  key: "pistol",  weaponName: "Service Pistol",  color: "#00ff88" },
@@ -761,8 +768,11 @@ export class Game {
       const isWeapon = col.key !== null;
       const unlocked = isWeapon ? this.progression.weaponsUnlocked[col.key] : true;
       const locked = isWeapon && !unlocked;
+      const isEquipped = isWeapon && col.key === equippedKey && unlocked;
 
-      div.className = "loadout-col" + (locked ? " col-locked" : "");
+      div.className = "loadout-col"
+        + (locked ? " col-locked" : "")
+        + (isEquipped ? " col-equipped" : "");
 
       // Icon area (colored circle)
       const icon = `<div class="col-icon" style="--col-color:${col.color}">
@@ -772,10 +782,15 @@ export class Game {
       // Name
       const name = `<div class="col-name">${col.label}</div>`;
 
-      // Status
-      const status = locked
-        ? `<div class="col-status locked">LOCKED</div>`
-        : `<div class="col-status unlocked">ACTIVE</div>`;
+      // Status + equipped badge
+      let statusText;
+      if (isEquipped) {
+        statusText = `<div class="col-status equipped">EQUIPPED</div>`;
+      } else if (locked) {
+        statusText = `<div class="col-status locked">LOCKED</div>`;
+      } else {
+        statusText = `<div class="col-status unlocked">ACTIVE</div>`;
+      }
 
       // Upgrades list
       const catKey = isWeapon ? col.label.charAt(0) + col.label.slice(1).toLowerCase() : "Global";
@@ -793,9 +808,14 @@ export class Game {
         upgradeHTML = `<div class="col-upgrade col-upgrade-none">${locked ? "—" : "None yet"}</div>`;
       }
 
-      div.innerHTML = `${icon}${name}${status}<div class="col-upgrades">${upgradeHTML}</div>`;
+      div.innerHTML = `${icon}${name}${statusText}<div class="col-upgrades">${upgradeHTML}</div>`;
       el.loadoutColumns.appendChild(div);
     }
+
+    // ---- Weapon stats label ----
+    const equippedCol = columns.find(c => c.key === equippedKey);
+    const weaponLabel = equippedCol ? equippedCol.weaponName.toUpperCase() : "PISTOL";
+    el.loadoutWeaponLabel.textContent = `CURRENT WEAPON: ${weaponLabel}`;
 
     // ---- Stats bar (bottom) ----
     const stats = this.progression.getDisplayStats(this.player);
@@ -2262,101 +2282,115 @@ export class Game {
 
     ctx.save();
 
-    // ---- Health bar (bottom-center) ----
-    const barW = 220;
-    const barH = 10;
-    const barX = (bounds.width - barW) / 2;
-    const barY = bounds.height - 38;
+    // ---- Bottom-center HUD: [ HEALTH ] [ SCRAP ] [ XP ] ----
+    const hudY = bounds.height - 32;          // vertical center of the HUD row
+    const barH = 12;
+    const healthW = 180;
+    const scrapW = 90;
+    const xpW = 180;
+    const gap = 16;
+    const totalW = healthW + gap + scrapW + gap + xpW;
+    const startX = (bounds.width - totalW) / 2;
+
+    // == HEALTH BAR (left) ==
+    const hpX = startX;
+    const hpY = hudY - barH / 2;
     const pct = clamp(this.player.health / this.player.maxHealth, 0, 1);
+    const hpFill = pct > 0.6 ? "#e8364f" : pct > 0.3 ? "#ffcc00" : "#ff2244";
 
     // Background
     ctx.fillStyle = "rgba(0,0,0,0.6)";
     ctx.beginPath();
-    ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 5);
+    ctx.roundRect(hpX - 2, hpY - 2, healthW + 4, barH + 4, 5);
     ctx.fill();
 
     // Border
-    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.strokeStyle = "rgba(255,80,100,0.15)";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 5);
+    ctx.roundRect(hpX - 2, hpY - 2, healthW + 4, barH + 4, 5);
     ctx.stroke();
 
-    // Fill
-    const hpColor = pct > 0.6 ? "#00ff88" : pct > 0.3 ? "#ffcc00" : "#ff3355";
-    ctx.fillStyle = hpColor;
+    // Fill — red tones
+    ctx.fillStyle = hpFill;
     ctx.shadowBlur = 10;
-    ctx.shadowColor = hpColor;
+    ctx.shadowColor = hpFill;
     ctx.beginPath();
-    ctx.roundRect(barX, barY, barW * pct, barH, 4);
+    ctx.roundRect(hpX, hpY, healthW * pct, barH, 4);
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // HP label + value
+    // HP label (left above bar)
     ctx.font = '700 10px "Share Tech Mono", monospace';
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
-    ctx.fillStyle = "rgba(255,255,255,0.4)";
-    ctx.fillText("HP", barX, barY - 4);
-    ctx.font = '600 11px "Inter", sans-serif';
+    ctx.fillStyle = "rgba(255,100,120,0.6)";
+    ctx.fillText("HP", hpX, hpY - 3);
+
+    // HP value (center above bar)
+    ctx.font = '600 10px "Inter", sans-serif';
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255,255,255,0.75)";
-    ctx.fillText(`${Math.ceil(this.player.health)} / ${this.player.maxHealth}`, bounds.width / 2, barY - 4);
+    ctx.fillText(`${Math.ceil(this.player.health)} / ${this.player.maxHealth}`, hpX + healthW / 2, hpY - 3);
 
-    // ---- XP bar (below health bar) ----
-    const xpW = barW;
-    const xpH = 6;
-    const xpX = barX;
-    const xpY = barY + barH + 8;
+    // == SCRAP (center) ==
+    const scrapX = hpX + healthW + gap;
+    ctx.font = '700 13px "Share Tech Mono", monospace';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "rgba(255,200,80,0.95)";
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = "rgba(255,200,80,0.35)";
+    ctx.fillText(`\u25C6 ${this.progression.scrap}`, scrapX + scrapW / 2, hudY);
+    ctx.shadowBlur = 0;
+
+    // SCRAP label below
+    ctx.font = '600 8px "Share Tech Mono", monospace';
+    ctx.fillStyle = "rgba(255,200,80,0.5)";
+    ctx.fillText("SCRAP", scrapX + scrapW / 2, hudY + 12);
+
+    // == XP BAR (right) ==
+    const xpBarH = 8;
+    const xpX = scrapX + scrapW + gap;
+    const xpY = hudY - xpBarH / 2;
     const xpPct = clamp(this.progression.xp / this.progression.xpMax, 0, 1);
 
     // Background
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     ctx.beginPath();
-    ctx.roundRect(xpX - 1, xpY - 1, xpW + 2, xpH + 2, 3);
+    ctx.roundRect(xpX - 1, xpY - 1, xpW + 2, xpBarH + 2, 4);
     ctx.fill();
 
     // Border
     ctx.strokeStyle = "rgba(140,120,255,0.15)";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(xpX - 1, xpY - 1, xpW + 2, xpH + 2, 3);
+    ctx.roundRect(xpX - 1, xpY - 1, xpW + 2, xpBarH + 2, 4);
     ctx.stroke();
 
-    // Fill — distinct purple color
+    // Fill — purple
     if (xpPct > 0) {
       ctx.fillStyle = "#a78bfa";
       ctx.shadowBlur = 8;
       ctx.shadowColor = "rgba(167,139,250,0.5)";
       ctx.beginPath();
-      ctx.roundRect(xpX, xpY, xpW * xpPct, xpH, 2);
+      ctx.roundRect(xpX, xpY, xpW * xpPct, xpBarH, 3);
       ctx.fill();
       ctx.shadowBlur = 0;
     }
 
-    // Level badge (left of XP bar)
+    // Level badge (left above XP bar)
     ctx.font = '700 10px "Share Tech Mono", monospace';
-    ctx.textAlign = "right";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "rgba(167,139,250,0.9)";
-    ctx.fillText(`LV ${this.progression.level}`, xpX - 6, xpY + xpH / 2);
-
-    // XP label (right of bar)
     ctx.textAlign = "left";
-    ctx.fillStyle = "rgba(167,139,250,0.55)";
-    ctx.font = '600 9px "Share Tech Mono", monospace';
-    ctx.fillText("XP", xpX + xpW + 6, xpY + xpH / 2);
+    ctx.textBaseline = "bottom";
+    ctx.fillStyle = "rgba(167,139,250,0.9)";
+    ctx.fillText(`LV ${this.progression.level}`, xpX, xpY - 3);
 
-    // ---- Scrap counter (below XP bar, centered) ----
-    const scrapY = xpY + xpH + 8;
-    ctx.font = '700 11px "Share Tech Mono", monospace';
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    ctx.fillStyle = "rgba(255,200,80,0.9)";
-    ctx.shadowBlur = 6;
-    ctx.shadowColor = "rgba(255,200,80,0.3)";
-    ctx.fillText(`\u25C6 ${this.progression.scrap} SCRAP`, bounds.width / 2, scrapY);
-    ctx.shadowBlur = 0;
+    // XP label (right above bar)
+    ctx.textAlign = "right";
+    ctx.fillStyle = "rgba(167,139,250,0.5)";
+    ctx.font = '600 9px "Share Tech Mono", monospace';
+    ctx.fillText("XP", xpX + xpW, xpY - 3);
 
     // ---- Top-left: Score + Wave (below brand corner) ----
     const tlX = 16;

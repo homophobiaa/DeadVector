@@ -155,8 +155,14 @@ export class Progression {
     const cards = [];
     const usedIds = new Set();
 
-    // Slot 3: ~10% rare chance (30% for boss reward)
-    const rareChance = isBossReward ? 0.3 : 0.1;
+    // Rare chance scales with level tier
+    // Early (1-4): no rare, Mid (5-9): 5%/10%, Late (10+): 10%/30%
+    let rareChance = 0;
+    if (this.level >= 10) {
+      rareChance = isBossReward ? 0.3 : 0.1;
+    } else if (this.level >= 5) {
+      rareChance = isBossReward ? 0.1 : 0.05;
+    }
     if (rarePool.length > 0 && Math.random() < rareChance) {
       const pick = rarePool[Math.floor(Math.random() * rarePool.length)];
       cards.push(pick);
@@ -186,10 +192,35 @@ export class Progression {
     return cards;
   }
 
+  // Upgrade level-tier restrictions
+  // Early (1-4): basic upgrades only
+  // Mid (5-9): stronger upgrades unlocked
+  // Late (10+): full pool including all rare
+  static UPGRADE_MIN_LEVEL = {
+    // Mid-game (level 5+): stronger mechanics
+    blast_core:     5,
+    heavy_shells:   5,
+    bullet_storm:   5,
+    shockwave:      5,
+    mark_target:    5,
+    efficiency:     5,
+    deadeye:        5,
+    wide_blast:     5,
+    heat_buildup:   5,
+    adrenaline:     5,
+    // Late-game (level 10+): high-impact / rare
+    chain_reaction: 10,
+    lightning_chain: 10,
+    freeze_field:   10,
+  };
+
   _getAvailableUpgrades() {
+    const minLevels = Progression.UPGRADE_MIN_LEVEL;
     return UPGRADES.filter(u => {
       // Already acquired?
       if (this.acquired.includes(u.id)) return false;
+      // Level-tier restriction
+      if (minLevels[u.id] && this.level < minLevels[u.id]) return false;
       // Weapon unlock card: only show if weapon is still locked
       if (u.isUnlock) {
         if (u.weapon === "shotgun" && this.weaponsUnlocked.shotgun) return false;

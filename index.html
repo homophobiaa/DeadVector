@@ -28,7 +28,11 @@
     </div>
 
     <!-- HUD hint for loadout key -->
-    <div id="hud-hint" class="hud-hint hidden">TAB / E — Loadout</div>
+    <div id="hud-hint" class="hud-hint hidden">
+      <span class="hud-key">TAB</span>
+      <span class="hud-key">E</span>
+      <span class="hud-hint-label">Loadout</span>
+    </div>
 
     <!-- Level-up card selection -->
     <section id="levelup-screen" class="overlay levelup-overlay hidden">
@@ -54,6 +58,7 @@
         <h2 class="overlay-title loadout-title">LOADOUT</h2>
         <div id="loadout-columns" class="loadout-columns"></div>
         <div class="loadout-stats-bar">
+          <div id="loadout-weapon-label" class="loadout-weapon-label">CURRENT WEAPON: PISTOL</div>
           <div id="loadout-stats" class="loadout-stats"></div>
         </div>
         <p class="loadout-dismiss">Press <kbd>TAB</kbd> / <kbd>E</kbd> / <kbd>Esc</kbd> to close</p>
