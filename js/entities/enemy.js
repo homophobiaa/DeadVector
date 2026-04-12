@@ -73,7 +73,7 @@ const BOSS_TYPES = {
   titan: {
     label: "Titan",
     radius: 42,
-    speed: 70,
+    speed: 90,
     maxHealth: 900,
     damage: 45,
     attackRange: 110,
@@ -95,15 +95,72 @@ const BOSS_TYPES = {
     bossGlowColor: "#aa44ff",
     bossTitle: "THE TITAN",
     slamRadius: 100,
-    shockwaveCount: 8,
+    shockwaveCount: 12,
+    chaseAttackInterval: 2.0,
   },
 };
 
 export function getBossTypes() { return BOSS_TYPES; }
 
-/** Return ordered boss cycle list. */
-export function getBossCycle() {
-  return ["juggernaut", "broodmother", "titan"];
+/**
+ * Boss schedule — defines which boss appears at each milestone wave.
+ * Entries beyond the schedule repeat the last entry with scaling.
+ * Each entry has a `base` key into BOSS_TYPES and optional stat overrides.
+ */
+const BOSS_SCHEDULE = [
+  // Boss #1 (wave 5) — intro melee
+  { base: "juggernaut" },
+  // Boss #2 (wave 10) — intro ranged
+  { base: "broodmother" },
+  // Boss #3 (wave 15) — AoE + shockwave
+  { base: "titan" },
+  // Boss #4 (wave 20) — evolved juggernaut
+  { base: "juggernaut", bossTitle: "THE WARLORD", label: "Warlord",
+    speed: 88, damage: 42, maxHealth: 950, slamRadius: 100, attackCooldown: 1.0,
+    radius: 40, score: 700, bodyColor: "#8a1010", accentColor: "#ff6644",
+    bossGlowColor: "#ff5522" },
+  // Boss #5 (wave 25) — evolved broodmother
+  { base: "broodmother", bossTitle: "HIVE QUEEN", label: "Hive Queen",
+    speed: 65, damage: 18, maxHealth: 850, burstCount: 8, burstSpread: 0.85,
+    projectileSpeed: 540, attackCooldown: 0.7, radius: 34, score: 850,
+    bodyColor: "#1a5520", accentColor: "#33ee22", bossGlowColor: "#22ff44" },
+  // Boss #6 (wave 30) — evolved titan
+  { base: "titan", bossTitle: "THE COLOSSUS", label: "Colossus",
+    speed: 100, damage: 55, maxHealth: 1500, slamRadius: 130,
+    shockwaveCount: 16, attackCooldown: 0.85, radius: 48, score: 1100,
+    bodyColor: "#2a0d3a", accentColor: "#aa55ee", bossGlowColor: "#bb44ff",
+    chaseAttackInterval: 1.6, eyeColor: "#eeccff" },
+  // Boss #7 (wave 35) — hybrid: ranged burst + melee slam + shockwave
+  { base: "broodmother", bossTitle: "ABOMINATION", label: "Abomination",
+    speed: 80, damage: 22, maxHealth: 1800, burstCount: 6, burstSpread: 0.7,
+    projectileSpeed: 500, attackCooldown: 0.65, radius: 40, score: 1400,
+    bodyColor: "#4a2010", accentColor: "#ff8833", bossGlowColor: "#ff6600",
+    projectileColor: "#ffaa44", slamRadius: 90, shockwaveCount: 6,
+    dualMode: true, eyeColor: "#ffcc66" },
+  // Boss #8 (wave 40) — ultimate melee juggernaut
+  { base: "titan", bossTitle: "APEX PREDATOR", label: "Apex Predator",
+    speed: 105, damage: 55, maxHealth: 2500, slamRadius: 140,
+    shockwaveCount: 18, attackCooldown: 0.6, radius: 50, score: 2000,
+    bodyColor: "#1a0a0a", accentColor: "#ff2222", bossGlowColor: "#ff1111",
+    eyeColor: "#ff4444", chaseAttackInterval: 1.3 },
+];
+
+export function getBossSchedule() { return BOSS_SCHEDULE; }
+
+/** Get merged boss config for the Nth boss occurrence (0-based). */
+export function getBossConfigForOccurrence(n) {
+  const idx = Math.min(n, BOSS_SCHEDULE.length - 1);
+  const { base, ...overrides } = BOSS_SCHEDULE[idx];
+  const config = { ...BOSS_TYPES[base], ...overrides };
+  // Beyond-schedule: scale up the last archetype
+  if (n >= BOSS_SCHEDULE.length) {
+    const extra = n - BOSS_SCHEDULE.length + 1;
+    config.maxHealth = Math.floor(config.maxHealth * (1 + extra * 0.25));
+    config.damage = Math.floor(config.damage * (1 + extra * 0.15));
+    config.speed = Math.floor(config.speed * (1 + extra * 0.05));
+    config.score = Math.floor(config.score * (1 + extra * 0.2));
+  }
+  return config;
 }
 
 // Five enemy types for FSM AI variety — mutable so dev panel can hot-swap
@@ -118,7 +175,7 @@ let ENEMY_TYPES = {
     attackWindup: 0.42,
     attackRecovery: 0.28,
     attackCooldown: 1.05,
-    noticeRange: 250,
+    noticeRange: 340,
     retreatThreshold: 0.18,
     retreatTime: [0.75, 1.1],
     retreatCooldown: 3.1,
@@ -140,7 +197,7 @@ let ENEMY_TYPES = {
     attackWindup: 0.26,
     attackRecovery: 0.18,
     attackCooldown: 0.75,
-    noticeRange: 315,
+    noticeRange: 400,
     retreatThreshold: 0.08,
     retreatTime: [0.45, 0.7],
     retreatCooldown: 2.2,
@@ -163,7 +220,7 @@ let ENEMY_TYPES = {
     attackWindup: 0.6,
     attackRecovery: 0.28,
     attackCooldown: 1.45,
-    noticeRange: 360,
+    noticeRange: 420,
     retreatThreshold: 0.74,
     retreatTime: [0.8, 1.2],
     retreatCooldown: 2.6,
@@ -186,7 +243,7 @@ let ENEMY_TYPES = {
     attackWindup: 0.72,
     attackRecovery: 0.36,
     attackCooldown: 1.55,
-    noticeRange: 270,
+    noticeRange: 360,
     retreatThreshold: 0.12,
     retreatTime: [0.55, 0.85],
     retreatCooldown: 3.4,
@@ -209,7 +266,7 @@ let ENEMY_TYPES = {
     attackWindup: 0.8,
     attackRecovery: 0.4,
     attackCooldown: 2.0,
-    noticeRange: 340,
+    noticeRange: 410,
     retreatThreshold: 0.35,
     retreatTime: [0.9, 1.4],
     retreatCooldown: 2.8,
@@ -242,6 +299,7 @@ export class Enemy {
     this.maxHealth = this.config.maxHealth + wave * 3;
     this.health = this.maxHealth;
     this.speed = this.config.speed * (1 + wave * 0.018);
+    this.noticeRange = this.config.noticeRange * (1 + wave * 0.012);
     this.attackCooldown = 0;
     this.damageFlash = 0;
     this.opacity = 1;
@@ -291,7 +349,7 @@ export class Enemy {
           {
             to: "CHASE",
             when: (owner, ctx) =>
-              owner.spawnTimer <= 0 && owner.distanceToPlayer(ctx.player) < owner.config.noticeRange,
+              owner.spawnTimer <= 0 && owner.distanceToPlayer(ctx.player) < owner.noticeRange,
           },
           { to: "WANDER", when: (owner) => owner.spawnTimer <= 0 },
         ],
@@ -300,21 +358,21 @@ export class Enemy {
       WANDER: {
         enter: (owner, context) => {
           owner.stateLabel = "WANDER";
-          owner.wanderTimer = randomRange(0.9, 1.8);
+          owner.wanderTimer = randomRange(0.6, 1.3);
           owner.pickWanderTarget(context.bounds, context.obstacles);
         },
         update: (owner, context, delta) => {
           owner.wanderTimer -= delta;
           if (owner.wanderTimer <= 0 || owner.distanceTo(owner.wanderTarget) < 12) {
             owner.pickWanderTarget(context.bounds, context.obstacles);
-            owner.wanderTimer = randomRange(0.9, 1.8);
+            owner.wanderTimer = randomRange(0.6, 1.3);
           }
           owner.moveToward(owner.wanderTarget.x, owner.wanderTarget.y, owner.speed * 0.52, delta, context.bounds);
         },
         transitions: [
           {
             to: "CHASE",
-            when: (owner, ctx) => owner.distanceToPlayer(ctx.player) < owner.config.noticeRange,
+            when: (owner, ctx) => owner.distanceToPlayer(ctx.player) < owner.noticeRange,
           },
           {
             to: "RETREAT",
@@ -337,6 +395,14 @@ export class Enemy {
           } else {
             owner.moveToward(pp.x, pp.y, owner.speed, delta, context.bounds);
           }
+          // Boss chase-attack: periodic ranged pressure while pursuing
+          if (owner.config.isBoss && owner.config.chaseAttackInterval) {
+            owner._chaseAttackTimer = (owner._chaseAttackTimer ?? owner.config.chaseAttackInterval) - delta;
+            if (owner._chaseAttackTimer <= 0) {
+              owner._chaseAttackTimer = owner.config.chaseAttackInterval;
+              owner._performChaseAttack(context);
+            }
+          }
         },
         transitions: [
           {
@@ -350,7 +416,7 @@ export class Enemy {
             when: (owner, ctx, machine) =>
               !owner.config.isBoss &&
               machine.stateTime > 1.3 &&
-              owner.distanceToPlayer(ctx.player) > owner.config.noticeRange * 1.65,
+              owner.distanceToPlayer(ctx.player) > owner.noticeRange * 2.2,
           },
         ],
       },
@@ -388,7 +454,7 @@ export class Enemy {
             when: (owner, ctx) =>
               owner.attackPerformed &&
               owner.attackRecovery <= 0 &&
-              owner.distanceToPlayer(ctx.player) <= owner.config.noticeRange * 1.4,
+              owner.distanceToPlayer(ctx.player) <= owner.noticeRange * 1.8,
           },
           {
             to: "WANDER",
@@ -419,7 +485,7 @@ export class Enemy {
           {
             to: "CHASE",
             when: (owner, ctx) =>
-              owner.retreatTimer <= 0 && owner.distanceToPlayer(ctx.player) <= owner.config.noticeRange,
+              owner.retreatTimer <= 0 && owner.distanceToPlayer(ctx.player) <= owner.noticeRange,
           },
           { to: "WANDER", when: (owner) => owner.retreatTimer <= 0 },
         ],
@@ -562,7 +628,7 @@ export class Enemy {
     return (
       this.retreatCooldown <= 0 &&
       this.health / this.maxHealth <= this.config.retreatThreshold &&
-      this.distanceToPlayer(player) < this.config.noticeRange
+      this.distanceToPlayer(player) < this.noticeRange
     );
   }
 
@@ -700,35 +766,24 @@ export class Enemy {
   _performBossAttack(context) {
     const player = context.player;
 
-    if (this.config.ranged) {
-      // --- Ranged boss: burst fire spread pattern ---
-      const burstCount = this.config.burstCount || 3;
-      const burstSpread = this.config.burstSpread || 0.4;
-      const leadTime = 0.3;
-      const leadX = player.x + (player.vx || 0) * leadTime;
-      const leadY = player.y + (player.vy || 0) * leadTime;
-      const baseAngle = Math.atan2(leadY - this.y, leadX - this.x);
-      const pColor = this.config.projectileColor || "#a7ff7c";
-      const pSpeed = this.config.projectileSpeed;
-
-      for (let i = 0; i < burstCount; i++) {
-        const offset = burstCount > 1
-          ? ((i / (burstCount - 1)) - 0.5) * burstSpread
-          : 0;
-        const angle = baseAngle + offset;
-        context.spawnEnemyProjectile(new Bullet({
-          x: this.x + Math.cos(angle) * (this.radius + 8),
-          y: this.y + Math.sin(angle) * (this.radius + 8),
-          vx: Math.cos(angle) * pSpeed,
-          vy: Math.sin(angle) * pSpeed,
-          radius: 8,
-          damage: this.config.damage,
-          life: 2.5,
-          color: pColor,
-          friendly: false,
-        }));
+    // --- Dual-mode boss: fires burst AND does AoE slam ---
+    if (this.config.dualMode) {
+      this._fireBurst(context, player);
+      // AoE slam if close
+      const slamR = this.config.slamRadius || this.radius * 2;
+      if (this.distanceToPlayer(player) <= slamR + player.radius) {
+        context.damagePlayer(this.config.damage);
+        context.spawnBurst(player.x, player.y, "#ffd1b0", 22, 40, 160);
+        context.spawnBurst(player.x, player.y, "#8b0000", 18, 30, 130);
+        context.leaveBlood(player.x, player.y, 10 + Math.random() * 12);
       }
-      context.spawnBurst(this.x, this.y, pColor, 14, 30, 90);
+      context.spawnBurst(this.x, this.y, this.config.accentColor, 24, 50, 180);
+      if (this.config.shockwaveCount) this._fireShockwave(context);
+      return;
+    }
+
+    if (this.config.ranged) {
+      this._fireBurst(context, player);
       return;
     }
 
@@ -740,30 +795,79 @@ export class Enemy {
       context.spawnBurst(player.x, player.y, "#8b0000", 18, 30, 130);
       context.leaveBlood(player.x, player.y, 10 + Math.random() * 12);
     }
-
-    // Ground slam visual — always shows
     context.spawnBurst(this.x, this.y, this.config.accentColor, 28, 60, 220);
     context.spawnBurst(this.x, this.y, "#443322", 18, 35, 140);
+    if (this.config.shockwaveCount) this._fireShockwave(context);
+  }
 
-    // Titan: shockwave ring of projectiles on every slam
-    if (this.config.shockwaveCount) {
-      const count = this.config.shockwaveCount;
-      const waveColor = this.config.bossGlowColor || "#aa44ff";
-      for (let i = 0; i < count; i++) {
-        const angle = (i / count) * Math.PI * 2 + Math.random() * 0.12;
-        context.spawnEnemyProjectile(new Bullet({
-          x: this.x + Math.cos(angle) * (this.radius + 6),
-          y: this.y + Math.sin(angle) * (this.radius + 6),
-          vx: Math.cos(angle) * 220,
-          vy: Math.sin(angle) * 220,
-          radius: 6,
-          damage: Math.floor(this.config.damage * 0.35),
-          life: 1.4,
-          color: waveColor,
-          friendly: false,
-        }));
-      }
+  /** Ranged burst fire pattern (used by ranged + dual bosses). */
+  _fireBurst(context, player) {
+    const burstCount = this.config.burstCount || 3;
+    const burstSpread = this.config.burstSpread || 0.4;
+    const leadX = player.x + (player.vx || 0) * 0.3;
+    const leadY = player.y + (player.vy || 0) * 0.3;
+    const baseAngle = Math.atan2(leadY - this.y, leadX - this.x);
+    const pColor = this.config.projectileColor || "#a7ff7c";
+    const pSpeed = this.config.projectileSpeed;
+    for (let i = 0; i < burstCount; i++) {
+      const offset = burstCount > 1 ? ((i / (burstCount - 1)) - 0.5) * burstSpread : 0;
+      const angle = baseAngle + offset;
+      context.spawnEnemyProjectile(new Bullet({
+        x: this.x + Math.cos(angle) * (this.radius + 8),
+        y: this.y + Math.sin(angle) * (this.radius + 8),
+        vx: Math.cos(angle) * pSpeed,
+        vy: Math.sin(angle) * pSpeed,
+        radius: 8,
+        damage: this.config.damage,
+        life: 2.5,
+        color: pColor,
+        friendly: false,
+      }));
     }
+    context.spawnBurst(this.x, this.y, pColor, 14, 30, 90);
+  }
+
+  /** Fire radial shockwave ring of projectiles. */
+  _fireShockwave(context) {
+    const count = this.config.shockwaveCount;
+    const waveColor = this.config.bossGlowColor || "#aa44ff";
+    const speed = 280;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.1;
+      context.spawnEnemyProjectile(new Bullet({
+        x: this.x + Math.cos(angle) * (this.radius + 6),
+        y: this.y + Math.sin(angle) * (this.radius + 6),
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        radius: 6,
+        damage: Math.floor(this.config.damage * 0.3),
+        life: 1.4,
+        color: waveColor,
+        friendly: false,
+      }));
+    }
+  }
+
+  /** Periodic ranged pressure while chasing (boss-only). */
+  _performChaseAttack(context) {
+    const count = this.config.shockwaveCount || 8;
+    const waveColor = this.config.bossGlowColor || "#aa44ff";
+    const speed = 260;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.1;
+      context.spawnEnemyProjectile(new Bullet({
+        x: this.x + Math.cos(angle) * (this.radius + 6),
+        y: this.y + Math.sin(angle) * (this.radius + 6),
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        radius: 5,
+        damage: Math.floor(this.config.damage * 0.2),
+        life: 1.3,
+        color: waveColor,
+        friendly: false,
+      }));
+    }
+    context.spawnBurst(this.x, this.y, this.config.accentColor, 14, 35, 130);
   }
 
   render(ctx) {

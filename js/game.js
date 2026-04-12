@@ -1,7 +1,7 @@
 import { Player, DEV_WEAPON, setBaseWeapons, getBaseWeapons, setPlayerStats, getPlayerStats } from "./entities/player.js";
 import { circlesOverlap, clamp, keepCircleInBounds, randomRange, separateCircles, resolveCircleRect, pointInRect } from "./systems/collision.js";
 import { WaveSpawner } from "./systems/spawner.js";
-import { Enemy, setEnemyTypes, getEnemyTypes, getBossTypes } from "./entities/enemy.js";
+import { Enemy, setEnemyTypes, getEnemyTypes, getBossTypes, getBossConfigForOccurrence } from "./entities/enemy.js";
 
 export class Game {
   constructor({ canvas, input, ui, audio, settings, mapObstacles = [], mapSpawnZones = [],
@@ -309,7 +309,8 @@ export class Game {
       // Wave announcement — boss waves get special treatment
       const isBoss = this.waveSpawner.bossActive;
       if (isBoss) {
-        const bossConfig = getBossTypes()[this.waveSpawner.getBossTypeForWave(this.waveSpawner.wave)];
+        const bossIndex = Math.floor(this.waveSpawner.wave / this.waveSpawner.config.bossInterval) - 1;
+        const bossConfig = getBossConfigForOccurrence(bossIndex);
         this.waveAnnouncement = {
           text: `WAVE ${this.waveSpawner.wave}`,
           subtext: bossConfig ? `${bossConfig.bossTitle} APPROACHES` : "BOSS INCOMING",
@@ -1506,7 +1507,7 @@ export class Game {
     ctx.restore();
   }
 
-  /** Render the next-boss indicator widget in the bottom-right corner. */
+  /** Render the next-boss indicator widget (top-right, scales with urgency). */
   renderBossIndicator() {
     if (this.state !== "playing" || this.waveSpawner.wave === 0) return;
     if (this.activeBoss && this.activeBoss.fsm.currentState !== "DEAD") return;
@@ -1529,101 +1530,129 @@ export class Game {
 
     ctx.save();
 
-    // Fixed-size widget — no movement, no shake
-    const W = 156, H = 46;
-    const pad = 14;
+    // --- Screen-edge warning at high urgency ---
+    if (urgency > 0.55) {
+      const edgeAlpha = (urgency - 0.55) * 0.35 + Math.sin(t * 2.5) * urgency * 0.06;
+      const edgeW = 3 + urgency * 4;
+      // Right and top edge strips
+      ctx.fillStyle = `rgba(${cr},${cg},${cb},${clamp(edgeAlpha, 0, 0.25)})`;
+      ctx.fillRect(bounds.width - edgeW, 0, edgeW, bounds.height);
+      ctx.fillRect(0, 0, bounds.width, edgeW * 0.6);
+    }
+
+    // Widget sizing — grows slightly with urgency
+    const W = 186 + urgency * 10;
+    const H = 54 + urgency * 4;
+    const pad = 12;
     const x0 = bounds.width - W - pad;
-    const y0 = bounds.height - H - 42;
+    const y0 = pad;
 
-    // Panel background — opacity increases with urgency
-    ctx.fillStyle = `rgba(8,8,8,${0.35 + urgency * 0.3})`;
+    // Outer glow at high urgency
+    if (urgency > 0.35) {
+      ctx.shadowBlur = 12 + urgency * 18;
+      ctx.shadowColor = `rgba(${cr},${cg},${cb},${(urgency - 0.35) * 0.5})`;
+    }
+
+    // Panel background
+    ctx.fillStyle = `rgba(6,6,6,${0.5 + urgency * 0.25})`;
     ctx.beginPath();
-    ctx.roundRect(x0, y0, W, H, 7);
+    ctx.roundRect(x0, y0, W, H, 8);
     ctx.fill();
+    ctx.shadowBlur = 0;
 
-    // Border with optional glow
-    const borderAlpha = 0.12 + urgency * 0.4;
+    // Panel border — pulses at high urgency
+    const borderAlpha = 0.15 + urgency * 0.5;
     const borderPulse = urgency > 0.5
       ? borderAlpha + Math.sin(t * 3.5) * urgency * 0.2
       : borderAlpha;
     ctx.strokeStyle = `rgba(${cr},${cg},${cb},${clamp(borderPulse, 0, 1)})`;
-    ctx.lineWidth = 1 + urgency * 0.5;
-    if (urgency > 0.4) {
-      ctx.shadowBlur = 8 + urgency * 12;
-      ctx.shadowColor = `rgba(${cr},${cg},${cb},${(urgency - 0.4) * 0.5})`;
-    }
+    ctx.lineWidth = 1.5 + urgency * 1;
     ctx.beginPath();
-    ctx.roundRect(x0, y0, W, H, 7);
+    ctx.roundRect(x0, y0, W, H, 8);
     ctx.stroke();
-    ctx.shadowBlur = 0;
+
+    // Warning stripe on left edge of panel
+    const stripeW = 3 + urgency * 1.5;
+    const stripeAlpha = 0.3 + urgency * 0.5 + (urgency > 0.6 ? Math.sin(t * 4) * 0.15 : 0);
+    ctx.fillStyle = `rgba(${cr},${cg},${cb},${clamp(stripeAlpha, 0, 1)})`;
+    ctx.beginPath();
+    ctx.roundRect(x0, y0, stripeW, H, [8, 0, 0, 8]);
+    ctx.fill();
 
     // --- Skull icon ---
-    const ix = x0 + 16;
+    const ix = x0 + 18;
     const iy = y0 + H / 2;
-    const iSz = 8 + urgency * 2;
-    const iAlpha = 0.4 + urgency * 0.5;
+    const iSz = 10 + urgency * 3;
+    const iPulse = 0.5 + urgency * 0.4 + (urgency > 0.4 ? Math.sin(t * 3) * 0.15 : 0);
 
-    ctx.fillStyle = `rgba(${cr},${cg},${cb},${iAlpha})`;
+    ctx.fillStyle = `rgba(${cr},${cg},${cb},${iPulse})`;
     ctx.beginPath();
-    ctx.arc(ix, iy - 1, iSz * 0.72, 0, Math.PI * 2);
+    ctx.arc(ix, iy - 1, iSz * 0.75, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillRect(ix - iSz * 0.32, iy + iSz * 0.35, iSz * 0.64, iSz * 0.28);
+    ctx.fillRect(ix - iSz * 0.35, iy + iSz * 0.35, iSz * 0.7, iSz * 0.3);
 
-    // Eye sockets
-    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillStyle = "rgba(0,0,0,0.75)";
     ctx.beginPath();
-    ctx.arc(ix - iSz * 0.24, iy - 2, iSz * 0.17, 0, Math.PI * 2);
-    ctx.arc(ix + iSz * 0.24, iy - 2, iSz * 0.17, 0, Math.PI * 2);
+    ctx.arc(ix - iSz * 0.24, iy - 2, iSz * 0.18, 0, Math.PI * 2);
+    ctx.arc(ix + iSz * 0.24, iy - 2, iSz * 0.18, 0, Math.PI * 2);
     ctx.fill();
 
-    if (urgency > 0.3) {
-      const eGlow = (urgency - 0.3) * 1.4;
+    if (urgency > 0.25) {
+      const eGlow = (urgency - 0.25) * 1.3;
       ctx.fillStyle = `rgba(${cr},${cg},${cb},${clamp(eGlow, 0, 1)})`;
       ctx.beginPath();
-      ctx.arc(ix - iSz * 0.24, iy - 2, iSz * 0.09, 0, Math.PI * 2);
-      ctx.arc(ix + iSz * 0.24, iy - 2, iSz * 0.09, 0, Math.PI * 2);
+      ctx.arc(ix - iSz * 0.24, iy - 2, iSz * 0.1, 0, Math.PI * 2);
+      ctx.arc(ix + iSz * 0.24, iy - 2, iSz * 0.1, 0, Math.PI * 2);
       ctx.fill();
     }
 
     // --- Text area ---
-    const tx = x0 + 34;
-    const maxTextW = W - 34 - 8;
+    const tx = x0 + 36;
+    const maxTextW = W - 36 - 10;
 
-    // Boss name — truncated if needed
+    // Boss name
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
-    ctx.font = 'bold 9px "Orbitron", monospace';
+    const nameFontSize = 10 + urgency * 1.5;
+    ctx.font = `bold ${nameFontSize}px "Orbitron", monospace`;
     const name = nextBossConfig.bossTitle || nextBossConfig.label.toUpperCase();
     let displayName = name;
     while (ctx.measureText(displayName).width > maxTextW && displayName.length > 4) {
       displayName = displayName.slice(0, -1);
     }
     if (displayName !== name) displayName += "\u2026";
-    ctx.fillStyle = `rgba(${cr},${cg},${cb},${0.5 + urgency * 0.45})`;
-    ctx.fillText(displayName, tx, y0 + 8);
+    ctx.fillStyle = `rgba(${cr},${cg},${cb},${0.6 + urgency * 0.35})`;
+    ctx.fillText(displayName, tx, y0 + 9);
 
-    // Wave counter or "NEXT WAVE!" flash
-    ctx.font = '600 10px "Inter", sans-serif';
+    // Wave counter or WARNING
+    const counterFontSize = 11 + urgency * 1.5;
+    ctx.font = `700 ${counterFontSize}px "Inter", sans-serif`;
     if (wavesLeft <= 1) {
-      const flash = 0.5 + Math.sin(t * 5) * 0.5;
-      ctx.fillStyle = `rgba(${cr},${cg},${cb},${clamp(flash, 0, 1)})`;
-      ctx.fillText("NEXT WAVE!", tx, y0 + 22);
+      const flash = 0.5 + Math.sin(t * 6) * 0.5;
+      ctx.fillStyle = `rgba(${cr},${cg},${cb},${clamp(flash, 0.2, 1)})`;
+      ctx.fillText("\u26A0 WARNING", tx, y0 + 26);
+    } else if (wavesLeft <= 2) {
+      const pulse = 0.7 + Math.sin(t * 3) * 0.2;
+      ctx.fillStyle = `rgba(${cr},${cg},${cb},${pulse})`;
+      ctx.fillText(`IN ${wavesLeft} WAVES`, tx, y0 + 26);
     } else {
-      ctx.fillStyle = `rgba(255,255,255,${0.35 + urgency * 0.35})`;
-      ctx.fillText(`IN ${wavesLeft} WAVES`, tx, y0 + 22);
+      ctx.fillStyle = `rgba(255,255,255,${0.4 + urgency * 0.3})`;
+      ctx.fillText(`IN ${wavesLeft} WAVES`, tx, y0 + 26);
     }
 
     // Progress bar at bottom
-    const pbX = x0 + 6;
-    const pbY = y0 + H - 5;
-    const pbW = W - 12;
-    ctx.fillStyle = "rgba(255,255,255,0.05)";
+    const pbX = x0 + 7;
+    const pbY = y0 + H - 6;
+    const pbW = W - 14;
+    const pbH = 3;
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
     ctx.beginPath();
-    ctx.roundRect(pbX, pbY, pbW, 2, 1);
+    ctx.roundRect(pbX, pbY, pbW, pbH, 1.5);
     ctx.fill();
-    ctx.fillStyle = `rgba(${cr},${cg},${cb},${0.25 + urgency * 0.5})`;
+    const barAlpha = 0.3 + urgency * 0.55 + (urgency > 0.7 ? Math.sin(t * 4) * 0.1 : 0);
+    ctx.fillStyle = `rgba(${cr},${cg},${cb},${clamp(barAlpha, 0, 1)})`;
     ctx.beginPath();
-    ctx.roundRect(pbX, pbY, pbW * urgency, 2, 1);
+    ctx.roundRect(pbX, pbY, pbW * urgency, pbH, 1.5);
     ctx.fill();
 
     ctx.restore();

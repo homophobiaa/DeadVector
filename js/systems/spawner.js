@@ -1,4 +1,4 @@
-import { Enemy, getBossTypes, getBossCycle } from "../entities/enemy.js";
+import { Enemy, getBossSchedule, getBossConfigForOccurrence } from "../entities/enemy.js";
 import { randomRange } from "./collision.js";
 
 const DEFAULT_WAVE_CONFIG = {
@@ -42,11 +42,12 @@ export class WaveSpawner {
     return this.config.bossInterval > 0 && wave % this.config.bossInterval === 0;
   }
 
-  /** Get the boss type key for a given wave (cycles through the boss roster). */
+  /** Get the boss type key for a given wave (uses boss schedule). */
   getBossTypeForWave(wave) {
-    const cycle = getBossCycle();
+    const schedule = getBossSchedule();
     const bossIndex = Math.floor(wave / this.config.bossInterval) - 1;
-    return cycle[bossIndex % cycle.length];
+    const idx = Math.min(bossIndex, schedule.length - 1);
+    return schedule[idx].base;
   }
 
   /** How many waves until the next boss (0 = this is a boss wave). */
@@ -65,8 +66,10 @@ export class WaveSpawner {
 
   /** Get the config object for the next boss. */
   nextBossConfig() {
-    const key = this.nextBossType();
-    return getBossTypes()[key] || null;
+    const remaining = this.wavesUntilBoss();
+    const nextBossWave = remaining === 0 ? this.wave : this.wave + remaining;
+    const bossIndex = Math.floor(nextBossWave / this.config.bossInterval) - 1;
+    return getBossConfigForOccurrence(bossIndex);
   }
 
   startWave(bounds, spawnZones = []) {
@@ -95,8 +98,8 @@ export class WaveSpawner {
     // Boss spawn on milestone waves
     if (this.isBossWave(wave)) {
       const bossKey = this.getBossTypeForWave(wave);
-      const bossTypes = getBossTypes();
-      const bossConfig = bossTypes[bossKey];
+      const bossIndex = Math.floor(wave / this.config.bossInterval) - 1;
+      const bossConfig = getBossConfigForOccurrence(bossIndex);
       if (bossConfig) {
         // Boss comes after a short delay, after some minions have spawned
         queue.push({
@@ -157,6 +160,7 @@ export class WaveSpawner {
         enemy.maxHealth = bc.maxHealth + this.wave * 8;
         enemy.health = enemy.maxHealth;
         enemy.speed = bc.speed * (1 + this.wave * 0.012);
+        enemy.noticeRange = bc.noticeRange * (1 + this.wave * 0.012);
         enemy.isBoss = true;
         this.bossSpawned = true;
       }
