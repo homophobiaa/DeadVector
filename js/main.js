@@ -74,6 +74,24 @@ const bootstrap = async () => {
     devSkipWave: document.getElementById("dev-skip-wave"),
     devSkipToInput: document.getElementById("dev-skip-to-input"),
     devSkipToGo: document.getElementById("dev-skip-to-go"),
+    // Progression screens
+    levelupScreen: document.getElementById("levelup-screen"),
+    levelupCards: document.getElementById("levelup-cards"),
+    bossRewardScreen: document.getElementById("boss-reward-screen"),
+    bossRewardCards: document.getElementById("boss-reward-cards"),
+    loadoutScreen: document.getElementById("loadout-screen"),
+    loadoutColumns: document.getElementById("loadout-columns"),
+    loadoutWeaponLabel: document.getElementById("loadout-weapon-label"),
+    loadoutStats: document.getElementById("loadout-stats"),
+    hudHint: document.getElementById("hud-hint"),
+    setUiScale: document.getElementById("set-ui-scale"),
+    uiScaleVal: document.getElementById("ui-scale-val"),
+    // Upgrade countdown DOM
+    upgradeCountdown: document.getElementById("upgrade-countdown"),
+    ucNumber: document.getElementById("uc-number"),
+    ucLabel: document.getElementById("uc-label"),
+    ucBarFill: document.getElementById("uc-bar-fill"),
+    ucQueue: document.getElementById("uc-queue"),
   });
 
   const input = new InputManager(canvas);

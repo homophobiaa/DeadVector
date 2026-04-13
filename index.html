@@ -27,6 +27,57 @@
       <button id="mute-button" class="icon-btn" type="button" title="Toggle sound">&#9834;</button>
     </div>
 
+    <!-- HUD hint for loadout key -->
+    <div id="hud-hint" class="hud-hint hidden">
+      <span class="hud-hint-label">Loadout</span>
+      <span class="hud-hint-keys">
+        <span class="hud-key">TAB</span>
+        <span class="hud-key">E</span>
+      </span>
+    </div>
+
+    <!-- Level-up card selection -->
+    <section id="levelup-screen" class="overlay levelup-overlay hidden">
+      <div class="levelup-inner">
+        <h2 class="levelup-title">LEVEL UP</h2>
+        <p class="levelup-sub">Choose an upgrade — <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></p>
+        <div id="levelup-cards" class="levelup-cards"></div>
+      </div>
+    </section>
+
+    <!-- Boss reward card selection -->
+    <section id="boss-reward-screen" class="overlay levelup-overlay hidden">
+      <div class="levelup-inner">
+        <h2 class="levelup-title boss-reward-title">BOSS REWARD</h2>
+        <p class="levelup-sub">Choose a reward — <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></p>
+        <div id="boss-reward-cards" class="levelup-cards"></div>
+      </div>
+    </section>
+
+    <!-- Upgrade countdown (renders ABOVE all overlays) -->
+    <div id="upgrade-countdown" class="upgrade-countdown hidden">
+      <div class="uc-number" id="uc-number"></div>
+      <div class="uc-label" id="uc-label"></div>
+      <div class="uc-bar-track"><div class="uc-bar-fill" id="uc-bar-fill"></div></div>
+      <div class="uc-queue" id="uc-queue"></div>
+    </div>
+
+    <!-- Loadout / Stats menu (TAB / E) -->
+    <section id="loadout-screen" class="overlay hidden">
+      <div class="overlay-inner loadout-panel">
+        <h2 class="overlay-title loadout-title">LOADOUT</h2>
+        <div id="loadout-columns" class="loadout-columns"></div>
+        <div class="loadout-stats-bar">
+          <div id="loadout-weapon-label" class="loadout-weapon-label">CURRENT WEAPON: PISTOL</div>
+          <div id="loadout-stats" class="loadout-stats"></div>
+        </div>
+        <p class="loadout-dismiss">
+          <span class="loadout-hint-row"><kbd>SCROLL</kbd> Change Weapon</span>
+          <span class="loadout-hint-row"><kbd>TAB</kbd> <kbd>E</kbd> <kbd>Esc</kbd> Close</span>
+        </p>
+      </div>
+    </section>
+
     <section id="menu-screen" class="overlay hidden">
       <div class="overlay-inner">
         <h1 class="menu-title">DEAD<span class="brand-accent">V</span>ECTOR</h1>
@@ -123,6 +174,10 @@
             <span class="setting-label">Show FPS</span>
             <input id="set-show-fps" type="checkbox" class="setting-toggle">
             <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+          <label class="setting-row">
+            <span class="setting-label">UI Scale <span id="ui-scale-val" class="setting-val">1.0x</span></span>
+            <input id="set-ui-scale" type="range" class="setting-slider" min="80" max="140" step="10" value="100">
           </label>
         </div>
 

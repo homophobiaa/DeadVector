@@ -1,7 +1,10 @@
 import { Player, DEV_WEAPON, setBaseWeapons, getBaseWeapons, setPlayerStats, getPlayerStats } from "./entities/player.js";
+import { Bullet } from "./entities/bullet.js";
 import { circlesOverlap, clamp, keepCircleInBounds, randomRange, separateCircles, resolveCircleRect, pointInRect } from "./systems/collision.js";
 import { WaveSpawner } from "./systems/spawner.js";
 import { Enemy, setEnemyTypes, getEnemyTypes, getBossTypes, getBossConfigForOccurrence } from "./entities/enemy.js";
+import { Progression } from "./systems/progression.js";
+import { getMuzzleOffset } from "./entities/player-renderer.js";
 
 export class Game {
   constructor({ canvas, input, ui, audio, settings, mapObstacles = [], mapSpawnZones = [],
@@ -65,6 +68,27 @@ export class Game {
     this.bossHealthBarAnim = 0;       // slide-in animation progress (0→1)
     this.bossDeathFlash = 0;          // screen flash on boss kill
     this.bossIndicatorPulse = 0;      // accumulated time for indicator animations
+
+    // Progression system
+    this.progression = new Progression();
+    this.gameSpeed = 1;                // 1 = normal, 0 = fully paused
+    this.loadoutOpen = false;
+    this.levelUpReadyAt = 0;           // misclick prevention timestamp
+    this.levelUpQueue = 0;             // queued level-up count
+    this.upgradeCountdown = 0;         // seconds remaining on pause countdown
+    this.upgradeTransition = 0;        // seconds remaining on speed-return transition
+    this.upgradeTransitionDur = 7;     // total transition duration
+    this.upgradePauseDur = 7;          // total pause countdown duration
+
+    // Pickup images
+    this.hpImg = new Image(); this.hpImg.src = "assets/images/dropables/hp.png";
+    this.scrapImg = new Image(); this.scrapImg.src = "assets/images/dropables/scrap.png";
+
+    // Gib particle images
+    this.gibImgs = [new Image(), new Image(), new Image()];
+    this.gibImgs[0].src = "assets/images/particle-drops/mixed-chunk.png";
+    this.gibImgs[1].src = "assets/images/particle-drops/flesh-chunk.png";
+    this.gibImgs[2].src = "assets/images/particle-drops/bloody-fragment.png";
 
     // Background image
     this.bgImg = new Image();
@@ -143,6 +167,14 @@ export class Game {
     this.waveAnnouncement = { text: "", timer: 0 };
     this.waveSpawner.reset();
     this.player.reset(this.bounds.width / 2, this.bounds.height / 2);
+    // Progression reset — player starts with pistol only
+    this.progression.reset();
+    this.gameSpeed = 1;
+    this.loadoutOpen = false;
+    this.levelUpReadyAt = 0;
+    this.levelUpQueue = 0;
+    this.upgradeCountdown = 0;
+    this.upgradeTransition = 0;
     this.bullets = [];
     this.enemyProjectiles = [];
     this.enemies = [];
@@ -158,8 +190,14 @@ export class Game {
     this.ui.showPause(false);
     this.ui.showGameOver(false);
     this.ui.showSettings(false);
+    this.ui.showLevelUp(false);
+    this.ui.showBossReward(false);
+    this.ui.showLoadout(false);
+    this.ui.showHudHint(true);
 
     this.applySettings();
+    // Sync weapons from progression AFTER applySettings to override setDevMode's weapon reset
+    this.syncWeaponsFromProgression();
 
     // setInterval event: periodic stats sync
     this.statsInterval = setInterval(() => {
@@ -257,12 +295,7 @@ export class Game {
 
   applyWeaponsData(data) {
     setBaseWeapons(data);
-    if (this.player.devMode) {
-      this.player.weapons = [...data, DEV_WEAPON];
-    } else {
-      this.player.weapons = [...data];
-    }
-    this.player.weaponIndex = Math.min(this.player.weaponIndex, this.player.weapons.length - 1);
+    this.syncWeaponsFromProgression();
   }
 
   applyEnemiesData(data) {
@@ -290,8 +323,7 @@ export class Game {
 
   resetWeaponsData() {
     setBaseWeapons(JSON.parse(JSON.stringify(this._defaultWeapons)));
-    this.player.weapons = this.player.devMode ? [...getBaseWeapons(), DEV_WEAPON] : [...getBaseWeapons()];
-    this.player.weaponIndex = Math.min(this.player.weaponIndex, this.player.weapons.length - 1);
+    this.syncWeaponsFromProgression();
   }
   resetEnemiesData()   { setEnemyTypes(JSON.parse(JSON.stringify(this._defaultEnemies))); }
   resetWavesData()     { this.waveSpawner.setConfig(JSON.parse(JSON.stringify(this._defaultWaves))); }
@@ -436,16 +468,121 @@ export class Game {
     }
 
     this.handleInput();
-    if (this.state === "playing") this.update(delta);
+
+    // Upgrade countdown & time-return transition (runs in real time)
+    if (this.state === "playing") {
+      const isUpgradeOpen = this.progression.levelUpActive || this.progression.bossRewardActive;
+      if (isUpgradeOpen) {
+        if (this.upgradeCountdown > 0) {
+          // Full pause phase — countdown ticking
+          this.upgradeCountdown -= delta;
+          this.gameSpeed = 0;
+          if (this.upgradeCountdown <= 0) {
+            this.upgradeCountdown = 0;
+            this.upgradeTransition = this.upgradeTransitionDur;
+          }
+        } else if (this.upgradeTransition > 0) {
+          // Transition phase — speed eases from 0 to 1 over upgradeTransitionDur
+          this.upgradeTransition -= delta;
+          if (this.upgradeTransition <= 0) {
+            this.upgradeTransition = 0;
+            this.gameSpeed = 1;
+            // Auto-pick first affordable card if player didn't choose
+            if (this.progression.levelUpActive || this.progression.bossRewardActive) {
+              const cards = this.progression.levelUpActive
+                ? this.progression.levelUpCards
+                : this.progression.bossRewardCards;
+              const pick = cards.findIndex(c => c.scrapCost <= 0 || this.progression.scrap >= c.scrapCost);
+              this.selectUpgradeCard(pick >= 0 ? pick : 0);
+            }
+          } else {
+            const t = 1 - (this.upgradeTransition / this.upgradeTransitionDur);
+            // Ease-in: slow at first, accelerates
+            this.gameSpeed = t * t;
+          }
+        }
+        // Drive DOM countdown overlay
+        this.updateCountdownUI();
+      } else {
+        this.hideCountdownUI();
+      }
+    } else {
+      this.hideCountdownUI();
+    }
+
+    if (this.state === "playing") this.update(delta * this.gameSpeed);
     this.render();
     this.input.endFrame();
     requestAnimationFrame(this.loop);
   }
 
+  updateCountdownUI() {
+    const el = this.ui.elements;
+    const wrap = el.upgradeCountdown;
+    if (!wrap) return;
+    wrap.classList.remove("hidden");
+    wrap.classList.add("visible");
+
+    if (this.upgradeCountdown > 0) {
+      // Pause phase
+      const secs = Math.ceil(this.upgradeCountdown);
+      el.ucNumber.textContent = secs;
+      el.ucLabel.textContent = "PAUSED \u2014 CHOOSE NOW";
+      el.ucLabel.classList.remove("uc-resuming");
+      const pct = (this.upgradeCountdown / this.upgradePauseDur) * 100;
+      el.ucBarFill.style.width = pct + "%";
+      el.ucBarFill.classList.remove("uc-transition");
+    } else if (this.upgradeTransition > 0) {
+      // Transition phase
+      const pctDone = 1 - (this.upgradeTransition / this.upgradeTransitionDur);
+      const speedPct = Math.round(pctDone * pctDone * 100);
+      el.ucNumber.textContent = speedPct + "%";
+      el.ucLabel.textContent = "RESUMING";
+      el.ucLabel.classList.add("uc-resuming");
+      el.ucBarFill.style.width = (pctDone * 100) + "%";
+      el.ucBarFill.classList.add("uc-transition");
+    } else {
+      el.ucNumber.textContent = "";
+      el.ucLabel.textContent = "";
+      el.ucBarFill.style.width = "100%";
+    }
+
+    // Queue indicator
+    if (this.levelUpQueue > 0) {
+      el.ucQueue.textContent = `+${this.levelUpQueue} MORE LEVEL-UP${this.levelUpQueue > 1 ? "S" : ""}`;
+    } else {
+      el.ucQueue.textContent = "";
+    }
+  }
+
+  hideCountdownUI() {
+    const wrap = this.ui.elements.upgradeCountdown;
+    if (!wrap) return;
+    wrap.classList.add("hidden");
+    wrap.classList.remove("visible");
+  }
+
   handleInput() {
     const events = this.input.consumeEvents();
 
-    if (this.input.wasPressed("escape")) this.togglePause();
+    // Escape: close loadout first, then pause
+    if (this.input.wasPressed("escape")) {
+      if (this.loadoutOpen) {
+        this.toggleLoadout();
+      } else {
+        this.togglePause();
+      }
+    }
+
+    // TAB / E: toggle loadout (only while playing, not during level-up/boss reward)
+    if ((this.input.wasPressed("tab") || this.input.wasPressed("e")) && this.state === "playing") {
+      if (!this.progression.levelUpActive && !this.progression.bossRewardActive) {
+        this.toggleLoadout();
+      }
+    }
+
+    // Block gameplay input during level-up, boss reward, or loadout
+    const inputBlocked = this.progression.levelUpActive || this.progression.bossRewardActive || this.loadoutOpen;
 
     for (const event of events) {
       if (event.type === "resize") this.resize();
@@ -468,7 +605,15 @@ export class Game {
 
       if (event.type === "keypress") this.handleKeyPress(event.key);
 
-      if (this.state !== "playing") continue;
+      // Wheel in loadout: switch weapon and refresh stats
+      if (event.type === "wheel" && this.loadoutOpen) {
+        const weapon = this.player.switchWeaponByStep(event.deltaY > 0 ? 1 : -1);
+        this.ui.pushEvent(`${weapon.name} selected.`);
+        this.populateLoadout();
+        continue;
+      }
+
+      if (this.state !== "playing" || inputBlocked) continue;
 
       if (event.type === "wheel") {
         const weapon = this.player.switchWeaponByStep(event.deltaY > 0 ? 1 : -1);
@@ -488,7 +633,7 @@ export class Game {
       }
     }
 
-    if (this.state === "playing" && this.input.mouse.leftDown && this.player.weapon.auto) {
+    if (this.state === "playing" && !inputBlocked && this.input.mouse.leftDown && this.player.weapon.auto) {
       this.firePlayerWeapon();
       this.audio.markAutoFiring();
     }
@@ -500,6 +645,15 @@ export class Game {
   }
 
   handleKeyPress(key) {
+    // Level-up / boss reward card selection (1/2/3)
+    if (this.progression.levelUpActive || this.progression.bossRewardActive) {
+      if (key === "1" || key === "2" || key === "3") {
+        this.selectUpgradeCard(Number(key) - 1);
+        return;
+      }
+      return; // Block other keys during level-up
+    }
+
     if (key === "1" || key === "2" || key === "3" || key === "4") {
       const weapon = this.player.selectWeapon(Number(key) - 1);
       this.ui.pushEvent(`${weapon.name} selected.`);
@@ -516,11 +670,337 @@ export class Game {
   }
 
   firePlayerWeapon() {
-    const bullets = this.player.tryShoot(this.input.mouse.x, this.input.mouse.y);
+    const wpn = this.player.weapon;
+    const mods = this.progression.getWeaponMods(wpn.name);
+
+    // Apply fire rate modifiers
+    let cooldown = wpn.cooldown * mods.cooldownMultiplier;
+    // Overdrive ramp: up to -40% cooldown at full ramp
+    if (mods.overdriveRamp > 0) cooldown *= (1 - mods.overdriveRamp * 0.4);
+
+    // Apply spread modifiers
+    let spread = wpn.spread * mods.spreadMultiplier;
+    // Tracking Spray: reduce spread while player is moving
+    if (mods._trackingSpray && (Math.abs(this.player.vx) > 10 || Math.abs(this.player.vy) > 10)) {
+      spread *= 0.8;
+    }
+
+    // Calculate damage
+    let damage = wpn.damage * mods.damageMultiplier;
+    // Adrenaline: +30% when below 40% HP
+    const adrenBonus = this.progression.getAdrenalineBonus(this.player.health, this.player.maxHealth);
+    if (adrenBonus > 0) damage *= (1 + adrenBonus);
+    // Heat Build: up to +30% based on overdrive ramp
+    if (mods.heatDmgBonus > 0) damage *= (1 + mods.heatDmgBonus);
+    const isCrit = Math.random() < mods.critChance;
+    if (isCrit) damage *= mods.critMultiplier;
+    damage = Math.round(damage);
+
+    // Use modified cooldown
+    if (this.player.fireCooldown > 0) return;
+    this.player.fireCooldown = cooldown;
+    this.player.muzzleFlash = 1;
+
+    const angle = Math.atan2(this.input.mouse.y - this.player.y, this.input.mouse.x - this.player.x);
+    const pellets = wpn.pellets + mods.pelletBonus;
+
+    // Spawn from muzzle
+    const muzzleOff = getMuzzleOffset(this.player);
+    const spawnX = muzzleOff ? this.player.x + muzzleOff.x : this.player.x + Math.cos(angle) * (this.player.radius + 12);
+    const spawnY = muzzleOff ? this.player.y + muzzleOff.y : this.player.y + Math.sin(angle) * (this.player.radius + 12);
+
+    const bullets = [];
+    for (let i = 0; i < pellets; i++) {
+      const spreadOffset = (Math.random() - 0.5) * spread;
+      const a = angle + spreadOffset;
+      bullets.push(new Bullet({
+        x: spawnX, y: spawnY,
+        vx: Math.cos(a) * wpn.projectileSpeed,
+        vy: Math.sin(a) * wpn.projectileSpeed,
+        radius: wpn.radius,
+        damage,
+        life: 0.9,
+        color: isCrit ? "#ffffff" : wpn.color,
+        friendly: true,
+        _ricochet: mods.ricochet ? 1 : 0,
+        _piercing: mods.piercing || 0,
+        _knockback: mods.knockback,
+        _blastRadius: mods.blastRadius,
+        _isCrit: isCrit,
+        _markTarget: mods.markTarget,
+        _lightningChain: mods.lightningChain || 0,
+        _shockwave: mods.shockwave,
+      }));
+    }
+
+    // Double Tap: fire a second burst after a tiny delay
+    if (mods.doubleTap) {
+      for (let i = 0; i < pellets; i++) {
+        const spreadOffset = (Math.random() - 0.5) * spread;
+        const a = angle + spreadOffset;
+        bullets.push(new Bullet({
+          x: spawnX, y: spawnY,
+          vx: Math.cos(a) * wpn.projectileSpeed,
+          vy: Math.sin(a) * wpn.projectileSpeed,
+          radius: wpn.radius,
+          damage: Math.round(damage * 0.6),
+          life: 0.9,
+          color: wpn.color,
+          friendly: true,
+          _ricochet: mods.ricochet ? 1 : 0,
+          _piercing: mods.piercing || 0,
+          _knockback: mods.knockback,
+          _blastRadius: mods.blastRadius,
+          _isCrit: false,
+          _markTarget: mods.markTarget,
+          _lightningChain: mods.lightningChain || 0,
+          _shockwave: mods.shockwave,
+        }));
+      }
+    }
+
     if (bullets.length === 0) return;
     this.bullets.push(...bullets);
-    this.audio.playShoot(this.player.weapon.name);
-    this.screenShake = Math.max(this.screenShake, this.player.weapon.recoil);
+    this.audio.playShoot(wpn.name);
+    this.screenShake = Math.max(this.screenShake, wpn.recoil);
+  }
+
+  // ---- Progression helpers ----
+
+  selectUpgradeCard(index) {
+    // Block input during the misclick-prevention delay
+    if (Date.now() < this.levelUpReadyAt) return;
+
+    const cards = this.progression.levelUpActive
+      ? this.progression.levelUpCards
+      : this.progression.bossRewardCards;
+    if (index < 0 || index >= cards.length) return;
+    const card = cards[index];
+
+    // Check scrap cost
+    if (card.scrapCost > 0 && this.progression.scrap < card.scrapCost) return;
+    if (card.scrapCost > 0) this.progression.scrap -= card.scrapCost;
+
+    this.progression.acquire(card.id);
+    this.syncWeaponsFromProgression();
+
+    // Dismiss UI
+    this.progression.levelUpActive = false;
+    this.progression.bossRewardActive = false;
+    this.progression.levelUpCards = [];
+    this.progression.bossRewardCards = [];
+    this.upgradeCountdown = 0;
+    this.upgradeTransition = 0;
+    this.gameSpeed = 1;
+
+    this.ui.showLevelUp(false);
+    this.ui.showBossReward(false);
+
+    this.ui.pushEvent(`${card.name} acquired.`);
+    this.audio.playConfirm();
+
+    // If more queued level-ups remain, trigger the next one
+    if (this.levelUpQueue > 0) {
+      // Small delay so the player sees the dismiss
+      setTimeout(() => this.triggerLevelUp(), 250);
+    }
+  }
+
+  triggerLevelUp() {
+    if (this.progression.levelUpActive || this.progression.bossRewardActive) return;
+    if (this.levelUpQueue <= 0) return;
+    this.levelUpQueue -= 1;
+
+    const cards = this.progression.buildLevelUpCards();
+    if (cards.length === 0) return;  // Pool exhausted
+    this.progression.levelUpCards = cards;
+    this.progression.levelUpActive = true;
+    this.gameSpeed = 0;                       // FULL PAUSE
+    this.upgradeCountdown = this.upgradePauseDur;
+    this.upgradeTransition = 0;
+    this.levelUpReadyAt = Date.now() + 350;
+    this.populateCards(cards, this.ui.elements.levelupCards);
+    this.ui.showLevelUp(true);
+  }
+
+  triggerBossReward(enemy) {
+    // If a level-up or boss reward is already active, defer boss reward
+    if (this.progression.levelUpActive || this.progression.bossRewardActive) {
+      // Retry after a short delay
+      setTimeout(() => {
+        if (this.state === "playing") this.triggerBossReward(enemy);
+      }, 400);
+      return;
+    }
+
+    // Grant XP burst — don't trigger another level-up from the burst itself
+    const xpAmt = this.progression.getXpFromKill(enemy);
+    this.progression.xp = Math.min(this.progression.xp + xpAmt, this.progression.xpMax - 1);
+
+    const cards = this.progression.buildBossRewardCards();
+    if (cards.length === 0) return;
+    this.progression.bossRewardCards = cards;
+    this.progression.bossRewardActive = true;
+    this.gameSpeed = 0;                       // FULL PAUSE
+    this.upgradeCountdown = this.upgradePauseDur;
+    this.upgradeTransition = 0;
+    this.levelUpReadyAt = Date.now() + 350;
+    this.populateCards(cards, this.ui.elements.bossRewardCards);
+    this.ui.showBossReward(true);
+  }
+
+  populateCards(cards, container) {
+    container.innerHTML = "";
+    cards.forEach((card, i) => {
+      const div = document.createElement("div");
+      div.className = "upgrade-card";
+      div.style.animationDelay = `${i * 0.08}s`;
+      const canAfford = card.scrapCost <= 0 || this.progression.scrap >= card.scrapCost;
+      if (!canAfford) div.classList.add("disabled");
+
+      div.innerHTML = `
+        <span class="card-category${card.category === 'Rare' ? ' cat-rare' : ''}">${card.category}</span>
+        <strong class="card-name">${card.name}</strong>
+        <span class="card-desc">${card.desc}</span>
+        ${card.scrapCost > 0 ? `<span class="card-cost${this.progression.scrap < card.scrapCost ? ' insufficient' : ''}">${card.scrapCost} SCRAP</span>` : ""}
+        <span class="card-key">${i + 1}</span>
+      `;
+      div.addEventListener("click", () => this.selectUpgradeCard(i));
+      container.appendChild(div);
+    });
+  }
+
+  toggleLoadout() {
+    this.loadoutOpen = !this.loadoutOpen;
+    if (this.loadoutOpen) {
+      this.populateLoadout();
+      this.ui.showLoadout(true);
+    } else {
+      this.ui.showLoadout(false);
+    }
+  }
+
+  populateLoadout() {
+    const el = this.ui.elements;
+
+    // ---- Determine equipped weapon key ----
+    const wpnName = this.player.weapon.name.toLowerCase();
+    const equippedKey = wpnName.includes("pistol") ? "pistol"
+      : (wpnName.includes("scatter") || wpnName.includes("shotgun")) ? "shotgun"
+      : (wpnName.includes("vector") || wpnName.includes("smg")) ? "smg"
+      : "pistol";
+
+    // ---- Weapon + upgrade columns ----
+    const columns = [
+      { label: "PISTOL",  key: "pistol",  weaponName: "Service Pistol",  color: "#00ff88" },
+      { label: "SHOTGUN", key: "shotgun", weaponName: "Scatter Cannon",  color: "#ff6633" },
+      { label: "SMG",     key: "smg",     weaponName: "Vector SMG",      color: "#6be0d6" },
+      { label: "GLOBAL",  key: null,      weaponName: null,              color: "#ffc850" },
+    ];
+
+    const groups = this.progression.getAcquiredGrouped();
+
+    el.loadoutColumns.innerHTML = "";
+    for (const col of columns) {
+      const div = document.createElement("div");
+      const isWeapon = col.key !== null;
+      const unlocked = isWeapon ? this.progression.weaponsUnlocked[col.key] : true;
+      const locked = isWeapon && !unlocked;
+      const isEquipped = isWeapon && col.key === equippedKey && unlocked;
+
+      div.className = "loadout-col"
+        + (locked ? " col-locked" : "")
+        + (isEquipped ? " col-equipped" : "");
+
+      // Icon area (colored circle)
+      const icon = `<div class="col-icon" style="--col-color:${col.color}">
+        <span class="col-icon-glyph">${isWeapon ? "⬡" : "✦"}</span>
+      </div>`;
+
+      // Name
+      const name = `<div class="col-name">${col.label}</div>`;
+
+      // Status + equipped badge
+      let statusText;
+      if (isEquipped) {
+        statusText = `<div class="col-status equipped">EQUIPPED</div>`;
+      } else if (locked) {
+        statusText = `<div class="col-status locked">LOCKED</div>`;
+      } else {
+        statusText = `<div class="col-status unlocked">ACTIVE</div>`;
+      }
+
+      // Upgrades list
+      const catKey = isWeapon ? col.label.charAt(0) + col.label.slice(1).toLowerCase() : "Global";
+      const catUpgrades = groups[catKey] || [];
+      // Also include Rare upgrades in Global column
+      const extras = col.key === null ? (groups["Rare"] || []) : [];
+      const allUpgrades = [...catUpgrades, ...extras];
+
+      let upgradeHTML = "";
+      if (allUpgrades.length > 0) {
+        upgradeHTML = allUpgrades.map(u =>
+          `<div class="col-upgrade"><span class="col-upgrade-pip" style="background:${col.color}"></span><span>${u.name}</span></div>`
+        ).join("");
+      } else {
+        upgradeHTML = `<div class="col-upgrade col-upgrade-none">${locked ? "—" : "None yet"}</div>`;
+      }
+
+      div.innerHTML = `${icon}${name}${statusText}<div class="col-upgrades">${upgradeHTML}</div>`;
+
+      // Click to select weapon for inspection
+      if (isWeapon && unlocked) {
+        div.style.cursor = "pointer";
+        div.addEventListener("click", () => {
+          // Find the weapon in player.weapons by matching key
+          const idx = this.player.weapons.findIndex(w => {
+            const n = w.name.toLowerCase();
+            if (col.key === "pistol") return n.includes("pistol");
+            if (col.key === "shotgun") return n.includes("scatter") || n.includes("shotgun");
+            if (col.key === "smg") return n.includes("vector") || n.includes("smg");
+            return false;
+          });
+          if (idx >= 0) {
+            this.player.selectWeapon(idx);
+            this.ui.pushEvent(`${this.player.weapon.name} selected.`);
+            this.populateLoadout();
+          }
+        });
+      }
+
+      el.loadoutColumns.appendChild(div);
+    }
+
+    // ---- Weapon stats label ----
+    const equippedCol = columns.find(c => c.key === equippedKey);
+    const weaponLabel = equippedCol ? equippedCol.weaponName.toUpperCase() : "PISTOL";
+    el.loadoutWeaponLabel.textContent = `CURRENT WEAPON: ${weaponLabel}`;
+
+    // ---- Stats bar (bottom) ----
+    const stats = this.progression.getDisplayStats(this.player);
+    el.loadoutStats.innerHTML = `
+      <div class="loadout-stat"><span class="stat-label">DAMAGE</span><span class="stat-value">${stats.damage}</span></div>
+      <div class="loadout-stat"><span class="stat-label">FIRE RATE</span><span class="stat-value">${stats.fireRate}/s</span></div>
+      <div class="loadout-stat"><span class="stat-label">MOVE SPD</span><span class="stat-value">${stats.moveSpeed}</span></div>
+      <div class="loadout-stat"><span class="stat-label">CRIT</span><span class="stat-value">${stats.critChance}%</span></div>
+      <div class="loadout-stat"><span class="stat-label">LEVEL</span><span class="stat-value">${this.progression.level}</span></div>
+      <div class="loadout-stat"><span class="stat-label">SCRAP</span><span class="stat-value scrap-val">${this.progression.scrap}</span></div>
+    `;
+  }
+
+  syncWeaponsFromProgression() {
+    const base = getBaseWeapons();
+    const weapons = [base[0]]; // Pistol always
+    if (this.progression.weaponsUnlocked.shotgun) weapons.push(base[2]); // Scatter Cannon
+    if (this.progression.weaponsUnlocked.smg) weapons.push(base[1]);     // Vector SMG
+
+    // If dev mode, append dev weapon
+    if (this.player.devMode) weapons.push(DEV_WEAPON);
+
+    this.player.weapons = weapons;
+    if (this.player.weaponIndex >= weapons.length) {
+      this.player.weaponIndex = weapons.length - 1;
+    }
   }
 
   update(delta) {
@@ -530,11 +1010,29 @@ export class Game {
     }
 
     this.player.update(delta, this.input, this.bounds);
+    // Apply speed modifier from progression
+    const speedMult = this.progression.getSpeedMultiplier();
+    if (speedMult !== 1) {
+      // Speed was applied at base; recalc velocity this frame
+      this.player.vx *= speedMult;
+      this.player.vy *= speedMult;
+    }
     if (!this.settings.get("devMode") || !this.settings.get("devNoclip")) {
       this.resolveEntityObstacles(this.player);
     }
     this.screenShake = Math.max(0, this.screenShake - delta * 24);
     this.damageVignette = Math.max(0, this.damageVignette - delta * 1.8);
+
+    // Progression: tick overdrive ramp (SMG continuous fire)
+    const isFiringSMG = this.input.mouse.leftDown &&
+      (this.player.weapon.name.toLowerCase().includes("vector") || this.player.weapon.name.toLowerCase().includes("smg"));
+    this.progression.tickOverdrive(isFiringSMG, delta);
+
+    // Progression: update combo bonuses
+    this.progression.updateComboBonuses(this.combo);
+
+    // Progression: tick mark target timers
+    this.progression.tickMarks(delta);
 
     // Combo timer
     if (this.comboTimer > 0) {
@@ -674,8 +1172,58 @@ export class Game {
       for (const enemy of this.enemies) {
         if (enemy.fsm.currentState === "DEAD" || !circlesOverlap(bullet, enemy)) continue;
 
-        bullet.alive = false;
-        const result = enemy.takeDamage(bullet.damage);
+        // Apply shredder bonus (per-enemy hit stacking)
+        let bulletDmg = bullet.damage;
+        const shredBonus = this.progression.getShredderBonus(enemy.id);
+        if (shredBonus > 0) bulletDmg = Math.round(bulletDmg * (1 + shredBonus));
+        this.progression.addShredderStack(enemy.id);
+
+        // Mark Target bonus — marked enemies take +20% damage
+        const markBonus = this.progression.getMarkBonus(enemy.id);
+        if (markBonus > 0) bulletDmg = Math.round(bulletDmg * (1 + markBonus));
+
+        // Mark Target — mark this enemy on hit
+        if (bullet._markTarget) this.progression.markEnemy(enemy.id);
+
+        // Piercing — bullet passes through instead of dying
+        if (bullet._piercing > 0) {
+          bullet._piercing -= 1;
+          bullet.damage = Math.round(bullet.damage * 0.7); // reduce for next hit
+        } else {
+          bullet.alive = false;
+        }
+
+        // Ricochet — bounce toward next nearest enemy
+        if (!bullet.alive && bullet._ricochet > 0) {
+          let nearest = null, nearDist = 300;
+          for (const other of this.enemies) {
+            if (other === enemy || other.fsm.currentState === "DEAD") continue;
+            const d = Math.hypot(other.x - bullet.x, other.y - bullet.y);
+            if (d < nearDist) { nearDist = d; nearest = other; }
+          }
+          if (nearest) {
+            const a = Math.atan2(nearest.y - bullet.y, nearest.x - bullet.x);
+            const speed = Math.hypot(bullet.vx, bullet.vy);
+            this.bullets.push(new Bullet({
+              x: bullet.x, y: bullet.y,
+              vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
+              radius: bullet.radius,
+              damage: Math.round(bulletDmg * 0.6),
+              life: 0.5,
+              color: bullet.color,
+              friendly: true,
+              _ricochet: bullet._ricochet - 1,
+              _piercing: 0,
+              _knockback: bullet._knockback,
+              _blastRadius: bullet._blastRadius,
+              _markTarget: bullet._markTarget,
+              _lightningChain: 0,
+              _shockwave: bullet._shockwave,
+            }));
+          }
+        }
+
+        const result = enemy.takeDamage(bulletDmg);
 
         if (result.hit) {
           this.audio.playEnemyHit();
@@ -705,95 +1253,64 @@ export class Game {
             );
           }
 
-          // Damage number
-          this.spawnDamageNumber(enemy.x, enemy.y - enemy.radius - 8, bullet.damage, bullet.color);
+          // Damage number (show crit indicator)
+          const dmgColor = bullet._isCrit ? "#ffffff" : bullet.color;
+          const dmgText = bullet._isCrit ? `${bulletDmg} CRIT` : bulletDmg;
+          this.spawnDamageNumber(enemy.x, enemy.y - enemy.radius - 8, dmgText, dmgColor);
+
+          // Knockback — push enemy away from bullet direction
+          if (bullet._knockback && !enemy.isBoss) {
+            const kbAngle = Math.atan2(bullet.vy, bullet.vx);
+            const kbForce = 60;
+            enemy.x += Math.cos(kbAngle) * kbForce;
+            enemy.y += Math.sin(kbAngle) * kbForce;
+            keepCircleInBounds(enemy, this.bounds);
+          }
+
+          // Blast Core — AoE explosion on hit
+          if (bullet._blastRadius > 0) {
+            this.spawnBurst(bullet.x, bullet.y, "#ff6633", 12, 30, 120);
+            this.screenShake = Math.max(this.screenShake, 10);
+            for (const other of this.enemies) {
+              if (other === enemy || other.fsm.currentState === "DEAD") continue;
+              const d = Math.hypot(other.x - bullet.x, other.y - bullet.y);
+              if (d < bullet._blastRadius) {
+                const aoeDmg = Math.round(bulletDmg * 0.4);
+                const aoeResult = other.takeDamage(aoeDmg);
+                if (aoeResult.hit) {
+                  this.spawnDamageNumber(other.x, other.y - other.radius - 8, aoeDmg, "#ff6633");
+                }
+                if (aoeResult.killed) {
+                  this.handleEnemyKill(other, bullet);
+                }
+              }
+            }
+          }
+          // Lightning Chain — spawn chain bolts to nearby enemies
+          if (bullet._lightningChain > 0) {
+            const chainTargets = [];
+            for (const other of this.enemies) {
+              if (other === enemy || other.fsm.currentState === "DEAD") continue;
+              const d = Math.hypot(other.x - enemy.x, other.y - enemy.y);
+              if (d < 150) chainTargets.push({ enemy: other, dist: d });
+            }
+            chainTargets.sort((a, b) => a.dist - b.dist);
+            const chainCount = Math.min(bullet._lightningChain, chainTargets.length);
+            for (let ci = 0; ci < chainCount; ci++) {
+              const target = chainTargets[ci].enemy;
+              const chainDmg = Math.round(bulletDmg * 0.35);
+              const chainResult = target.takeDamage(chainDmg);
+              if (chainResult.hit) {
+                this.spawnDamageNumber(target.x, target.y - target.radius - 8, chainDmg, "#88ccff");
+                this.spawnBurst(target.x, target.y, "#88ccff", 6, 15, 60);
+              }
+              if (chainResult.killed) this.handleEnemyKill(target, bullet);
+            }
+          }
         }
 
         if (result.killed) {
-          // Combo system
-          this.combo += 1;
-          this.comboTimer = 2.5;
-          if (this.combo > this.maxCombo) this.maxCombo = this.combo;
-
-          const multiplier = this.getComboMultiplier();
-          const points = Math.floor(enemy.config.score * Math.max(1, this.waveSpawner.wave) * multiplier);
-          this.score += points;
-          this.player.kills += 1;
-
-          this.audio.playEnemyKill();
-          this.screenShake = Math.max(this.screenShake, 20);
-
-          // Massive gore explosion on kill
-          const killAngle = Math.atan2(bullet.vy, bullet.vx);
-          this.spawnDirectionalBlood(enemy.x, enemy.y, killAngle, 24, 90, 320);
-          // Backspray
-          this.spawnDirectionalBlood(enemy.x, enemy.y, killAngle + Math.PI, 10, 40, 140);
-          // Omnidirectional blood burst
-          this.spawnDirectionalBlood(enemy.x, enemy.y, Math.random() * Math.PI * 2, 12, 50, 180);
-          // Gibs — more for bigger enemies
-          const gibCount = enemy.type === "brute" ? 10 + Math.floor(Math.random() * 6) : 5 + Math.floor(Math.random() * 5);
-          this.spawnGibs(enemy.x, enemy.y, enemy.radius, enemy.config.bodyColor, gibCount);
-          // Multiple blood mist clouds
-          this.spawnBloodMist(enemy.x, enemy.y, enemy.radius);
-          this.spawnBloodMist(enemy.x, enemy.y, enemy.radius * 0.6);
-
-          // Wall splatter — blood that flies toward arena edges
-          const edgeDist = Math.min(enemy.x, enemy.y, this.bounds.width - enemy.x, this.bounds.height - enemy.y);
-          if (edgeDist < 120) {
-            this.leaveBlood(enemy.x, enemy.y, enemy.radius * 2.0);
-          }
-
-          // Combo text
-          if (this.combo > 1) {
-            this.spawnDamageNumber(
-              enemy.x, enemy.y - enemy.radius - 22,
-              `${this.combo}x COMBO`, "#ffc850"
-            );
-          }
-
-          // Score text
-          this.spawnDamageNumber(enemy.x + 15, enemy.y - enemy.radius - 12, `+${points}`, "#fff");
-
-          // Drop pickup (25% chance)
-          if (Math.random() < 0.25) {
-            this.pickups.push({
-              x: enemy.x + randomRange(-10, 10),
-              y: enemy.y + randomRange(-10, 10),
-              radius: 8,
-              type: "health",
-              amount: 12,
-              life: 10,
-              bobPhase: Math.random() * Math.PI * 2,
-            });
-          }
-
-          // Boss death — massive effects
-          if (enemy.isBoss) {
-            this.bossDeathFlash = 1;
-            this.screenShake = Math.max(this.screenShake, 40);
-            // Extra massive gore
-            for (let bi = 0; bi < 3; bi++) {
-              this.spawnDirectionalBlood(enemy.x, enemy.y, Math.random() * Math.PI * 2, 30, 100, 400);
-            }
-            this.spawnGibs(enemy.x, enemy.y, enemy.radius, enemy.config.bodyColor, 20);
-            this.spawnBloodMist(enemy.x, enemy.y, enemy.radius * 2);
-            this.spawnBloodMist(enemy.x, enemy.y, enemy.radius * 1.5);
-            // Guaranteed health drops
-            for (let pi = 0; pi < 3; pi++) {
-              this.pickups.push({
-                x: enemy.x + randomRange(-30, 30),
-                y: enemy.y + randomRange(-30, 30),
-                radius: 8,
-                type: "health",
-                amount: 20,
-                life: 12,
-                bobPhase: Math.random() * Math.PI * 2,
-              });
-            }
-            // Big score popup
-            this.spawnDamageNumber(enemy.x, enemy.y - enemy.radius - 35, "BOSS SLAIN!", "#ff4444");
-            this.activeBoss = null;
-          }
+          this.handleEnemyKill(enemy, bullet);
         }
         break;
       }
@@ -824,20 +1341,195 @@ export class Game {
       }
     }
 
-    // Player vs pickups
+    // Player vs pickups (with magnet core radius modifier)
+    const pickupRadiusMult = this.progression.getPickupRadiusMultiplier();
     for (const pickup of this.pickups) {
       if (pickup.life <= 0) continue;
       const dx = this.player.x - pickup.x;
       const dy = this.player.y - pickup.y;
       const dist = Math.hypot(dx, dy);
-      if (dist < this.player.radius + pickup.radius) {
+      if (dist < (this.player.radius + pickup.radius) * pickupRadiusMult) {
         if (pickup.type === "health") {
           this.player.heal(pickup.amount);
           this.spawnBurst(pickup.x, pickup.y, "#78ff78", 8, 15, 55);
           this.spawnDamageNumber(pickup.x, pickup.y - 15, `+${pickup.amount} HP`, "#78ff78");
+        } else if (pickup.type === "scrap") {
+          this.progression.scrap += pickup.amount;
+          this.spawnBurst(pickup.x, pickup.y, "#ffc850", 6, 12, 45);
+          this.spawnDamageNumber(pickup.x, pickup.y - 15, `+${pickup.amount} SCRAP`, "#ffc850");
         }
         pickup.life = 0;
       }
+    }
+  }
+
+  /** Shared enemy-kill handling — called from main hit loop and blast AoE. */
+  handleEnemyKill(enemy, bullet) {
+    // Combo system
+    this.combo += 1;
+    this.comboTimer = 2.5;
+    if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+
+    const multiplier = this.getComboMultiplier();
+    const points = Math.floor(enemy.config.score * Math.max(1, this.waveSpawner.wave) * multiplier);
+    this.score += points;
+    this.player.kills += 1;
+
+    this.audio.playEnemyKill();
+    this.screenShake = Math.max(this.screenShake, 20);
+
+    // Progression: XP
+    const xp = this.progression.getXpFromKill(enemy);
+    const levelUps = this.progression.addXp(xp);
+    if (levelUps > 0) {
+      // Queue all level-ups; triggerLevelUp will show the first
+      this.levelUpQueue = (this.levelUpQueue || 0) + levelUps;
+      if (!this.progression.levelUpActive && !this.progression.bossRewardActive) {
+        this.triggerLevelUp();
+      }
+    }
+
+    // Progression: Scrap
+    const scrapAmt = this.progression.getScrapFromKill(enemy);
+    if (scrapAmt > 0) {
+      // Bosses drop multiple scrap pickups spread around, normal enemies drop one
+      const pickupCount = enemy.isBoss ? 5 : 1;
+      const perPickup = Math.ceil(scrapAmt / pickupCount);
+      for (let si = 0; si < pickupCount; si++) {
+        this.pickups.push({
+          x: enemy.x + randomRange(-20, 20),
+          y: enemy.y + randomRange(-20, 20),
+          radius: 6,
+          type: "scrap",
+          amount: perPickup,
+          life: 12,
+          bobPhase: Math.random() * Math.PI * 2,
+        });
+      }
+    }
+
+    // Progression: Heal on kill
+    const healAmt = this.progression.getHealOnKill();
+    if (healAmt > 0) {
+      this.player.heal(healAmt);
+    }
+
+    // Progression: Clear shredder stacks for dead enemy
+    this.progression.clearShredderStacks(enemy.id);
+
+    // Massive gore explosion on kill
+    const killAngle = Math.atan2(bullet.vy, bullet.vx);
+    this.spawnDirectionalBlood(enemy.x, enemy.y, killAngle, 24, 90, 320);
+    this.spawnDirectionalBlood(enemy.x, enemy.y, killAngle + Math.PI, 10, 40, 140);
+    this.spawnDirectionalBlood(enemy.x, enemy.y, Math.random() * Math.PI * 2, 12, 50, 180);
+    const gibCount = enemy.type === "brute" ? 10 + Math.floor(Math.random() * 6) : 5 + Math.floor(Math.random() * 5);
+    this.spawnGibs(enemy.x, enemy.y, enemy.radius, enemy.config.bodyColor, gibCount);
+    this.spawnBloodMist(enemy.x, enemy.y, enemy.radius);
+    this.spawnBloodMist(enemy.x, enemy.y, enemy.radius * 0.6);
+
+    const edgeDist = Math.min(enemy.x, enemy.y, this.bounds.width - enemy.x, this.bounds.height - enemy.y);
+    if (edgeDist < 120) {
+      this.leaveBlood(enemy.x, enemy.y, enemy.radius * 2.0);
+    }
+
+    // Combo text
+    if (this.combo > 1) {
+      this.spawnDamageNumber(enemy.x, enemy.y - enemy.radius - 22, `${this.combo}x COMBO`, "#ffc850");
+    }
+
+    // Score text
+    this.spawnDamageNumber(enemy.x + 15, enemy.y - enemy.radius - 12, `+${points}`, "#fff");
+
+    // Drop pickup (25% chance)
+    if (Math.random() < 0.25) {
+      this.pickups.push({
+        x: enemy.x + randomRange(-10, 10),
+        y: enemy.y + randomRange(-10, 10),
+        radius: 8,
+        type: "health",
+        amount: 12,
+        life: 10,
+        bobPhase: Math.random() * Math.PI * 2,
+      });
+    }
+
+    // Chain Reaction — enemies explode on death
+    if (this.progression.hasChainReaction()) {
+      const chainRadius = 55;
+      this.spawnBurst(enemy.x, enemy.y, "#ff4444", 16, 40, 160);
+      for (const other of this.enemies) {
+        if (other === enemy || other.fsm.currentState === "DEAD") continue;
+        const d = Math.hypot(other.x - enemy.x, other.y - enemy.y);
+        if (d < chainRadius) {
+          const chainDmg = 15;
+          const chainResult = other.takeDamage(chainDmg);
+          if (chainResult.hit) {
+            this.spawnDamageNumber(other.x, other.y - other.radius - 8, chainDmg, "#ff4444");
+          }
+          // Chain kills don't re-trigger chain to prevent infinite cascades
+        }
+      }
+    }
+
+    // Shockwave — kills push nearby enemies back (shotgun upgrade)
+    if (bullet._shockwave && !enemy.isBoss) {
+      const swRadius = 80;
+      for (const other of this.enemies) {
+        if (other === enemy || other.fsm.currentState === "DEAD" || other.isBoss) continue;
+        const d = Math.hypot(other.x - enemy.x, other.y - enemy.y);
+        if (d < swRadius && d > 0) {
+          const pushAngle = Math.atan2(other.y - enemy.y, other.x - enemy.x);
+          const pushForce = 90 * (1 - d / swRadius);
+          other.x += Math.cos(pushAngle) * pushForce;
+          other.y += Math.sin(pushAngle) * pushForce;
+          keepCircleInBounds(other, this.bounds);
+        }
+      }
+      this.spawnBurst(enemy.x, enemy.y, "#ffaa33", 10, 30, 100);
+    }
+
+    // Freeze Field — kills slow nearby enemies for 1.5s
+    if (this.progression.hasFreezeField()) {
+      const freezeRadius = 100;
+      for (const other of this.enemies) {
+        if (other === enemy || other.fsm.currentState === "DEAD") continue;
+        const d = Math.hypot(other.x - enemy.x, other.y - enemy.y);
+        if (d < freezeRadius) {
+          other.slowTimer = 1.5;
+          other.slowFactor = 0.4; // 60% slower
+        }
+      }
+      this.spawnBurst(enemy.x, enemy.y, "#88ddff", 12, 25, 90);
+    }
+
+    // Boss death — massive effects + boss reward
+    if (enemy.isBoss) {
+      this.bossDeathFlash = 1;
+      this.screenShake = Math.max(this.screenShake, 40);
+      for (let bi = 0; bi < 3; bi++) {
+        this.spawnDirectionalBlood(enemy.x, enemy.y, Math.random() * Math.PI * 2, 30, 100, 400);
+      }
+      this.spawnGibs(enemy.x, enemy.y, enemy.radius, enemy.config.bodyColor, 20);
+      this.spawnBloodMist(enemy.x, enemy.y, enemy.radius * 2);
+      this.spawnBloodMist(enemy.x, enemy.y, enemy.radius * 1.5);
+      for (let pi = 0; pi < 3; pi++) {
+        this.pickups.push({
+          x: enemy.x + randomRange(-30, 30),
+          y: enemy.y + randomRange(-30, 30),
+          radius: 8,
+          type: "health",
+          amount: 20,
+          life: 12,
+          bobPhase: Math.random() * Math.PI * 2,
+        });
+      }
+      this.spawnDamageNumber(enemy.x, enemy.y - enemy.radius - 35, "BOSS SLAIN!", "#ff4444");
+      this.activeBoss = null;
+
+      // Trigger boss reward after a brief pause
+      setTimeout(() => {
+        if (this.state === "playing") this.triggerBossReward(enemy);
+      }, 600);
     }
   }
 
@@ -871,6 +1563,7 @@ export class Game {
     for (const p of this.pickups) {
       p.life -= delta;
       p.bobPhase += delta * 3;
+      p.age = (p.age || 0) + delta;
     }
   }
 
@@ -976,18 +1669,23 @@ export class Game {
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 100 + Math.random() * 280;
-      this.gibs.push({
+      const useImage = Math.random() < 0.3 && this.gibImgs.length > 0;
+      const gib = {
         x, y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         rotation: Math.random() * Math.PI * 2,
         rotSpeed: (Math.random() - 0.5) * 18,
-        size: 3 + Math.random() * (radius * 0.55),
+        size: useImage ? (6 + Math.random() * 10) : (3 + Math.random() * (radius * 0.55)),
         life: 1.5 + Math.random() * 2.0,
         color: GIB_COLORS[Math.floor(Math.random() * GIB_COLORS.length)],
         shape: GIB_SHAPES[Math.floor(Math.random() * GIB_SHAPES.length)],
         trailTimer: 0,
-      });
+      };
+      if (useImage) {
+        gib.img = this.gibImgs[Math.floor(Math.random() * this.gibImgs.length)];
+      }
+      this.gibs.push(gib);
     }
   }
 
@@ -1057,6 +1755,14 @@ export class Game {
     );
 
     this.ui.showPause(false);
+    this.ui.showLevelUp(false);
+    this.ui.showBossReward(false);
+    this.ui.showLoadout(false);
+    this.ui.showHudHint(false);
+    this.gameSpeed = 1;
+    this.loadoutOpen = false;
+    this.progression.levelUpActive = false;
+    this.progression.bossRewardActive = false;
     this.ui.showGameOver(
       true,
       `Score: ${this.score.toLocaleString()} \u2022 Wave: ${this.waveSpawner.wave} \u2022 Kills: ${this.player.kills} \u2022 Max Combo: ${this.maxCombo}x`,
@@ -1142,52 +1848,55 @@ export class Game {
       ctx.translate(g.x, g.y);
       ctx.rotate(g.rotation);
 
-      ctx.fillStyle = g.color;
       const s = g.size;
 
-      if (g.shape === "shard") {
-        // Sharp bone-like shard
+      // Image-based gib
+      if (g.img && g.img.complete && g.img.naturalWidth > 0) {
+        ctx.drawImage(g.img, -s, -s, s * 2, s * 2);
+      } else if (!g.img) {
+        // Procedural gib (original shapes)
+        ctx.fillStyle = g.color;
+
+        if (g.shape === "shard") {
+          ctx.beginPath();
+          ctx.moveTo(0, -s);
+          ctx.lineTo(s * 0.4, 0);
+          ctx.lineTo(0, s * 1.2);
+          ctx.lineTo(-s * 0.3, 0);
+          ctx.closePath();
+          ctx.fill();
+        } else if (g.shape === "round") {
+          ctx.beginPath();
+          ctx.arc(0, 0, s * 0.7, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "rgba(180,30,30,0.5)";
+          ctx.beginPath();
+          ctx.arc(s * 0.15, -s * 0.1, s * 0.35, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (g.shape === "strip") {
+          ctx.beginPath();
+          ctx.moveTo(-s * 1.2, -s * 0.2);
+          ctx.quadraticCurveTo(0, -s * 0.5, s * 1.0, -s * 0.15);
+          ctx.lineTo(s * 0.8, s * 0.25);
+          ctx.quadraticCurveTo(0, s * 0.4, -s * 1.0, s * 0.2);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(-s, -s * 0.6);
+          ctx.lineTo(s * 0.7, -s * 0.4);
+          ctx.lineTo(s, s * 0.5);
+          ctx.lineTo(-s * 0.3, s * 0.8);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // Wet blood sheen on procedural gibs
+        ctx.fillStyle = "rgba(160,20,20,0.45)";
         ctx.beginPath();
-        ctx.moveTo(0, -s);
-        ctx.lineTo(s * 0.4, 0);
-        ctx.lineTo(0, s * 1.2);
-        ctx.lineTo(-s * 0.3, 0);
-        ctx.closePath();
-        ctx.fill();
-      } else if (g.shape === "round") {
-        // Fleshy round chunk
-        ctx.beginPath();
-        ctx.arc(0, 0, s * 0.7, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "rgba(180,30,30,0.5)";
-        ctx.beginPath();
-        ctx.arc(s * 0.15, -s * 0.1, s * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (g.shape === "strip") {
-        // Elongated meat strip
-        ctx.beginPath();
-        ctx.moveTo(-s * 1.2, -s * 0.2);
-        ctx.quadraticCurveTo(0, -s * 0.5, s * 1.0, -s * 0.15);
-        ctx.lineTo(s * 0.8, s * 0.25);
-        ctx.quadraticCurveTo(0, s * 0.4, -s * 1.0, s * 0.2);
-        ctx.closePath();
-        ctx.fill();
-      } else {
-        // Default irregular chunk
-        ctx.beginPath();
-        ctx.moveTo(-s, -s * 0.6);
-        ctx.lineTo(s * 0.7, -s * 0.4);
-        ctx.lineTo(s, s * 0.5);
-        ctx.lineTo(-s * 0.3, s * 0.8);
-        ctx.closePath();
+        ctx.arc(0, 0, s * 0.3, 0, Math.PI * 2);
         ctx.fill();
       }
-
-      // Wet blood sheen on all gibs
-      ctx.fillStyle = "rgba(160,20,20,0.45)";
-      ctx.beginPath();
-      ctx.arc(0, 0, s * 0.3, 0, Math.PI * 2);
-      ctx.fill();
 
       // Trailing blood drip from gib
       const speed = Math.hypot(g.vx, g.vy);
@@ -1263,37 +1972,45 @@ export class Game {
       const fadeAlpha = p.life < 2 ? p.life / 2 : 1;
       const bob = Math.sin(p.bobPhase) * 3;
 
+      // Spawn pop-in scale (first 0.25s)
+      const age = p.age || 0;
+      const spawnT = Math.min(age / 0.25, 1);
+      const spawnScale = spawnT < 1 ? 1.4 - 0.4 * spawnT : 1; // start big, settle to 1
+
       ctx.save();
       ctx.translate(p.x, p.y + bob);
-      ctx.globalAlpha = fadeAlpha;
+      ctx.globalAlpha = fadeAlpha * Math.min(spawnT * 4, 1); // fade in quickly
 
-      // Outer glow
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = "#78ff78";
+      const isScrap = p.type === "scrap";
+      const img = isScrap ? this.scrapImg : this.hpImg;
+      const glowColor = isScrap ? "#ffc850" : "#78ff78";
+      const drawSize = (isScrap ? 14 : 16) * spawnScale;
 
-      // Pulsing ring
+      // Pulsing glow ring
       const pulse = 0.3 + Math.sin(t * 4 + p.bobPhase) * 0.15;
-      ctx.strokeStyle = `rgba(120,255,120,${pulse})`;
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = glowColor;
+      ctx.strokeStyle = glowColor;
+      ctx.globalAlpha = fadeAlpha * pulse;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.arc(0, 0, p.radius + 4 + Math.sin(t * 3) * 2, 0, Math.PI * 2);
+      ctx.arc(0, 0, drawSize + 3, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.globalAlpha = fadeAlpha * Math.min(spawnT * 4, 1);
 
-      // Core orb
-      const orbGrad = ctx.createRadialGradient(0, 0, 1, 0, 0, p.radius);
-      orbGrad.addColorStop(0, "#ccffcc");
-      orbGrad.addColorStop(0.5, "#55dd55");
-      orbGrad.addColorStop(1, "#228822");
-      ctx.fillStyle = orbGrad;
-      ctx.beginPath();
-      ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Cross symbol
-      ctx.fillStyle = "#ffffff";
-      ctx.globalAlpha = fadeAlpha * 0.8;
-      ctx.fillRect(-1.5, -4, 3, 8);
-      ctx.fillRect(-4, -1.5, 8, 3);
+      // Draw the image
+      if (img.complete && img.naturalWidth > 0) {
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = glowColor;
+        ctx.drawImage(img, -drawSize, -drawSize, drawSize * 2, drawSize * 2);
+        ctx.shadowBlur = 0;
+      } else {
+        // Fallback: simple colored circle if image not loaded
+        ctx.fillStyle = glowColor;
+        ctx.beginPath();
+        ctx.arc(0, 0, drawSize * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       ctx.restore();
     }
@@ -1712,115 +2429,202 @@ export class Game {
   renderHud() {
     if (this.state === "menu") return;
     const { ctx, bounds } = this;
+    const s = this.settings.get("uiScale") || 1.0;
 
     ctx.save();
 
-    // ---- Health bar (bottom-center) ----
-    const barW = 200;
-    const barH = 8;
-    const barX = (bounds.width - barW) / 2;
-    const barY = bounds.height - 32;
+    // ---- Bottom-center HUD: [ HEALTH ] [ SCRAP ] [ XP ] ----
+    const hudY = bounds.height - Math.round(36 * s);
+    const barH = Math.round(16 * s);
+    const healthW = Math.round(220 * s);
+    const scrapW = Math.round(100 * s);
+    const xpW = Math.round(220 * s);
+    const gap = Math.round(22 * s);
+    const totalW = healthW + gap + scrapW + gap + xpW;
+    const startX = (bounds.width - totalW) / 2;
+
+    // == HEALTH BAR (left) ==
+    const hpX = startX;
+    const hpY = hudY - barH / 2;
     const pct = clamp(this.player.health / this.player.maxHealth, 0, 1);
+    const hpFill = pct > 0.6 ? "#00e050" : pct > 0.3 ? "#ffcc00" : "#ff2244";
 
     // Background
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
     ctx.beginPath();
-    ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 4);
+    ctx.roundRect(hpX - 2, hpY - 2, healthW + 4, barH + 4, Math.round(5 * s));
     ctx.fill();
 
     // Border
-    ctx.strokeStyle = "rgba(0,255,136,0.25)";
-    ctx.lineWidth = 1;
+    const hpBorder = pct > 0.6 ? "rgba(0,224,80,0.18)" : pct > 0.3 ? "rgba(255,204,0,0.18)" : "rgba(255,80,100,0.18)";
+    ctx.strokeStyle = hpBorder;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 4);
+    ctx.roundRect(hpX - 2, hpY - 2, healthW + 4, barH + 4, Math.round(5 * s));
     ctx.stroke();
 
     // Fill
-    const hpColor = pct > 0.6 ? "#00ff88" : pct > 0.3 ? "#ffcc00" : "#ff3355";
-    ctx.fillStyle = hpColor;
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = hpColor;
+    ctx.fillStyle = hpFill;
+    ctx.shadowBlur = Math.round(12 * s);
+    ctx.shadowColor = hpFill;
     ctx.beginPath();
-    ctx.roundRect(barX, barY, barW * pct, barH, 3);
+    ctx.roundRect(hpX, hpY, healthW * pct, barH, Math.round(4 * s));
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // HP text
-    ctx.font = '600 11px "Inter", sans-serif';
-    ctx.textAlign = "center";
+    // HP label (left above bar)
+    ctx.font = `700 ${Math.round(12 * s)}px "Share Tech Mono", monospace`;
+    ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
-    ctx.fillStyle = "rgba(255,255,255,0.6)";
-    ctx.fillText(`${Math.ceil(this.player.health)} / ${this.player.maxHealth}`, bounds.width / 2, barY - 5);
+    ctx.fillStyle = pct > 0.6 ? "rgba(0,224,80,0.65)" : pct > 0.3 ? "rgba(255,204,0,0.65)" : "rgba(255,100,120,0.65)";
+    ctx.fillText("HP", hpX, hpY - Math.round(4 * s));
+
+    // HP value (center above bar)
+    ctx.font = `600 ${Math.round(12 * s)}px "Inter", sans-serif`;
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.shadowBlur = 2;
+    ctx.shadowColor = "rgba(0,0,0,0.6)";
+    ctx.fillText(`${Math.ceil(this.player.health)} / ${this.player.maxHealth}`, hpX + healthW / 2, hpY - Math.round(4 * s));
+    ctx.shadowBlur = 0;
+
+    // == SCRAP (center) ==
+    const scrapX = hpX + healthW + gap;
+    ctx.font = `700 ${Math.round(16 * s)}px "Share Tech Mono", monospace`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "rgba(255,200,80,0.95)";
+    ctx.shadowBlur = Math.round(10 * s);
+    ctx.shadowColor = "rgba(255,200,80,0.4)";
+    ctx.fillText(`\u25C6 ${this.progression.scrap}`, scrapX + scrapW / 2, hudY - Math.round(2 * s));
+    ctx.shadowBlur = 0;
+
+    // SCRAP label below
+    ctx.font = `600 ${Math.round(9 * s)}px "Share Tech Mono", monospace`;
+    ctx.fillStyle = "rgba(255,200,80,0.55)";
+    ctx.fillText("SCRAP", scrapX + scrapW / 2, hudY + Math.round(12 * s));
+
+    // == XP BAR (right) ==
+    const xpBarH = Math.round(12 * s);
+    const xpX = scrapX + scrapW + gap;
+    const xpY = hudY - xpBarH / 2;
+    const xpPct = clamp(this.progression.xp / this.progression.xpMax, 0, 1);
+
+    // Background
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.beginPath();
+    ctx.roundRect(xpX - 1, xpY - 1, xpW + 2, xpBarH + 2, Math.round(4 * s));
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = "rgba(140,120,255,0.18)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(xpX - 1, xpY - 1, xpW + 2, xpBarH + 2, Math.round(4 * s));
+    ctx.stroke();
+
+    // Fill — purple
+    if (xpPct > 0) {
+      ctx.fillStyle = "#a78bfa";
+      ctx.shadowBlur = Math.round(10 * s);
+      ctx.shadowColor = "rgba(167,139,250,0.5)";
+      ctx.beginPath();
+      ctx.roundRect(xpX, xpY, xpW * xpPct, xpBarH, Math.round(3 * s));
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // Level badge (left above XP bar)
+    ctx.font = `700 ${Math.round(12 * s)}px "Share Tech Mono", monospace`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    ctx.fillStyle = "rgba(167,139,250,0.9)";
+    ctx.shadowBlur = 2;
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.fillText(`LV ${this.progression.level}`, xpX, xpY - Math.round(4 * s));
+    ctx.shadowBlur = 0;
+
+    // XP label (right above bar)
+    ctx.textAlign = "right";
+    ctx.fillStyle = "rgba(167,139,250,0.55)";
+    ctx.font = `600 ${Math.round(10 * s)}px "Share Tech Mono", monospace`;
+    ctx.fillText("XP", xpX + xpW, xpY - Math.round(4 * s));
 
     // ---- Top-left: Score + Wave (below brand corner) ----
-    const tlX = 16;
-    const tlY = 34;
+    const tlX = Math.round(16 * s);
+    const tlY = Math.round(34 * s);
 
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
 
     // Score
-    ctx.font = 'bold 18px "Orbitron", monospace';
+    ctx.font = `bold ${Math.round(20 * s)}px "Orbitron", monospace`;
     ctx.fillStyle = "#00ff88";
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = Math.round(10 * s);
     ctx.shadowColor = "rgba(0,255,136,0.3)";
     ctx.fillText(this.score.toLocaleString(), tlX, tlY);
     ctx.shadowBlur = 0;
 
     // Wave label
-    ctx.font = '500 11px "Inter", sans-serif';
+    ctx.font = `500 ${Math.round(12 * s)}px "Inter", sans-serif`;
     ctx.fillStyle = "rgba(0,255,136,0.45)";
-    ctx.fillText(`WAVE ${this.waveSpawner.wave}`, tlX, tlY + 24);
+    ctx.fillText(`WAVE ${this.waveSpawner.wave}`, tlX, tlY + Math.round(26 * s));
 
     // ---- Bottom-left: Weapon ----
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
-    ctx.font = '600 12px "Inter", sans-serif';
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.fillText(this.player.weapon.name.toUpperCase(), 22, bounds.height - 18);
+    ctx.font = `600 ${Math.round(13 * s)}px "Inter", sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.shadowBlur = 2;
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.fillText(this.player.weapon.name.toUpperCase(), Math.round(22 * s), bounds.height - Math.round(18 * s));
+    ctx.shadowBlur = 0;
 
     // Weapon indicator dots
     const weapons = this.player.weapons || [];
     for (let i = 0; i < weapons.length; i++) {
-      const dotX = 22 + i * 14;
-      const dotY = bounds.height - 38;
+      const dotX = Math.round(22 * s) + i * Math.round(16 * s);
+      const dotY = bounds.height - Math.round(40 * s);
       const active = weapons[i] === this.player.weapon;
       ctx.fillStyle = active ? "#00ff88" : "rgba(255,255,255,0.2)";
       ctx.beginPath();
-      ctx.arc(dotX + 4, dotY, 3, 0, Math.PI * 2);
+      ctx.arc(dotX + Math.round(4 * s), dotY, Math.round(3.5 * s), 0, Math.PI * 2);
       ctx.fill();
     }
 
     // ---- Bottom-right: Kills ----
     ctx.textAlign = "right";
     ctx.textBaseline = "bottom";
-    ctx.font = '600 12px "Inter", sans-serif';
-    ctx.fillStyle = "rgba(255,255,255,0.4)";
-    ctx.fillText(`${this.player.kills} KILLS`, bounds.width - 22, bounds.height - 18);
+    ctx.font = `600 ${Math.round(13 * s)}px "Inter", sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.shadowBlur = 2;
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.fillText(`${this.player.kills} KILLS`, bounds.width - Math.round(22 * s), bounds.height - Math.round(18 * s));
+    ctx.shadowBlur = 0;
 
     // ---- FPS counter (top-right) ----
     if (this.settings.get("showFps")) {
-      let fpsY = 16;
+      let fpsY = Math.round(16 * s);
       // Push below boss indicator widget when it's visible
       if (this.state === "playing" && this.waveSpawner.wave > 0) {
         const noActiveBoss = !this.activeBoss || this.activeBoss.fsm.currentState === "DEAD";
         const wl = this.waveSpawner.wavesUntilBoss();
-        if (noActiveBoss && wl !== Infinity && wl !== 0) fpsY = 78;
+        if (noActiveBoss && wl !== Infinity && wl !== 0) fpsY = Math.round(78 * s);
       }
       ctx.textAlign = "right";
       ctx.textBaseline = "top";
-      ctx.font = '600 11px "Share Tech Mono", monospace';
+      ctx.font = `600 ${Math.round(12 * s)}px "Share Tech Mono", monospace`;
       ctx.fillStyle = "rgba(0,255,136,0.45)";
-      ctx.fillText(`${this.fpsDisplay} FPS`, bounds.width - 16, fpsY);
+      ctx.fillText(`${this.fpsDisplay} FPS`, bounds.width - Math.round(16 * s), fpsY);
     }
 
     // ---- Dev mode indicator ----
     if (this.settings.get("devMode")) {
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
-      ctx.font = 'bold 10px "Share Tech Mono", monospace';
+      ctx.font = `bold ${Math.round(10 * s)}px "Share Tech Mono", monospace`;
       ctx.fillStyle = "rgba(255,0,255,0.6)";
-      ctx.fillText("DEV MODE", 16, bounds.height - 58);
+      ctx.fillText("DEV MODE", Math.round(16 * s), bounds.height - Math.round(58 * s));
     }
 
     ctx.restore();

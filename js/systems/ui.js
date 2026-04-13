@@ -100,6 +100,12 @@ export class UIManager {
     el.setDevNoclip.checked = settings.get("devNoclip");
     el.setDevObstacles.checked = settings.get("devShowObstacles");
 
+    // UI Scale
+    const uiScalePercent = Math.round(settings.get("uiScale") * 100);
+    el.setUiScale.value = uiScalePercent;
+    el.uiScaleVal.textContent = settings.get("uiScale").toFixed(1) + "x";
+    this._applyUiScale(settings.get("uiScale"));
+
     // Slider handlers
     el.setMasterVol.addEventListener("input", () => {
       settings.set("masterVolume", el.setMasterVol.value / 100);
@@ -112,6 +118,14 @@ export class UIManager {
     el.setSfxVol.addEventListener("input", () => {
       settings.set("sfxVolume", el.setSfxVol.value / 100);
       if (this.game) this.game.applySettings();
+    });
+
+    // UI Scale handler
+    el.setUiScale.addEventListener("input", () => {
+      const scale = el.setUiScale.value / 100;
+      settings.set("uiScale", scale);
+      el.uiScaleVal.textContent = scale.toFixed(1) + "x";
+      this._applyUiScale(scale);
     });
 
     // Toggle handlers
@@ -164,6 +178,11 @@ export class UIManager {
   }
   showSettings(visible) { this.toggleElement(this.elements.settingsScreen, visible); }
 
+  showLevelUp(visible) { this.toggleElement(this.elements.levelupScreen, visible); }
+  showBossReward(visible) { this.toggleElement(this.elements.bossRewardScreen, visible); }
+  showLoadout(visible) { this.toggleElement(this.elements.loadoutScreen, visible); }
+  showHudHint(visible) { this.toggleElement(this.elements.hudHint, visible); }
+
   showGameOver(visible, summary = "") {
     this.toggleElement(this.elements.gameOverScreen, visible);
     if (summary) this.elements.finalSummary.textContent = summary;
@@ -186,5 +205,13 @@ export class UIManager {
       this.toasts[i].life -= delta;
       if (this.toasts[i].life <= 0) this.toasts.splice(i, 1);
     }
+  }
+
+  _applyUiScale(scale) {
+    document.documentElement.style.setProperty("--ui-scale", scale);
+  }
+
+  getUiScale() {
+    return this.settings ? this.settings.get("uiScale") : 1.0;
   }
 }

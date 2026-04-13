@@ -288,8 +288,11 @@ export function setEnemyTypes(types) { ENEMY_TYPES = types; }
 /** Return current enemy type configs (for export). */
 export function getEnemyTypes() { return ENEMY_TYPES; }
 
+let _enemyIdCounter = 0;
+
 export class Enemy {
   constructor({ x, y, type, wave }) {
+    this.id = ++_enemyIdCounter;
     this.type = type;
     this.config = ENEMY_TYPES[type] || BOSS_TYPES[type];
     this.x = x;
@@ -570,9 +573,15 @@ export class Enemy {
       }
     }
 
+    // Tick slow timer (freeze field effect)
+    if (this.slowTimer > 0) {
+      this.slowTimer = Math.max(0, this.slowTimer - delta);
+    }
+
     // Apply buff speed boost
     const speedMult = this.buffed ? 1.18 : 1;
-    this._effectiveSpeed = this.speed * speedMult;
+    const slowMult = this.slowTimer > 0 ? (this.slowFactor || 1) : 1;
+    this._effectiveSpeed = this.speed * speedMult * slowMult;
     this.buffed = false;
     const isChase = this.stateLabel === "CHASE";
 

@@ -1,5 +1,6 @@
 export class Bullet {
-  constructor({ x, y, vx, vy, radius, damage, life, color, friendly = true }) {
+  constructor({ x, y, vx, vy, radius, damage, life, color, friendly = true,
+                _ricochet = 0, _knockback = false, _blastRadius = 0, _isCrit = false }) {
     this.x = x;
     this.y = y;
     this.vx = vx;
@@ -13,6 +14,11 @@ export class Bullet {
     this.alive = true;
     this.trail = [];
     this.trailMax = 8;
+    // Progression-driven properties
+    this._ricochet = _ricochet;
+    this._knockback = _knockback;
+    this._blastRadius = _blastRadius;
+    this._isCrit = _isCrit;
   }
 
   update(delta, bounds) {

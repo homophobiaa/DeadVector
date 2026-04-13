@@ -112,3 +112,499 @@
   95%           { transform: translate(2px, -1px); }
   97%           { transform: translate(-1px, -1px); }
 }
+
+/* ============================================================
+   Progression UI — Level-up cards, boss rewards, loadout menu
+   ============================================================ */
+
+/* ---- HUD hint (bottom-left keybind) ---- */
+.hud-hint {
+  position: absolute;
+  left: calc(16px * var(--ui-scale, 1));
+  bottom: calc(60px * var(--ui-scale, 1));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: calc(0.72rem * var(--ui-scale, 1));
+  letter-spacing: 0.12em;
+  color: rgba(0, 255, 136, 0.5);
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.2);
+  z-index: 10;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.hud-hint-label {
+  font-size: calc(0.62rem * var(--ui-scale, 1));
+  font-weight: 600;
+  color: rgba(0, 255, 136, 0.45);
+  letter-spacing: 0.1em;
+}
+
+.hud-hint-keys {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.hud-key {
+  display: inline-block;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: calc(0.58rem * var(--ui-scale, 1));
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(0, 255, 136, 0.7);
+  background: rgba(0, 255, 136, 0.06);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 3px;
+  padding: 0.15rem 0.45rem;
+  line-height: 1.1;
+}
+
+/* ---- Level-up / Boss reward overlay ---- */
+.levelup-overlay {
+  background: rgba(2, 4, 2, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.levelup-inner {
+  text-align: center;
+  animation: panelSlideUp 0.25s var(--ease-out) both;
+}
+
+.levelup-title {
+  font-family: 'Orbitron', monospace;
+  font-weight: 900;
+  font-size: 1.4rem;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  text-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+  margin-bottom: 0.2rem;
+}
+
+.boss-reward-title {
+  color: #ffc850;
+  text-shadow: 0 0 20px rgba(255, 200, 80, 0.4);
+}
+
+.levelup-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  margin-bottom: 1.1rem;
+  letter-spacing: 0.04em;
+}
+
+.levelup-sub kbd {
+  font-size: 0.58rem;
+  padding: 0.08rem 0.28rem;
+}
+
+/* ---- Upgrade cards row ---- */
+.levelup-cards {
+  display: flex;
+  justify-content: center;
+  gap: 0.85rem;
+}
+
+.upgrade-card {
+  width: calc(175px * var(--ui-scale, 1));
+  padding: calc(1rem * var(--ui-scale, 1)) calc(0.8rem * var(--ui-scale, 1)) calc(0.85rem * var(--ui-scale, 1));
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(0, 255, 136, 0.04), transparent 50%),
+    rgba(10, 18, 10, 0.92);
+  cursor: pointer;
+  text-align: center;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    transform 0.12s var(--ease-out),
+    box-shadow 0.15s;
+  position: relative;
+  animation: cardPop 0.3s var(--ease-bounce) both;
+}
+
+.upgrade-card:nth-child(1) { animation-delay: 0.05s; }
+.upgrade-card:nth-child(2) { animation-delay: 0.12s; }
+.upgrade-card:nth-child(3) { animation-delay: 0.19s; }
+
+@keyframes cardPop {
+  from { opacity: 0; transform: translateY(12px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.upgrade-card:hover {
+  border-color: var(--accent);
+  background:
+    linear-gradient(180deg, rgba(0, 255, 136, 0.1), transparent 50%),
+    rgba(10, 18, 10, 0.95);
+  transform: translateY(-3px);
+  box-shadow: 0 0 24px rgba(0, 255, 136, 0.12), 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.upgrade-card:active {
+  transform: translateY(0);
+}
+
+.upgrade-card.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.upgrade-card .card-key {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+
+.upgrade-card .card-category {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-dim);
+  margin-bottom: 0.45rem;
+}
+
+.upgrade-card .card-category.cat-rare {
+  color: #ffc850;
+}
+
+.upgrade-card .card-name {
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--text-main);
+  margin-bottom: 0.3rem;
+}
+
+.upgrade-card .card-desc {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.62rem;
+  color: var(--text-soft);
+  line-height: 1.35;
+}
+
+.upgrade-card .card-cost {
+  margin-top: 0.4rem;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.58rem;
+  color: #ffc850;
+  letter-spacing: 0.06em;
+}
+
+.upgrade-card .card-cost.insufficient {
+  color: var(--danger);
+}
+
+/* ---- Loadout panel ---- */
+.loadout-panel {
+  width: min(calc(780px * var(--ui-scale, 1)), calc(100% - 2rem));
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  text-align: left;
+  padding: calc(1.6rem * var(--ui-scale, 1)) calc(2rem * var(--ui-scale, 1)) calc(1.2rem * var(--ui-scale, 1));
+}
+
+.loadout-title {
+  text-align: center;
+  margin-bottom: 1.1rem;
+}
+
+/* ---- Weapon / Global columns ---- */
+.loadout-columns {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.loadout-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem 0.5rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(0, 255, 136, 0.015);
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+.loadout-col:hover {
+  border-color: var(--line-strong);
+}
+
+.loadout-col[style*="cursor"] {
+  transition: border-color 0.2s, background 0.2s, transform 0.12s;
+}
+
+.loadout-col[style*="cursor"]:hover {
+  transform: translateY(-2px);
+}
+
+.loadout-col[style*="cursor"]:active {
+  transform: translateY(0);
+}
+
+.loadout-col.col-locked {
+  opacity: 0.4;
+}
+
+.loadout-col.col-equipped {
+  border-color: var(--accent-dim);
+  background: rgba(0, 255, 136, 0.04);
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.06);
+}
+
+/* Column icon */
+.col-icon {
+  width: calc(40px * var(--ui-scale, 1));
+  height: calc(40px * var(--ui-scale, 1));
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--line);
+  margin-bottom: 0.45rem;
+  position: relative;
+}
+
+.col-icon-glyph {
+  font-size: 1.1rem;
+  color: var(--col-color, var(--accent));
+  filter: drop-shadow(0 0 4px var(--col-color, var(--accent)));
+  line-height: 1;
+}
+
+/* Column name */
+.col-name {
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  font-size: calc(0.68rem * var(--ui-scale, 1));
+  letter-spacing: 0.14em;
+  color: var(--text-main);
+  margin-bottom: 0.2rem;
+}
+
+/* Status badge */
+.col-status {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: calc(0.48rem * var(--ui-scale, 1));
+  letter-spacing: 0.1em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  margin-bottom: 0.55rem;
+}
+
+.col-status.unlocked {
+  color: var(--accent);
+  background: rgba(0, 255, 136, 0.08);
+}
+
+.col-status.equipped {
+  color: #fff;
+  background: rgba(0, 255, 136, 0.22);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.col-status.locked {
+  color: var(--danger);
+  background: rgba(255, 51, 85, 0.1);
+}
+
+/* Upgrades list inside column */
+.col-upgrades {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.4rem;
+}
+
+.col-upgrade {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: 'Inter', sans-serif;
+  font-size: calc(0.58rem * var(--ui-scale, 1));
+  color: var(--text-soft);
+  padding: 0.12rem 0.25rem;
+}
+
+.col-upgrade-pip {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.col-upgrade-none {
+  color: var(--text-dim);
+  font-style: italic;
+  justify-content: center;
+  font-size: 0.52rem;
+}
+
+/* ---- Stats bar (bottom row) ---- */
+.loadout-stats-bar {
+  border-top: 1px solid var(--line);
+  padding-top: 0.65rem;
+}
+
+.loadout-weapon-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: calc(0.6rem * var(--ui-scale, 1));
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  text-align: center;
+  margin-bottom: 0.45rem;
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.2);
+}
+
+.loadout-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.3rem 1.2rem;
+}
+
+.loadout-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Inter', sans-serif;
+  font-size: calc(0.62rem * var(--ui-scale, 1));
+  color: var(--text-soft);
+  padding: 0.15rem 0;
+}
+
+.loadout-stat .stat-label {
+  font-weight: 500;
+}
+
+.loadout-stat .stat-value {
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.loadout-stat .stat-value.scrap-val {
+  color: #ffc850;
+}
+
+.loadout-dismiss {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: calc(0.6rem * var(--ui-scale, 1));
+  color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.loadout-hint-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.loadout-dismiss kbd {
+  font-size: calc(0.52rem * var(--ui-scale, 1));
+  padding: 0.1rem 0.3rem;
+  background: rgba(0, 255, 136, 0.06);
+  border: 1px solid rgba(0, 255, 136, 0.18);
+  border-radius: 3px;
+  font-family: 'Share Tech Mono', monospace;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+
+/* ============================================================
+   Upgrade Countdown Overlay  (z-index 30 — ABOVE all overlays)
+   ============================================================ */
+.upgrade-countdown {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: calc(28px * var(--ui-scale, 1));
+  pointer-events: none;
+  user-select: none;
+}
+
+.uc-number {
+  font-family: 'Orbitron', monospace;
+  font-weight: 900;
+  font-size: calc(2.4rem * var(--ui-scale, 1));
+  color: #00ff88;
+  text-shadow:
+    0 0 18px rgba(0, 255, 136, 0.6),
+    0 0 40px rgba(0, 255, 136, 0.25),
+    0 2px 4px rgba(0, 0, 0, 0.7);
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+.uc-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: calc(0.62rem * var(--ui-scale, 1));
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: rgba(0, 255, 136, 0.55);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  margin-top: 0.25rem;
+}
+
+.uc-label.uc-resuming {
+  color: rgba(255, 200, 80, 0.7);
+}
+
+.uc-bar-track {
+  width: calc(120px * var(--ui-scale, 1));
+  height: calc(5px * var(--ui-scale, 1));
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 99px;
+  margin-top: 0.45rem;
+  overflow: hidden;
+}
+
+.uc-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: #00ff88;
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
+  transition: width 0.15s linear, background 0.3s;
+  width: 0%;
+}
+
+.uc-bar-fill.uc-transition {
+  background: #ffc850;
+  box-shadow: 0 0 8px rgba(255, 200, 80, 0.5);
+}
+
+.uc-queue {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: calc(0.56rem * var(--ui-scale, 1));
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: rgba(167, 139, 250, 0.65);
+  margin-top: 0.3rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
