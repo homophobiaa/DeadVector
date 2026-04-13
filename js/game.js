@@ -77,8 +77,18 @@ export class Game {
     this.levelUpQueue = 0;             // queued level-up count
     this.upgradeCountdown = 0;         // seconds remaining on pause countdown
     this.upgradeTransition = 0;        // seconds remaining on speed-return transition
-    this.upgradeTransitionDur = 5;     // total transition duration
-    this.upgradePauseDur = 4;          // total pause countdown duration
+    this.upgradeTransitionDur = 7;     // total transition duration
+    this.upgradePauseDur = 7;          // total pause countdown duration
+
+    // Pickup images
+    this.hpImg = new Image(); this.hpImg.src = "assets/images/dropables/hp.png";
+    this.scrapImg = new Image(); this.scrapImg.src = "assets/images/dropables/scrap.png";
+
+    // Gib particle images
+    this.gibImgs = [new Image(), new Image(), new Image()];
+    this.gibImgs[0].src = "assets/images/particle-drops/mixed-chunk.png";
+    this.gibImgs[1].src = "assets/images/particle-drops/flesh-chunk.png";
+    this.gibImgs[2].src = "assets/images/particle-drops/bloody-fragment.png";
 
     // Background image
     this.bgImg = new Image();
@@ -491,13 +501,65 @@ export class Game {
             this.gameSpeed = t * t;
           }
         }
+        // Drive DOM countdown overlay
+        this.updateCountdownUI();
+      } else {
+        this.hideCountdownUI();
       }
+    } else {
+      this.hideCountdownUI();
     }
 
     if (this.state === "playing") this.update(delta * this.gameSpeed);
     this.render();
     this.input.endFrame();
     requestAnimationFrame(this.loop);
+  }
+
+  updateCountdownUI() {
+    const el = this.ui.elements;
+    const wrap = el.upgradeCountdown;
+    if (!wrap) return;
+    wrap.classList.remove("hidden");
+    wrap.classList.add("visible");
+
+    if (this.upgradeCountdown > 0) {
+      // Pause phase
+      const secs = Math.ceil(this.upgradeCountdown);
+      el.ucNumber.textContent = secs;
+      el.ucLabel.textContent = "PAUSED \u2014 CHOOSE NOW";
+      el.ucLabel.classList.remove("uc-resuming");
+      const pct = (this.upgradeCountdown / this.upgradePauseDur) * 100;
+      el.ucBarFill.style.width = pct + "%";
+      el.ucBarFill.classList.remove("uc-transition");
+    } else if (this.upgradeTransition > 0) {
+      // Transition phase
+      const pctDone = 1 - (this.upgradeTransition / this.upgradeTransitionDur);
+      const speedPct = Math.round(pctDone * pctDone * 100);
+      el.ucNumber.textContent = speedPct + "%";
+      el.ucLabel.textContent = "RESUMING";
+      el.ucLabel.classList.add("uc-resuming");
+      el.ucBarFill.style.width = (pctDone * 100) + "%";
+      el.ucBarFill.classList.add("uc-transition");
+    } else {
+      el.ucNumber.textContent = "";
+      el.ucLabel.textContent = "";
+      el.ucBarFill.style.width = "100%";
+    }
+
+    // Queue indicator
+    if (this.levelUpQueue > 0) {
+      el.ucQueue.textContent = `+${this.levelUpQueue} MORE LEVEL-UP${this.levelUpQueue > 1 ? "S" : ""}`;
+    } else {
+      el.ucQueue.textContent = "";
+    }
+  }
+
+  hideCountdownUI() {
+    const wrap = this.ui.elements.upgradeCountdown;
+    if (!wrap) return;
+    wrap.classList.add("hidden");
+    wrap.classList.remove("visible");
   }
 
   handleInput() {
@@ -1501,6 +1563,7 @@ export class Game {
     for (const p of this.pickups) {
       p.life -= delta;
       p.bobPhase += delta * 3;
+      p.age = (p.age || 0) + delta;
     }
   }
 
@@ -1606,18 +1669,23 @@ export class Game {
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 100 + Math.random() * 280;
-      this.gibs.push({
+      const useImage = Math.random() < 0.3 && this.gibImgs.length > 0;
+      const gib = {
         x, y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         rotation: Math.random() * Math.PI * 2,
         rotSpeed: (Math.random() - 0.5) * 18,
-        size: 3 + Math.random() * (radius * 0.55),
+        size: useImage ? (6 + Math.random() * 10) : (3 + Math.random() * (radius * 0.55)),
         life: 1.5 + Math.random() * 2.0,
         color: GIB_COLORS[Math.floor(Math.random() * GIB_COLORS.length)],
         shape: GIB_SHAPES[Math.floor(Math.random() * GIB_SHAPES.length)],
         trailTimer: 0,
-      });
+      };
+      if (useImage) {
+        gib.img = this.gibImgs[Math.floor(Math.random() * this.gibImgs.length)];
+      }
+      this.gibs.push(gib);
     }
   }
 
@@ -1780,52 +1848,55 @@ export class Game {
       ctx.translate(g.x, g.y);
       ctx.rotate(g.rotation);
 
-      ctx.fillStyle = g.color;
       const s = g.size;
 
-      if (g.shape === "shard") {
-        // Sharp bone-like shard
+      // Image-based gib
+      if (g.img && g.img.complete && g.img.naturalWidth > 0) {
+        ctx.drawImage(g.img, -s, -s, s * 2, s * 2);
+      } else if (!g.img) {
+        // Procedural gib (original shapes)
+        ctx.fillStyle = g.color;
+
+        if (g.shape === "shard") {
+          ctx.beginPath();
+          ctx.moveTo(0, -s);
+          ctx.lineTo(s * 0.4, 0);
+          ctx.lineTo(0, s * 1.2);
+          ctx.lineTo(-s * 0.3, 0);
+          ctx.closePath();
+          ctx.fill();
+        } else if (g.shape === "round") {
+          ctx.beginPath();
+          ctx.arc(0, 0, s * 0.7, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "rgba(180,30,30,0.5)";
+          ctx.beginPath();
+          ctx.arc(s * 0.15, -s * 0.1, s * 0.35, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (g.shape === "strip") {
+          ctx.beginPath();
+          ctx.moveTo(-s * 1.2, -s * 0.2);
+          ctx.quadraticCurveTo(0, -s * 0.5, s * 1.0, -s * 0.15);
+          ctx.lineTo(s * 0.8, s * 0.25);
+          ctx.quadraticCurveTo(0, s * 0.4, -s * 1.0, s * 0.2);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(-s, -s * 0.6);
+          ctx.lineTo(s * 0.7, -s * 0.4);
+          ctx.lineTo(s, s * 0.5);
+          ctx.lineTo(-s * 0.3, s * 0.8);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // Wet blood sheen on procedural gibs
+        ctx.fillStyle = "rgba(160,20,20,0.45)";
         ctx.beginPath();
-        ctx.moveTo(0, -s);
-        ctx.lineTo(s * 0.4, 0);
-        ctx.lineTo(0, s * 1.2);
-        ctx.lineTo(-s * 0.3, 0);
-        ctx.closePath();
-        ctx.fill();
-      } else if (g.shape === "round") {
-        // Fleshy round chunk
-        ctx.beginPath();
-        ctx.arc(0, 0, s * 0.7, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "rgba(180,30,30,0.5)";
-        ctx.beginPath();
-        ctx.arc(s * 0.15, -s * 0.1, s * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (g.shape === "strip") {
-        // Elongated meat strip
-        ctx.beginPath();
-        ctx.moveTo(-s * 1.2, -s * 0.2);
-        ctx.quadraticCurveTo(0, -s * 0.5, s * 1.0, -s * 0.15);
-        ctx.lineTo(s * 0.8, s * 0.25);
-        ctx.quadraticCurveTo(0, s * 0.4, -s * 1.0, s * 0.2);
-        ctx.closePath();
-        ctx.fill();
-      } else {
-        // Default irregular chunk
-        ctx.beginPath();
-        ctx.moveTo(-s, -s * 0.6);
-        ctx.lineTo(s * 0.7, -s * 0.4);
-        ctx.lineTo(s, s * 0.5);
-        ctx.lineTo(-s * 0.3, s * 0.8);
-        ctx.closePath();
+        ctx.arc(0, 0, s * 0.3, 0, Math.PI * 2);
         ctx.fill();
       }
-
-      // Wet blood sheen on all gibs
-      ctx.fillStyle = "rgba(160,20,20,0.45)";
-      ctx.beginPath();
-      ctx.arc(0, 0, s * 0.3, 0, Math.PI * 2);
-      ctx.fill();
 
       // Trailing blood drip from gib
       const speed = Math.hypot(g.vx, g.vy);
@@ -1901,67 +1972,44 @@ export class Game {
       const fadeAlpha = p.life < 2 ? p.life / 2 : 1;
       const bob = Math.sin(p.bobPhase) * 3;
 
+      // Spawn pop-in scale (first 0.25s)
+      const age = p.age || 0;
+      const spawnT = Math.min(age / 0.25, 1);
+      const spawnScale = spawnT < 1 ? 1.4 - 0.4 * spawnT : 1; // start big, settle to 1
+
       ctx.save();
       ctx.translate(p.x, p.y + bob);
-      ctx.globalAlpha = fadeAlpha;
+      ctx.globalAlpha = fadeAlpha * Math.min(spawnT * 4, 1); // fade in quickly
 
-      if (p.type === "scrap") {
-        // Scrap pickup — golden orb
-        ctx.shadowBlur = 14;
-        ctx.shadowColor = "#ffc850";
+      const isScrap = p.type === "scrap";
+      const img = isScrap ? this.scrapImg : this.hpImg;
+      const glowColor = isScrap ? "#ffc850" : "#78ff78";
+      const drawSize = (isScrap ? 14 : 16) * spawnScale;
 
-        const pulse = 0.3 + Math.sin(t * 4 + p.bobPhase) * 0.15;
-        ctx.strokeStyle = `rgba(255,200,80,${pulse})`;
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(0, 0, p.radius + 3, 0, Math.PI * 2);
-        ctx.stroke();
+      // Pulsing glow ring
+      const pulse = 0.3 + Math.sin(t * 4 + p.bobPhase) * 0.15;
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = glowColor;
+      ctx.strokeStyle = glowColor;
+      ctx.globalAlpha = fadeAlpha * pulse;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, drawSize + 3, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = fadeAlpha * Math.min(spawnT * 4, 1);
 
-        const orbGrad = ctx.createRadialGradient(0, 0, 1, 0, 0, p.radius);
-        orbGrad.addColorStop(0, "#fff4cc");
-        orbGrad.addColorStop(0.5, "#ffc850");
-        orbGrad.addColorStop(1, "#aa7722");
-        ctx.fillStyle = orbGrad;
-        ctx.beginPath();
-        ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Diamond symbol
-        ctx.fillStyle = "#ffffff";
-        ctx.globalAlpha = fadeAlpha * 0.7;
-        ctx.beginPath();
-        ctx.moveTo(0, -3.5);
-        ctx.lineTo(3, 0);
-        ctx.lineTo(0, 3.5);
-        ctx.lineTo(-3, 0);
-        ctx.closePath();
-        ctx.fill();
+      // Draw the image
+      if (img.complete && img.naturalWidth > 0) {
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = glowColor;
+        ctx.drawImage(img, -drawSize, -drawSize, drawSize * 2, drawSize * 2);
+        ctx.shadowBlur = 0;
       } else {
-        // Health pickup — green orb
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = "#78ff78";
-
-        const pulse = 0.3 + Math.sin(t * 4 + p.bobPhase) * 0.15;
-        ctx.strokeStyle = `rgba(120,255,120,${pulse})`;
-        ctx.lineWidth = 1.5;
+        // Fallback: simple colored circle if image not loaded
+        ctx.fillStyle = glowColor;
         ctx.beginPath();
-        ctx.arc(0, 0, p.radius + 4 + Math.sin(t * 3) * 2, 0, Math.PI * 2);
-        ctx.stroke();
-
-        const orbGrad = ctx.createRadialGradient(0, 0, 1, 0, 0, p.radius);
-        orbGrad.addColorStop(0, "#ccffcc");
-        orbGrad.addColorStop(0.5, "#55dd55");
-        orbGrad.addColorStop(1, "#228822");
-        ctx.fillStyle = orbGrad;
-        ctx.beginPath();
-        ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
+        ctx.arc(0, 0, drawSize * 0.6, 0, Math.PI * 2);
         ctx.fill();
-
-        // Cross symbol
-        ctx.fillStyle = "#ffffff";
-        ctx.globalAlpha = fadeAlpha * 0.8;
-        ctx.fillRect(-1.5, -4, 3, 8);
-        ctx.fillRect(-4, -1.5, 8, 3);
       }
 
       ctx.restore();
@@ -2577,59 +2625,6 @@ export class Game {
       ctx.font = `bold ${Math.round(10 * s)}px "Share Tech Mono", monospace`;
       ctx.fillStyle = "rgba(255,0,255,0.6)";
       ctx.fillText("DEV MODE", Math.round(16 * s), bounds.height - Math.round(58 * s));
-    }
-
-    // ---- Upgrade countdown / time-return indicator ----
-    const isUpgradeOpen = this.progression.levelUpActive || this.progression.bossRewardActive;
-    if (isUpgradeOpen) {
-      ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-
-      if (this.upgradeCountdown > 0) {
-        // Countdown phase — show seconds remaining
-        const secs = Math.ceil(this.upgradeCountdown);
-        ctx.font = `bold ${Math.round(28 * s)}px "Orbitron", monospace`;
-        ctx.fillStyle = "rgba(0,255,136,0.7)";
-        ctx.shadowBlur = Math.round(16 * s);
-        ctx.shadowColor = "rgba(0,255,136,0.4)";
-        ctx.fillText(secs.toString(), bounds.width / 2, Math.round(50 * s));
-        ctx.shadowBlur = 0;
-
-        // Label
-        ctx.font = `600 ${Math.round(10 * s)}px "Share Tech Mono", monospace`;
-        ctx.fillStyle = "rgba(0,255,136,0.45)";
-        ctx.fillText("PAUSED — CHOOSE NOW", bounds.width / 2, Math.round(82 * s));
-      } else if (this.upgradeTransition > 0) {
-        // Transition phase — show speed returning
-        const pctDone = 1 - (this.upgradeTransition / this.upgradeTransitionDur);
-        const speedPct = Math.round(pctDone * pctDone * 100);
-
-        // Speed bar
-        const barW = Math.round(120 * s);
-        const barH2 = Math.round(6 * s);
-        const bx = bounds.width / 2 - barW / 2;
-        const by = Math.round(58 * s);
-        ctx.fillStyle = "rgba(0,0,0,0.5)";
-        ctx.beginPath();
-        ctx.roundRect(bx, by, barW, barH2, 3);
-        ctx.fill();
-        ctx.fillStyle = `rgba(255,200,80,${0.5 + pctDone * 0.5})`;
-        ctx.beginPath();
-        ctx.roundRect(bx, by, barW * pctDone, barH2, 3);
-        ctx.fill();
-
-        // Label
-        ctx.font = `600 ${Math.round(10 * s)}px "Share Tech Mono", monospace`;
-        ctx.fillStyle = "rgba(255,200,80,0.6)";
-        ctx.fillText(`RESUMING ${speedPct}%`, bounds.width / 2, by + Math.round(12 * s));
-      }
-
-      // Queue indicator — show remaining level-ups
-      if (this.levelUpQueue > 0) {
-        ctx.font = `600 ${Math.round(10 * s)}px "Share Tech Mono", monospace`;
-        ctx.fillStyle = "rgba(167,139,250,0.6)";
-        ctx.fillText(`+${this.levelUpQueue} MORE LEVEL-UP${this.levelUpQueue > 1 ? "S" : ""}`, bounds.width / 2, Math.round(98 * s));
-      }
     }
 
     ctx.restore();

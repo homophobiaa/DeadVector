@@ -531,3 +531,80 @@
   font-weight: 700;
   color: var(--text-soft);
 }
+
+/* ============================================================
+   Upgrade Countdown Overlay  (z-index 30 — ABOVE all overlays)
+   ============================================================ */
+.upgrade-countdown {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: calc(28px * var(--ui-scale, 1));
+  pointer-events: none;
+  user-select: none;
+}
+
+.uc-number {
+  font-family: 'Orbitron', monospace;
+  font-weight: 900;
+  font-size: calc(2.4rem * var(--ui-scale, 1));
+  color: #00ff88;
+  text-shadow:
+    0 0 18px rgba(0, 255, 136, 0.6),
+    0 0 40px rgba(0, 255, 136, 0.25),
+    0 2px 4px rgba(0, 0, 0, 0.7);
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+.uc-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: calc(0.62rem * var(--ui-scale, 1));
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: rgba(0, 255, 136, 0.55);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  margin-top: 0.25rem;
+}
+
+.uc-label.uc-resuming {
+  color: rgba(255, 200, 80, 0.7);
+}
+
+.uc-bar-track {
+  width: calc(120px * var(--ui-scale, 1));
+  height: calc(5px * var(--ui-scale, 1));
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 99px;
+  margin-top: 0.45rem;
+  overflow: hidden;
+}
+
+.uc-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: #00ff88;
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
+  transition: width 0.15s linear, background 0.3s;
+  width: 0%;
+}
+
+.uc-bar-fill.uc-transition {
+  background: #ffc850;
+  box-shadow: 0 0 8px rgba(255, 200, 80, 0.5);
+}
+
+.uc-queue {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: calc(0.56rem * var(--ui-scale, 1));
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: rgba(167, 139, 250, 0.65);
+  margin-top: 0.3rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}

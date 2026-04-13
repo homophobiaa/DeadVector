@@ -86,6 +86,12 @@ const bootstrap = async () => {
     hudHint: document.getElementById("hud-hint"),
     setUiScale: document.getElementById("set-ui-scale"),
     uiScaleVal: document.getElementById("ui-scale-val"),
+    // Upgrade countdown DOM
+    upgradeCountdown: document.getElementById("upgrade-countdown"),
+    ucNumber: document.getElementById("uc-number"),
+    ucLabel: document.getElementById("uc-label"),
+    ucBarFill: document.getElementById("uc-bar-fill"),
+    ucQueue: document.getElementById("uc-queue"),
   });
 
   const input = new InputManager(canvas);
