@@ -703,8 +703,17 @@ export class Game {
     this.player.fireCooldown = cooldown;
     this.player.muzzleFlash = 1;
 
+    // Overcharged Rounds — every 8th shot deals 3x damage
+    const isOvercharged = this.progression.tickOverchargedRounds();
+    if (isOvercharged) damage = Math.round(damage * 3);
+
     const angle = Math.atan2(this.input.mouse.y - this.player.y, this.input.mouse.x - this.player.x);
     const pellets = wpn.pellets + mods.pelletBonus;
+
+    // SMG gets shorter range and damage falloff
+    const isSmg = wpn.name.toLowerCase().includes("vector") || wpn.name.toLowerCase().includes("smg");
+    const bulletLife = isSmg ? 0.48 : 0.9;
+    const damageFalloff = isSmg ? 1 : 0;
 
     // Spawn from muzzle
     const muzzleOff = getMuzzleOffset(this.player);
@@ -721,7 +730,7 @@ export class Game {
         vy: Math.sin(a) * wpn.projectileSpeed,
         radius: wpn.radius,
         damage,
-        life: 0.9,
+        life: bulletLife,
         color: isCrit ? "#ffffff" : wpn.color,
         friendly: true,
         _ricochet: mods.ricochet ? 1 : 0,
@@ -732,6 +741,7 @@ export class Game {
         _markTarget: mods.markTarget,
         _lightningChain: mods.lightningChain || 0,
         _shockwave: mods.shockwave,
+        _damageFalloff: damageFalloff,
       }));
     }
 
@@ -746,7 +756,7 @@ export class Game {
           vy: Math.sin(a) * wpn.projectileSpeed,
           radius: wpn.radius,
           damage: Math.round(damage * 0.6),
-          life: 0.9,
+          life: bulletLife,
           color: wpn.color,
           friendly: true,
           _ricochet: mods.ricochet ? 1 : 0,
@@ -757,6 +767,7 @@ export class Game {
           _markTarget: mods.markTarget,
           _lightningChain: mods.lightningChain || 0,
           _shockwave: mods.shockwave,
+          _damageFalloff: damageFalloff,
         }));
       }
     }
@@ -853,15 +864,18 @@ export class Game {
 
   populateCards(cards, container) {
     container.innerHTML = "";
+    const isBossReward = this.progression.bossRewardActive;
     cards.forEach((card, i) => {
       const div = document.createElement("div");
       div.className = "upgrade-card";
+      if (isBossReward) div.classList.add("boss-card");
       div.style.animationDelay = `${i * 0.08}s`;
       const canAfford = card.scrapCost <= 0 || this.progression.scrap >= card.scrapCost;
       if (!canAfford) div.classList.add("disabled");
 
+      const catClass = card.category === 'Rare' ? ' cat-rare' : card.category === 'Boss' ? ' cat-boss' : '';
       div.innerHTML = `
-        <span class="card-category${card.category === 'Rare' ? ' cat-rare' : ''}">${card.category}</span>
+        <span class="card-category${catClass}">${card.category}</span>
         <strong class="card-name">${card.name}</strong>
         <span class="card-desc">${card.desc}</span>
         ${card.scrapCost > 0 ? `<span class="card-cost${this.progression.scrap < card.scrapCost ? ' insufficient' : ''}">${card.scrapCost} SCRAP</span>` : ""}
@@ -1026,7 +1040,10 @@ export class Game {
 
     this.player.update(delta, this.input, this.bounds);
     // Apply speed modifier from progression
-    const speedMult = this.progression.getSpeedMultiplier();
+    let speedMult = this.progression.getSpeedMultiplier();
+    // Predator Instinct speed boost
+    const predatorBoost = this.progression.getPredatorSpeedBoost();
+    if (predatorBoost > 0) speedMult += predatorBoost;
     if (speedMult !== 1) {
       // Speed was applied at base; recalc velocity this frame
       this.player.vx *= speedMult;
@@ -1037,6 +1054,37 @@ export class Game {
     }
     this.screenShake = Math.max(0, this.screenShake - delta * 30);
     this.damageVignette = Math.max(0, this.damageVignette - delta * 1.8);
+
+    // Progression: tick boss upgrade timers
+    this.progression.tickBossUpgrades(delta);
+
+    // Iron Shell — apply max HP bonus
+    const ironHpBonus = this.progression.getIronShellMaxHp();
+    if (ironHpBonus > 0 && this.player.maxHealth < 100 + ironHpBonus) {
+      this.player.maxHealth = 100 + ironHpBonus;
+      // Don't auto-heal, just raise the cap
+    }
+
+    // Arc Discharge — periodic shockwave
+    if (this.progression.tickArcDischarge(delta)) {
+      const arcDmg = 15 + this.waveSpawner.wave * 2;
+      const arcRadius = 120;
+      for (const enemy of this.enemies) {
+        if (enemy.fsm.currentState === "DEAD") continue;
+        const d = Math.hypot(enemy.x - this.player.x, enemy.y - this.player.y);
+        if (d < arcRadius) {
+          const result = enemy.takeDamage(arcDmg);
+          if (result.hit) {
+            this.spawnDamageNumber(enemy.x, enemy.y - enemy.radius - 8, arcDmg, "#88ccff");
+          }
+          if (result.killed) {
+            this.handleEnemyKill(enemy, null);
+          }
+        }
+      }
+      this.spawnBurst(this.player.x, this.player.y, "#88ccff", 16, 30, 120);
+      this.screenShake = Math.max(this.screenShake, 5);
+    }
 
     // Progression: tick overdrive ramp (SMG continuous fire)
     const isFiringSMG = this.input.mouse.leftDown &&
@@ -1180,6 +1228,8 @@ export class Game {
   }
 
   damagePlayer(amount) {
+    // Iron Shell damage reduction
+    amount = Math.round(amount * this.progression.getIronShellDR());
     const hit = this.player.takeDamage(amount);
     if (hit) {
       this.audio.playPlayerHit();
@@ -1198,7 +1248,7 @@ export class Game {
         if (enemy.fsm.currentState === "DEAD" || !circlesOverlap(bullet, enemy)) continue;
 
         // Apply shredder bonus (per-enemy hit stacking)
-        let bulletDmg = bullet.damage;
+        let bulletDmg = bullet.getEffectiveDamage();
         const shredBonus = this.progression.getShredderBonus(enemy.id);
         if (shredBonus > 0) bulletDmg = Math.round(bulletDmg * (1 + shredBonus));
         this.progression.addShredderStack(enemy.id);
@@ -1439,11 +1489,21 @@ export class Game {
       this.player.heal(healAmt);
     }
 
+    // Boss upgrade: Blood Surge — heal + damage boost on kill
+    const surge = this.progression.triggerBloodSurge();
+    if (surge.heal > 0) {
+      this.player.heal(surge.heal);
+      this.spawnBurst(this.player.x, this.player.y, "#ff4466", 6, 12, 50);
+    }
+
+    // Boss upgrade: Predator Instinct — speed + damage buff on kill
+    this.progression.triggerPredatorInstinct();
+
     // Progression: Clear shredder stacks for dead enemy
     this.progression.clearShredderStacks(enemy.id);
 
     // Massive gore explosion on kill
-    const killAngle = Math.atan2(bullet.vy, bullet.vx);
+    const killAngle = bullet ? Math.atan2(bullet.vy, bullet.vx) : Math.random() * Math.PI * 2;
     this.spawnDirectionalBlood(enemy.x, enemy.y, killAngle, 24, 90, 320);
     this.spawnDirectionalBlood(enemy.x, enemy.y, killAngle + Math.PI, 10, 40, 140);
     this.spawnDirectionalBlood(enemy.x, enemy.y, Math.random() * Math.PI * 2, 12, 50, 180);

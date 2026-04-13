@@ -24,7 +24,7 @@ const UPGRADES = [
   { id: "mark_target",     name: "Mark Target",     desc: "Hit enemies take +15% dmg for 2s", category: "Pistol", weapon: "pistol", scrapCost: 8 },
 
   // SHOTGUN (8)
-  { id: "unlock_shotgun",  name: "Unlock Shotgun",  desc: "Adds Scatter Cannon to loadout", category: "Shotgun", weapon: "shotgun", scrapCost: 0, isUnlock: true },
+  { id: "unlock_shotgun",  name: "Unlock Shotgun",  desc: "Adds Scatter Cannon to loadout", category: "Shotgun", weapon: "shotgun", scrapCost: 25, isUnlock: true },
   { id: "dense_shells",    name: "Dense Shells",    desc: "+2 pellets per shot",          category: "Shotgun", weapon: "shotgun", scrapCost: 3 },
   { id: "knockback_core",  name: "Knockback Core",  desc: "Pushes enemies on hit",        category: "Shotgun", weapon: "shotgun", scrapCost: 0 },
   { id: "tight_spread",    name: "Tight Spread",    desc: "More focused cone",            category: "Shotgun", weapon: "shotgun", scrapCost: 0 },
@@ -34,7 +34,7 @@ const UPGRADES = [
   { id: "shockwave",       name: "Shockwave",       desc: "Kills push nearby enemies back", category: "Shotgun", weapon: "shotgun", scrapCost: 12 },
 
   // SMG (8)
-  { id: "unlock_smg",      name: "Unlock Vector SMG", desc: "Adds Vector SMG to loadout",   category: "SMG",   weapon: "smg",     scrapCost: 0, isUnlock: true },
+  { id: "unlock_smg",      name: "Unlock Vector SMG", desc: "Adds Vector SMG to loadout",   category: "SMG",   weapon: "smg",     scrapCost: 75, isUnlock: true },
   { id: "overdrive",       name: "Overdrive",       desc: "Fire rate ramps while shooting", category: "SMG",   weapon: "smg",     scrapCost: 0 },
   { id: "stabilizer",      name: "Stabilizer",      desc: "Reduce spread by 25%",         category: "SMG",    weapon: "smg",     scrapCost: 0 },
   { id: "shredder",        name: "Shredder",        desc: "Damage increases per hit on same target", category: "SMG", weapon: "smg", scrapCost: 3 },
@@ -55,6 +55,17 @@ const UPGRADES = [
   { id: "chain_reaction",  name: "Chain Reaction",  desc: "Enemies explode on death",     category: "Rare",   weapon: null,      scrapCost: 25 },
   { id: "lightning_chain", name: "Lightning Chain",  desc: "Bullets chain to 2 nearby enemies", category: "Rare", weapon: null,   scrapCost: 30 },
   { id: "freeze_field",    name: "Freeze Field",    desc: "Kills slow nearby enemies for 1.5s", category: "Rare", weapon: null,  scrapCost: 25 },
+];
+
+// ── Boss-only upgrades (never appear in normal level-ups) ─────
+
+const BOSS_UPGRADES = [
+  { id: "twin_shot",       name: "Twin Shot",       desc: "All weapons fire an extra projectile",       category: "Boss",  weapon: null, scrapCost: 0 },
+  { id: "blood_surge",     name: "Blood Surge",     desc: "Kills heal 8 HP and boost damage 15% for 3s", category: "Boss", weapon: null, scrapCost: 0 },
+  { id: "arc_discharge",   name: "Arc Discharge",   desc: "Every 4s, a shockwave damages nearby enemies", category: "Boss", weapon: null, scrapCost: 0 },
+  { id: "predator_instinct", name: "Predator Instinct", desc: "Kills grant +25% speed and +10% damage for 4s", category: "Boss", weapon: null, scrapCost: 0 },
+  { id: "overcharged_rounds", name: "Overcharged Rounds", desc: "Every 8th shot deals 3x damage",       category: "Boss",  weapon: null, scrapCost: 0 },
+  { id: "iron_shell",      name: "Iron Shell",      desc: "+30 max HP and +15% damage reduction",       category: "Boss",  weapon: null, scrapCost: 0 },
 ];
 
 export function getUpgradePool() { return UPGRADES; }
@@ -96,6 +107,12 @@ export class Progression {
     // Combo-based bonuses (recalculated each frame)
     this.comboXpBonus = 0;         // multiplier: 0, 0.1, or 0.2
     this.comboDmgBonus = 0;        // multiplier: 0 or 0.1
+
+    // Boss upgrade state
+    this.bloodSurgeTimer = 0;      // remaining seconds of Blood Surge damage boost
+    this.predatorTimer = 0;        // remaining seconds of Predator Instinct buff
+    this.arcDischargeTimer = 0;    // seconds until next Arc Discharge
+    this.shotCounter = 0;          // tracks shots for Overcharged Rounds
   }
 
   // ── XP & Leveling ────────────────────────────────────────────
@@ -153,7 +170,68 @@ export class Progression {
 
   /** Build 3 upgrade cards for a boss reward (higher rare chance). */
   buildBossRewardCards() {
-    return this._pickCards(true);
+    return this._pickBossCards();
+  }
+
+  /** Boss reward card selection — guarantees 1 boss-exclusive + fills from enhanced normal pool. */
+  _pickBossCards() {
+    const cards = [];
+    const usedIds = new Set();
+
+    // 1. Pick at least 1 boss-exclusive upgrade (if any available)
+    const bossPool = BOSS_UPGRADES.filter(u => !this.acquired.includes(u.id));
+    if (bossPool.length > 0) {
+      this._shuffle(bossPool);
+      cards.push(bossPool[0]);
+      usedIds.add(bossPool[0].id);
+      // Possibly add a second boss-exclusive
+      if (bossPool.length > 1 && Math.random() < 0.35) {
+        cards.push(bossPool[1]);
+        usedIds.add(bossPool[1].id);
+      }
+    }
+
+    // 2. Fill remaining slots from enhanced normal pool (high rare chance)
+    const normalPool = this._getAvailableUpgrades().filter(u => !usedIds.has(u.id));
+    const rarePool = normalPool.filter(u => u.category === "Rare");
+    const otherPool = normalPool.filter(u => u.category !== "Rare");
+
+    // Try to include a rare card
+    if (cards.length < 3 && rarePool.length > 0 && Math.random() < 0.6) {
+      const pick = rarePool[Math.floor(Math.random() * rarePool.length)];
+      cards.push(pick);
+      usedIds.add(pick.id);
+    }
+
+    // Fill remaining with normal upgrades
+    this._shuffle(otherPool);
+    for (const u of otherPool) {
+      if (cards.length >= 3) break;
+      if (usedIds.has(u.id)) continue;
+      cards.push(u);
+      usedIds.add(u.id);
+    }
+
+    // If still not full, try remaining rare
+    if (cards.length < 3) {
+      const leftover = rarePool.filter(u => !usedIds.has(u.id));
+      for (const u of leftover) {
+        if (cards.length >= 3) break;
+        cards.push(u);
+      }
+    }
+
+    // If still not full, try remaining boss pool
+    if (cards.length < 3) {
+      for (const u of bossPool) {
+        if (cards.length >= 3) break;
+        if (usedIds.has(u.id)) continue;
+        cards.push(u);
+      }
+    }
+
+    this._shuffle(cards);
+    return cards;
   }
 
   _pickCards(isBossReward) {
@@ -166,15 +244,11 @@ export class Progression {
     const usedIds = new Set();
 
     // Rare chance scales with level tier
-    // Early (1-4): no rare, Mid (5-9): 5%/10%, Late (10+): 10%/30%
-    // Boss rewards guarantee at least 1 rare if any are available
     let rareChance = 0;
     if (this.level >= 10) {
-      rareChance = isBossReward ? 1.0 : 0.1;
+      rareChance = 0.1;
     } else if (this.level >= 5) {
-      rareChance = isBossReward ? 0.5 : 0.05;
-    } else if (isBossReward) {
-      rareChance = 0.25;
+      rareChance = 0.05;
     }
     if (rarePool.length > 0 && Math.random() < rareChance) {
       const pick = rarePool[Math.floor(Math.random() * rarePool.length)];
@@ -275,7 +349,7 @@ export class Progression {
     if (this.acquired.includes(upgradeId)) return;
     this.acquired.push(upgradeId);
     // Handle unlock
-    const def = UPGRADES.find(u => u.id === upgradeId);
+    const def = UPGRADES.find(u => u.id === upgradeId) || BOSS_UPGRADES.find(u => u.id === upgradeId);
     if (def && def.isUnlock) {
       if (def.weapon === "shotgun") this.weaponsUnlocked.shotgun = true;
       if (def.weapon === "smg") this.weaponsUnlocked.smg = true;
@@ -357,6 +431,12 @@ export class Progression {
 
     // Rare
     if (this.has("lightning_chain"))   mods.lightningChain = 2;
+
+    // Boss upgrades
+    if (this.has("twin_shot"))         mods.pelletBonus += 1;
+    if (this.has("blood_surge") && this.bloodSurgeTimer > 0) mods.damageMultiplier += 0.15;
+    if (this.has("predator_instinct") && this.predatorTimer > 0) mods.damageMultiplier += 0.10;
+    if (this.has("overcharged_rounds")) mods._overcharged = true;
 
     return mods;
   }
@@ -446,12 +526,72 @@ export class Progression {
     return (playerHp / playerMaxHp) < 0.4 ? 0.2 : 0;
   }
 
+  // ── Boss Upgrade Helpers ─────────────────────────────────────
+
+  /** Blood Surge: trigger on kill — heal + damage boost. */
+  triggerBloodSurge() {
+    if (!this.has("blood_surge")) return { heal: 0 };
+    this.bloodSurgeTimer = 3.0;
+    return { heal: 8 };
+  }
+
+  /** Predator Instinct: trigger on kill — speed + damage boost. */
+  triggerPredatorInstinct() {
+    if (!this.has("predator_instinct")) return { speedBoost: 0 };
+    this.predatorTimer = 4.0;
+    return { speedBoost: 0.25 };
+  }
+
+  /** Arc Discharge: tick timer, return true when shockwave should fire. */
+  tickArcDischarge(delta) {
+    if (!this.has("arc_discharge")) return false;
+    this.arcDischargeTimer -= delta;
+    if (this.arcDischargeTimer <= 0) {
+      this.arcDischargeTimer = 4.0;
+      return true;
+    }
+    return false;
+  }
+
+  /** Overcharged Rounds: increment shot counter, return true on every 8th. */
+  tickOverchargedRounds() {
+    if (!this.has("overcharged_rounds")) return false;
+    this.shotCounter += 1;
+    if (this.shotCounter >= 8) {
+      this.shotCounter = 0;
+      return true;
+    }
+    return false;
+  }
+
+  /** Iron Shell: max HP bonus. */
+  getIronShellMaxHp() {
+    return this.has("iron_shell") ? 30 : 0;
+  }
+
+  /** Iron Shell: damage reduction multiplier. */
+  getIronShellDR() {
+    return this.has("iron_shell") ? 0.85 : 1;
+  }
+
+  /** Get Predator speed multiplier (active buff). */
+  getPredatorSpeedBoost() {
+    if (!this.has("predator_instinct") || this.predatorTimer <= 0) return 0;
+    return 0.25;
+  }
+
+  /** Tick boss upgrade timers each frame. */
+  tickBossUpgrades(delta) {
+    if (this.bloodSurgeTimer > 0) this.bloodSurgeTimer = Math.max(0, this.bloodSurgeTimer - delta);
+    if (this.predatorTimer > 0) this.predatorTimer = Math.max(0, this.predatorTimer - delta);
+  }
+
   // ── Grouped upgrades for display ─────────────────────────────
 
   getAcquiredGrouped() {
-    const groups = { Pistol: [], Shotgun: [], SMG: [], Global: [], Rare: [] };
+    const groups = { Pistol: [], Shotgun: [], SMG: [], Global: [], Rare: [], Boss: [] };
     for (const id of this.acquired) {
-      const def = UPGRADES.find(u => u.id === id);
+      const def = UPGRADES.find(u => u.id === id) || BOSS_UPGRADES.find(u => u.id === id);
       if (def && !def.isUnlock) {
         const cat = groups[def.category] ? def.category : "Global";
         groups[cat].push(def);

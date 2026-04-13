@@ -217,6 +217,11 @@
   box-shadow: 0 0 24px rgba(255, 200, 80, 0.15), 0 8px 20px rgba(0, 0, 0, 0.3);
 }
 
+.boss-reward-sub {
+  color: var(--text-soft);
+  font-size: 0.72rem;
+}
+
 .levelup-sub {
   font-family: 'Inter', sans-serif;
   font-size: 0.68rem;
@@ -305,6 +310,24 @@
 
 .upgrade-card .card-category.cat-rare {
   color: #ffc850;
+}
+
+.upgrade-card .card-category.cat-boss {
+  color: #ff6644;
+  text-shadow: 0 0 8px rgba(255, 102, 68, 0.4);
+}
+
+/* Boss reward cards — slightly larger and more dramatic */
+.boss-reward-overlay .upgrade-card.boss-card {
+  border-color: rgba(255, 102, 68, 0.4);
+  background:
+    linear-gradient(180deg, rgba(255, 102, 68, 0.08), transparent 50%),
+    rgba(18, 12, 8, 0.94);
+}
+
+.boss-reward-overlay .upgrade-card.boss-card:hover {
+  border-color: #ff6644;
+  box-shadow: 0 0 28px rgba(255, 102, 68, 0.2), 0 8px 20px rgba(0, 0, 0, 0.3);
 }
 
 .upgrade-card .card-name {
