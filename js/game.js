@@ -68,6 +68,7 @@ export class Game {
     this.bossHealthBarAnim = 0;       // slide-in animation progress (0→1)
     this.bossDeathFlash = 0;          // screen flash on boss kill
     this.bossIndicatorPulse = 0;      // accumulated time for indicator animations
+    this.bossHitStop = 0;             // freeze frames on boss death
 
     // Progression system
     this.progression = new Progression();
@@ -164,6 +165,7 @@ export class Game {
     this.bossHealthBarAnim = 0;
     this.bossDeathFlash = 0;
     this.bossIndicatorPulse = 0;
+    this.bossHitStop = 0;
     this.waveAnnouncement = { text: "", timer: 0 };
     this.waveSpawner.reset();
     this.player.reset(this.bounds.width / 2, this.bounds.height / 2);
@@ -350,7 +352,7 @@ export class Game {
           isBoss: true,
           bossColor: bossConfig ? bossConfig.bossGlowColor : "#ff3030",
         };
-        this.screenShake = Math.max(this.screenShake, 15);
+        this.screenShake = Math.max(this.screenShake, 8);
       } else {
         this.waveAnnouncement = {
           text: `WAVE ${this.waveSpawner.wave}`,
@@ -628,7 +630,7 @@ export class Game {
           this.resolveEntityObstacles(this.player);
           this.audio.playDash();
           this.spawnBurst(this.player.x, this.player.y, "#6be0d6", 16, 25, 160);
-          this.screenShake = Math.max(this.screenShake, 5);
+          this.screenShake = Math.max(this.screenShake, 3);
         }
       }
     }
@@ -762,7 +764,7 @@ export class Game {
     if (bullets.length === 0) return;
     this.bullets.push(...bullets);
     this.audio.playShoot(wpn.name);
-    this.screenShake = Math.max(this.screenShake, wpn.recoil);
+    this.screenShake = Math.max(this.screenShake, wpn.recoil * 0.5);
   }
 
   // ---- Progression helpers ----
@@ -1004,6 +1006,19 @@ export class Game {
   }
 
   update(delta) {
+    // Boss death hit-stop — freeze gameplay briefly
+    if (this.bossHitStop > 0) {
+      this.bossHitStop -= delta;
+      // Still decay visual effects during hit-stop
+      this.bossDeathFlash = Math.max(0, this.bossDeathFlash - delta * 2.5);
+      this.screenShake = Math.max(0, this.screenShake - delta * 30);
+      this.damageVignette = Math.max(0, this.damageVignette - delta * 1.8);
+      this.updateParticles(delta);
+      this.updateGibs(delta);
+      this.updateBloodMist(delta);
+      return;
+    }
+
     // Recompute obstacles if image just loaded
     if (this.bgImg.naturalWidth && this.obstacles.length === 0) {
       this.computeBgTransform();
@@ -1020,7 +1035,7 @@ export class Game {
     if (!this.settings.get("devMode") || !this.settings.get("devNoclip")) {
       this.resolveEntityObstacles(this.player);
     }
-    this.screenShake = Math.max(0, this.screenShake - delta * 24);
+    this.screenShake = Math.max(0, this.screenShake - delta * 30);
     this.damageVignette = Math.max(0, this.damageVignette - delta * 1.8);
 
     // Progression: tick overdrive ramp (SMG continuous fire)
@@ -1058,6 +1073,16 @@ export class Game {
         this.activeBoss = e;
         this.bossHealthBarAnim = 0;
       }
+    }
+
+    // Deferred boss spawn — appears when few normal enemies remain
+    const aliveEnemies = this.enemies.filter(e => e.fsm.currentState !== "DEAD").length;
+    const deferredBoss = this.waveSpawner.trySpawnBoss(aliveEnemies);
+    if (deferredBoss) {
+      this.enemies.push(deferredBoss);
+      this.resolveEntityObstacles(deferredBoss);
+      this.activeBoss = deferredBoss;
+      this.bossHealthBarAnim = 0;
     }
 
     // Update boss tracking
@@ -1159,7 +1184,7 @@ export class Game {
     if (hit) {
       this.audio.playPlayerHit();
       // Scale shake with damage — boss hits feel heavier
-      const shake = Math.min(25, 8 + amount * 0.4);
+      const shake = Math.min(15, 6 + amount * 0.3);
       this.screenShake = Math.max(this.screenShake, shake);
       this.damageVignette = 1;
     }
@@ -1270,7 +1295,7 @@ export class Game {
           // Blast Core — AoE explosion on hit
           if (bullet._blastRadius > 0) {
             this.spawnBurst(bullet.x, bullet.y, "#ff6633", 12, 30, 120);
-            this.screenShake = Math.max(this.screenShake, 10);
+            this.screenShake = Math.max(this.screenShake, 6);
             for (const other of this.enemies) {
               if (other === enemy || other.fsm.currentState === "DEAD") continue;
               const d = Math.hypot(other.x - bullet.x, other.y - bullet.y);
@@ -1376,7 +1401,7 @@ export class Game {
     this.player.kills += 1;
 
     this.audio.playEnemyKill();
-    this.screenShake = Math.max(this.screenShake, 20);
+    this.screenShake = Math.max(this.screenShake, 10);
 
     // Progression: XP
     const xp = this.progression.getXpFromKill(enemy);
@@ -1505,7 +1530,11 @@ export class Game {
     // Boss death — massive effects + boss reward
     if (enemy.isBoss) {
       this.bossDeathFlash = 1;
-      this.screenShake = Math.max(this.screenShake, 40);
+      this.screenShake = Math.max(this.screenShake, 25);
+
+      // Brief hit-stop freeze for dramatic impact
+      this.bossHitStop = 0.35;
+
       for (let bi = 0; bi < 3; bi++) {
         this.spawnDirectionalBlood(enemy.x, enemy.y, Math.random() * Math.PI * 2, 30, 100, 400);
       }
@@ -1526,10 +1555,10 @@ export class Game {
       this.spawnDamageNumber(enemy.x, enemy.y - enemy.radius - 35, "BOSS SLAIN!", "#ff4444");
       this.activeBoss = null;
 
-      // Trigger boss reward after a brief pause
+      // Trigger boss reward after hit-stop + reveal delay
       setTimeout(() => {
         if (this.state === "playing") this.triggerBossReward(enemy);
-      }, 600);
+      }, 1000);
     }
   }
 

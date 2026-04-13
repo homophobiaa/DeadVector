@@ -139,7 +139,7 @@ export class Progression {
   // ── Scrap ────────────────────────────────────────────────────
 
   getScrapFromKill(enemy) {
-    if (enemy.isBoss) return 12 + Math.floor(Math.random() * 7); // 12-18
+    if (enemy.isBoss) return 18 + Math.floor(Math.random() * 10); // 18-27
     const chance = this.has("scavenger") ? 0.12 : 0.06;
     return Math.random() < chance ? 1 : 0;
   }
@@ -167,11 +167,14 @@ export class Progression {
 
     // Rare chance scales with level tier
     // Early (1-4): no rare, Mid (5-9): 5%/10%, Late (10+): 10%/30%
+    // Boss rewards guarantee at least 1 rare if any are available
     let rareChance = 0;
     if (this.level >= 10) {
-      rareChance = isBossReward ? 0.3 : 0.1;
+      rareChance = isBossReward ? 1.0 : 0.1;
     } else if (this.level >= 5) {
-      rareChance = isBossReward ? 0.1 : 0.05;
+      rareChance = isBossReward ? 0.5 : 0.05;
+    } else if (isBossReward) {
+      rareChance = 0.25;
     }
     if (rarePool.length > 0 && Math.random() < rareChance) {
       const pick = rarePool[Math.floor(Math.random() * rarePool.length)];
