@@ -687,7 +687,7 @@ export class Game {
 
     // Calculate damage
     let damage = wpn.damage * mods.damageMultiplier;
-    // Adrenaline: +30% when below 40% HP
+    // Adrenaline: +20% when below 40% HP
     const adrenBonus = this.progression.getAdrenalineBonus(this.player.health, this.player.maxHealth);
     if (adrenBonus > 0) damage *= (1 + adrenBonus);
     // Heat Build: up to +30% based on overdrive ramp
@@ -835,7 +835,7 @@ export class Game {
 
     // Grant XP burst — don't trigger another level-up from the burst itself
     const xpAmt = this.progression.getXpFromKill(enemy);
-    this.progression.xp = Math.min(this.progression.xp + xpAmt, this.progression.xpMax - 1);
+    this.progression.xp = Math.min(this.progression.xp + xpAmt, this.progression.xpToNextLevel() - 1);
 
     const cards = this.progression.buildBossRewardCards();
     if (cards.length === 0) return;
@@ -1178,7 +1178,7 @@ export class Game {
         if (shredBonus > 0) bulletDmg = Math.round(bulletDmg * (1 + shredBonus));
         this.progression.addShredderStack(enemy.id);
 
-        // Mark Target bonus — marked enemies take +20% damage
+        // Mark Target bonus — marked enemies take +15% damage
         const markBonus = this.progression.getMarkBonus(enemy.id);
         if (markBonus > 0) bulletDmg = Math.round(bulletDmg * (1 + markBonus));
 
@@ -2508,7 +2508,7 @@ export class Game {
     const xpBarH = Math.round(12 * s);
     const xpX = scrapX + scrapW + gap;
     const xpY = hudY - xpBarH / 2;
-    const xpPct = clamp(this.progression.xp / this.progression.xpMax, 0, 1);
+    const xpPct = clamp(this.progression.xp / this.progression.xpToNextLevel(), 0, 1);
 
     // Background
     ctx.fillStyle = "rgba(0,0,0,0.6)";

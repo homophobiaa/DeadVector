@@ -3,18 +3,18 @@ import { randomRange } from "./collision.js";
 
 const DEFAULT_WAVE_CONFIG = {
   baseCount: 5,
-  perWave: 2,
+  perWave: 3,
   bonusEvery: 2,
-  maxEnemies: 40,
-  spawnDelay: [0.2, 0.45],
+  maxEnemies: 45,
+  spawnDelay: [0.15, 0.38],
   bossInterval: 5,
   defaultType: "shambler",
   typeThresholds: [
-    { type: "screamer", minWave: 7, threshold: 0.92 },
-    { type: "brute",    minWave: 5, threshold: 0.85 },
-    { type: "screamer", minWave: 4, threshold: 0.82 },
-    { type: "spitter",  minWave: 3, threshold: 0.58 },
-    { type: "sprinter", minWave: 2, threshold: 0.32 },
+    { type: "screamer", minWave: 6, threshold: 0.90 },
+    { type: "brute",    minWave: 4, threshold: 0.82 },
+    { type: "screamer", minWave: 4, threshold: 0.80 },
+    { type: "spitter",  minWave: 2, threshold: 0.52 },
+    { type: "sprinter", minWave: 2, threshold: 0.28 },
   ],
 };
 
@@ -157,7 +157,7 @@ export class WaveSpawner {
         // Override with boss config (scaled by wave)
         enemy.config = { ...bc };
         enemy.radius = bc.radius;
-        enemy.maxHealth = bc.maxHealth + this.wave * 8;
+        enemy.maxHealth = bc.maxHealth + this.wave * 12;
         enemy.health = enemy.maxHealth;
         enemy.speed = bc.speed * (1 + this.wave * 0.012);
         enemy.noticeRange = bc.noticeRange * (1 + this.wave * 0.012);
