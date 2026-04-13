@@ -186,7 +186,40 @@
 
 .boss-reward-title {
   color: #ffc850;
-  text-shadow: 0 0 20px rgba(255, 200, 80, 0.4);
+  font-size: 1.7rem;
+  text-shadow: 0 0 24px rgba(255, 200, 80, 0.5), 0 0 60px rgba(255, 160, 40, 0.25);
+  animation: bossRewardPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes bossRewardPulse {
+  0%, 100% { text-shadow: 0 0 24px rgba(255, 200, 80, 0.5), 0 0 60px rgba(255, 160, 40, 0.25); }
+  50%      { text-shadow: 0 0 32px rgba(255, 200, 80, 0.7), 0 0 80px rgba(255, 160, 40, 0.4); }
+}
+
+/* Boss reward overlay — distinct warm tint */
+.boss-reward-overlay {
+  background: rgba(20, 12, 2, 0.65);
+  backdrop-filter: blur(5px);
+}
+
+.boss-reward-overlay .upgrade-card {
+  border-color: rgba(255, 200, 80, 0.3);
+  background:
+    linear-gradient(180deg, rgba(255, 200, 80, 0.06), transparent 50%),
+    rgba(18, 14, 8, 0.92);
+}
+
+.boss-reward-overlay .upgrade-card:hover {
+  border-color: #ffc850;
+  background:
+    linear-gradient(180deg, rgba(255, 200, 80, 0.12), transparent 50%),
+    rgba(18, 14, 8, 0.95);
+  box-shadow: 0 0 24px rgba(255, 200, 80, 0.15), 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.boss-reward-sub {
+  color: var(--text-soft);
+  font-size: 0.72rem;
 }
 
 .levelup-sub {
@@ -277,6 +310,24 @@
 
 .upgrade-card .card-category.cat-rare {
   color: #ffc850;
+}
+
+.upgrade-card .card-category.cat-boss {
+  color: #ff6644;
+  text-shadow: 0 0 8px rgba(255, 102, 68, 0.4);
+}
+
+/* Boss reward cards — slightly larger and more dramatic */
+.boss-reward-overlay .upgrade-card.boss-card {
+  border-color: rgba(255, 102, 68, 0.4);
+  background:
+    linear-gradient(180deg, rgba(255, 102, 68, 0.08), transparent 50%),
+    rgba(18, 12, 8, 0.94);
+}
+
+.boss-reward-overlay .upgrade-card.boss-card:hover {
+  border-color: #ff6644;
+  box-shadow: 0 0 28px rgba(255, 102, 68, 0.2), 0 8px 20px rgba(0, 0, 0, 0.3);
 }
 
 .upgrade-card .card-name {

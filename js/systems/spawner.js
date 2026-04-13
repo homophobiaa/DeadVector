@@ -3,18 +3,18 @@ import { randomRange } from "./collision.js";
 
 const DEFAULT_WAVE_CONFIG = {
   baseCount: 5,
-  perWave: 2,
+  perWave: 3,
   bonusEvery: 2,
-  maxEnemies: 40,
-  spawnDelay: [0.2, 0.45],
+  maxEnemies: 45,
+  spawnDelay: [0.15, 0.38],
   bossInterval: 5,
   defaultType: "shambler",
   typeThresholds: [
-    { type: "screamer", minWave: 7, threshold: 0.92 },
-    { type: "brute",    minWave: 5, threshold: 0.85 },
-    { type: "screamer", minWave: 4, threshold: 0.82 },
-    { type: "spitter",  minWave: 3, threshold: 0.58 },
-    { type: "sprinter", minWave: 2, threshold: 0.32 },
+    { type: "screamer", minWave: 6, threshold: 0.90 },
+    { type: "brute",    minWave: 4, threshold: 0.82 },
+    { type: "screamer", minWave: 4, threshold: 0.80 },
+    { type: "spitter",  minWave: 2, threshold: 0.52 },
+    { type: "sprinter", minWave: 2, threshold: 0.28 },
   ],
 };
 
@@ -35,6 +35,7 @@ export class WaveSpawner {
     this.spawnTimer = 0;
     this.bossActive = false;
     this.bossSpawned = false;
+    this.pendingBoss = null;  // deferred boss entry — spawns when few enemies remain
   }
 
   /** Returns true if the given wave number is a boss wave. */
@@ -77,6 +78,7 @@ export class WaveSpawner {
     this.spawnZones = spawnZones;
     this.bossActive = this.isBossWave(this.wave);
     this.bossSpawned = false;
+    this.pendingBoss = null;
     this.queue = this.buildWave(this.wave, bounds);
     this.spawnTimer = 0.2;
   }
@@ -95,20 +97,19 @@ export class WaveSpawner {
       });
     }
 
-    // Boss spawn on milestone waves
+    // Boss spawn on milestone waves — deferred until few enemies remain
     if (this.isBossWave(wave)) {
       const bossKey = this.getBossTypeForWave(wave);
       const bossIndex = Math.floor(wave / this.config.bossInterval) - 1;
       const bossConfig = getBossConfigForOccurrence(bossIndex);
       if (bossConfig) {
-        // Boss comes after a short delay, after some minions have spawned
-        queue.push({
+        this.pendingBoss = {
           type: bossKey,
-          delay: 0.8,
+          delay: 0,
           isBoss: true,
           bossConfig,
           ...this.pickSpawnPoint(bounds),
-        });
+        };
       }
     }
 
@@ -157,7 +158,7 @@ export class WaveSpawner {
         // Override with boss config (scaled by wave)
         enemy.config = { ...bc };
         enemy.radius = bc.radius;
-        enemy.maxHealth = bc.maxHealth + this.wave * 8;
+        enemy.maxHealth = bc.maxHealth + this.wave * 12;
         enemy.health = enemy.maxHealth;
         enemy.speed = bc.speed * (1 + this.wave * 0.012);
         enemy.noticeRange = bc.noticeRange * (1 + this.wave * 0.012);
@@ -171,7 +172,28 @@ export class WaveSpawner {
     return spawned;
   }
 
+  /** Try to spawn the deferred boss when active enemies are low enough. */
+  trySpawnBoss(activeEnemyCount) {
+    if (!this.pendingBoss || this.bossSpawned) return null;
+    // Spawn boss when queue is empty and <=5 normal enemies remain
+    if (this.queue.length > 0 || activeEnemyCount > 5) return null;
+
+    const next = this.pendingBoss;
+    this.pendingBoss = null;
+    const enemy = new Enemy({ x: next.x, y: next.y, type: next.type, wave: this.wave });
+    const bc = next.bossConfig;
+    enemy.config = { ...bc };
+    enemy.radius = bc.radius;
+    enemy.maxHealth = bc.maxHealth + this.wave * 12;
+    enemy.health = enemy.maxHealth;
+    enemy.speed = bc.speed * (1 + this.wave * 0.012);
+    enemy.noticeRange = bc.noticeRange * (1 + this.wave * 0.012);
+    enemy.isBoss = true;
+    this.bossSpawned = true;
+    return enemy;
+  }
+
   get remaining() {
-    return this.queue.length;
+    return this.queue.length + (this.pendingBoss && !this.bossSpawned ? 1 : 0);
   }
 }

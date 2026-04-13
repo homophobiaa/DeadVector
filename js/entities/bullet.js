@@ -1,6 +1,7 @@
 export class Bullet {
   constructor({ x, y, vx, vy, radius, damage, life, color, friendly = true,
-                _ricochet = 0, _knockback = false, _blastRadius = 0, _isCrit = false }) {
+                _ricochet = 0, _knockback = false, _blastRadius = 0, _isCrit = false,
+                _damageFalloff = 0 }) {
     this.x = x;
     this.y = y;
     this.vx = vx;
@@ -19,6 +20,7 @@ export class Bullet {
     this._knockback = _knockback;
     this._blastRadius = _blastRadius;
     this._isCrit = _isCrit;
+    this._damageFalloff = _damageFalloff; // 0 = none, 1 = full falloff by end of life
   }
 
   update(delta, bounds) {
@@ -37,6 +39,19 @@ export class Bullet {
     ) {
       this.alive = false;
     }
+  }
+
+  /** Get effective damage accounting for distance falloff. */
+  getEffectiveDamage() {
+    if (this._damageFalloff <= 0) return this.damage;
+    // 0 = just spawned (full damage), 1 = end of life (minimum damage)
+    const travelled = 1 - (this.life / this.maxLife);
+    // Falloff starts at 40% of bullet life, scales to minimum of 30% damage
+    const falloffStart = 0.4;
+    if (travelled <= falloffStart) return this.damage;
+    const t = (travelled - falloffStart) / (1 - falloffStart);
+    const mult = 1 - t * 0.7; // drops to 30% damage at max range
+    return Math.round(this.damage * Math.max(0.3, mult));
   }
 
   render(ctx) {
