@@ -190,53 +190,7 @@
   color: rgba(255, 0, 255, 0.5);
 }
 
-/* ---- dev sub-options ---- */
-.dev-sub-options {
-  margin-top: 4px;
-  margin-left: 10px;
-  padding: 6px 10px 4px;
-  border-left: 2px solid rgba(255, 0, 255, 0.25);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
 
-.dev-sub-options.hidden {
-  display: none;
-}
-
-.setting-row-sub {
-  opacity: 0.9;
-}
-
-/* ---- dev wave controls (pause screen) ---- */
-.dev-wave-controls {
-  margin: 0.6rem 0 1rem;
-  padding: 0.65rem 0.8rem;
-  border: 1px solid rgba(255, 0, 255, 0.25);
-  border-radius: 8px;
-  background: rgba(255, 0, 255, 0.05);
-}
-
-.dev-wave-controls.hidden {
-  display: none;
-}
-
-.dev-wave-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.25rem 0;
-}
-
-.dev-wave-label {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  color: rgba(255, 0, 255, 0.7);
-}
 
 .dev-wave-input {
   width: 56px;
@@ -311,11 +265,186 @@
   background: #ff66ff;
   box-shadow: 0 0 6px rgba(255, 0, 255, 0.6);
 }
-
 /* ---- settings back button center ---- */
 .settings-panel .btn-primary {
   display: block;
   margin: 0.6rem auto 0;
 }
 
+/* ============================================================
+   Dev Menu — floating draggable panel
+   ============================================================ */
 
+.dev-menu {
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  width: 260px;
+  min-width: 210px;
+  min-height: 120px;
+  background: rgba(10, 10, 18, 0.92);
+  border: 1px solid rgba(255, 0, 255, 0.3);
+  border-radius: 10px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5), 0 0 12px rgba(255, 0, 255, 0.08);
+  z-index: 9000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+  font-family: 'Share Tech Mono', 'Consolas', monospace;
+  transition: opacity 0.2s;
+}
+
+.dev-menu.hidden {
+  display: none;
+}
+
+.dev-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: rgba(255, 0, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 0, 255, 0.25);
+  cursor: grab;
+}
+
+.dev-menu-header:active {
+  cursor: grabbing;
+}
+
+.dev-menu-title {
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  color: #ff66ff;
+  text-transform: uppercase;
+}
+
+.dev-menu-close {
+  appearance: none;
+  background: none;
+  border: none;
+  color: rgba(255, 180, 255, 0.6);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.dev-menu-close:hover {
+  color: #ff00ff;
+}
+
+.dev-menu-body {
+  padding: 8px 10px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.dev-menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dev-menu-label {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.52rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: rgba(255, 0, 255, 0.5);
+  text-transform: uppercase;
+}
+
+.dev-menu-label-sm {
+  font-size: 0.56rem;
+  color: rgba(255, 180, 255, 0.5);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+.dev-menu-row {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.dev-menu-row .btn-dev {
+  flex: 1;
+  text-align: center;
+  padding: 0.3rem 0.4rem;
+  font-size: 0.56rem;
+}
+
+.dev-menu-row .dev-wave-input {
+  width: 50px;
+  flex: 0 0 50px;
+}
+
+.dev-menu-info {
+  font-size: 0.52rem;
+  color: rgba(255, 180, 255, 0.35);
+  letter-spacing: 0.08em;
+  border-top: 1px solid rgba(255, 0, 255, 0.12);
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+/* ---- Debug toggles row ---- */
+.dev-menu-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  cursor: pointer;
+  font-size: 0.62rem;
+  color: rgba(255, 180, 255, 0.7);
+  letter-spacing: 0.06em;
+}
+
+.dev-menu-toggle input[type="checkbox"] {
+  accent-color: #ff00ff;
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
+}
+
+.dev-menu-toggle input[type="checkbox"]:checked + span {
+  color: #ff66ff;
+}
+
+/* ---- F1 hint in header ---- */
+.dev-menu-hint {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.48rem;
+  color: rgba(255, 180, 255, 0.3);
+  letter-spacing: 0.1em;
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+.dev-menu-resize {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+}
+
+.dev-menu-resize::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid rgba(255, 0, 255, 0.35);
+  border-bottom: 2px solid rgba(255, 0, 255, 0.35);
+}

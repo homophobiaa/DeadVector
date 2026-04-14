@@ -69,6 +69,7 @@ const BOSS_UPGRADES = [
 ];
 
 export function getUpgradePool() { return UPGRADES; }
+export function getBossUpgradePool() { return BOSS_UPGRADES; }
 
 // ── Progression System ────────────────────────────────────────────
 

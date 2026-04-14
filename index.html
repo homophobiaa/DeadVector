@@ -110,17 +110,6 @@
         <h2 class="overlay-title">PAUSED</h2>
         <p class="overlay-text">Game paused. Focus loss auto-pauses.</p>
 
-        <div id="dev-wave-controls" class="dev-wave-controls hidden">
-          <div class="dev-wave-row">
-            <button id="dev-skip-wave" class="btn-dev" type="button">SKIP WAVE</button>
-          </div>
-          <div class="dev-wave-row">
-            <label class="dev-wave-label">SKIP TO WAVE</label>
-            <input id="dev-skip-to-input" type="number" class="dev-wave-input" min="1" max="999" value="1">
-            <button id="dev-skip-to-go" class="btn-dev btn-dev-sm" type="button">GO</button>
-          </div>
-        </div>
-
         <button id="resume-button" class="btn-primary" type="button">RESUME</button>
         <button id="pause-settings-button" class="btn-secondary" type="button">SETTINGS</button>
       </div>
@@ -187,29 +176,75 @@
             <input id="set-dev-mode" type="checkbox" class="setting-toggle">
             <span class="toggle-track"><span class="toggle-thumb"></span></span>
           </label>
-          <p class="setting-hint">Unlocks the DEV Laser &mdash; an overpowered auto rifle. Disables leaderboard.</p>
-          <div class="dev-sub-options hidden" id="dev-sub-options">
-            <label class="setting-row setting-row-sub">
-              <span class="setting-label">Invincible</span>
-              <input id="set-dev-invincible" type="checkbox" class="setting-toggle" checked>
-              <span class="toggle-track"><span class="toggle-thumb"></span></span>
-            </label>
-            <label class="setting-row setting-row-sub">
-              <span class="setting-label">No-clip</span>
-              <input id="set-dev-noclip" type="checkbox" class="setting-toggle">
-              <span class="toggle-track"><span class="toggle-thumb"></span></span>
-            </label>
-            <label class="setting-row setting-row-sub">
-              <span class="setting-label">Show Obstacles</span>
-              <input id="set-dev-obstacles" type="checkbox" class="setting-toggle">
-              <span class="toggle-track"><span class="toggle-thumb"></span></span>
-            </label>
-          </div>
+          <p class="setting-hint">Enables DEV Laser &amp; debug panel (<kbd>F1</kbd>).</p>
         </div>
 
         <button id="settings-back" class="btn-primary" type="button">BACK</button>
       </div>
     </section>
+    <!-- Dev Menu (floating, draggable) -->
+    <aside id="dev-menu" class="dev-menu hidden">
+      <header class="dev-menu-header" id="dev-menu-header">
+        <span class="dev-menu-title">DEV MENU</span>
+        <span class="dev-menu-hint">F1</span>
+        <button id="dev-menu-close" class="dev-menu-close" type="button">&times;</button>
+      </header>
+      <div class="dev-menu-body">
+        <div class="dev-menu-section">
+          <span class="dev-menu-label">WAVE</span>
+          <div class="dev-menu-row">
+            <button id="dm-skip-wave" class="btn-dev" type="button">SKIP WAVE</button>
+            <button id="dm-skip5" class="btn-dev" type="button">SKIP +5</button>
+          </div>
+          <div class="dev-menu-row">
+            <label class="dev-menu-label-sm">GO TO</label>
+            <input id="dm-goto-input" type="number" class="dev-wave-input" min="1" max="999" value="1">
+            <button id="dm-goto-go" class="btn-dev btn-dev-sm" type="button">GO</button>
+          </div>
+        </div>
+        <div class="dev-menu-section">
+          <span class="dev-menu-label">PROGRESSION</span>
+          <div class="dev-menu-row">
+            <button id="dm-unlock-all" class="btn-dev" type="button">UNLOCK ALL</button>
+            <button id="dm-level-up" class="btn-dev" type="button">LEVEL UP</button>
+          </div>
+          <div class="dev-menu-row">
+            <button id="dm-give-scrap" class="btn-dev" type="button">+50 SCRAP</button>
+            <button id="dm-heal" class="btn-dev" type="button">FULL HEAL</button>
+          </div>
+        </div>
+        <div class="dev-menu-section">
+          <span class="dev-menu-label">SPAWN</span>
+          <div class="dev-menu-row">
+            <button id="dm-spawn-shambler" class="btn-dev btn-dev-sm" type="button">SHAMBLER</button>
+            <button id="dm-spawn-sprinter" class="btn-dev btn-dev-sm" type="button">SPRINTER</button>
+            <button id="dm-spawn-spitter" class="btn-dev btn-dev-sm" type="button">SPITTER</button>
+          </div>
+          <div class="dev-menu-row">
+            <button id="dm-spawn-brute" class="btn-dev btn-dev-sm" type="button">BRUTE</button>
+            <button id="dm-spawn-screamer" class="btn-dev btn-dev-sm" type="button">SCREAMER</button>
+            <button id="dm-kill-all" class="btn-dev btn-dev-sm" type="button">KILL ALL</button>
+          </div>
+        </div>
+        <div class="dev-menu-section">
+          <span class="dev-menu-label">DEBUG</span>
+          <label class="dev-menu-toggle">
+            <input id="dm-tog-invincible" type="checkbox" checked>
+            <span>Invincible</span>
+          </label>
+          <label class="dev-menu-toggle">
+            <input id="dm-tog-noclip" type="checkbox">
+            <span>No-clip</span>
+          </label>
+          <label class="dev-menu-toggle">
+            <input id="dm-tog-obstacles" type="checkbox">
+            <span>Show Borders</span>
+          </label>
+        </div>
+        <div class="dev-menu-info" id="dm-info">Wave — | Enemies — | Level —</div>
+      </div>
+      <div class="dev-menu-resize" id="dev-menu-resize"></div>
+    </aside>
   </div>
 
   <script type="module" src="./js/main.js"></script>

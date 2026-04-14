@@ -30,27 +30,6 @@ export class UIManager {
       this.game.resume();
     });
 
-    // Dev wave controls
-    this.elements.devSkipWave.addEventListener("click", () => {
-      this.game.devSkipWave();
-      this.game.resume();
-    });
-
-    this.elements.devSkipToGo.addEventListener("click", () => {
-      const target = parseInt(this.elements.devSkipToInput.value, 10);
-      if (target >= 1) {
-        this.game.devSkipToWave(target);
-        this.game.resume();
-      }
-    });
-
-    this.elements.devSkipToInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        this.elements.devSkipToGo.click();
-      }
-    });
-
     this.elements.restartButton.addEventListener("click", async () => {
       await this.game.startNewRun();
     });
@@ -95,10 +74,6 @@ export class UIManager {
     el.setBlood.checked = settings.get("blood");
     el.setShowFps.checked = settings.get("showFps");
     el.setDevMode.checked = settings.get("devMode");
-    el.devSubOptions.classList.toggle("hidden", !settings.get("devMode"));
-    el.setDevInvincible.checked = settings.get("devInvincible");
-    el.setDevNoclip.checked = settings.get("devNoclip");
-    el.setDevObstacles.checked = settings.get("devShowObstacles");
 
     // UI Scale
     const uiScalePercent = Math.round(settings.get("uiScale") * 100);
@@ -143,18 +118,7 @@ export class UIManager {
     });
     el.setDevMode.addEventListener("change", () => {
       settings.set("devMode", el.setDevMode.checked);
-      el.devSubOptions.classList.toggle("hidden", !el.setDevMode.checked);
       if (this.game) this.game.applySettings();
-    });
-    el.setDevInvincible.addEventListener("change", () => {
-      settings.set("devInvincible", el.setDevInvincible.checked);
-      if (this.game) this.game.applySettings();
-    });
-    el.setDevNoclip.addEventListener("change", () => {
-      settings.set("devNoclip", el.setDevNoclip.checked);
-    });
-    el.setDevObstacles.addEventListener("change", () => {
-      settings.set("devShowObstacles", el.setDevObstacles.checked);
     });
   }
 
@@ -168,13 +132,6 @@ export class UIManager {
   showMenu(visible) { this.toggleElement(this.elements.menuScreen, visible); }
   showPause(visible) {
     this.toggleElement(this.elements.pauseScreen, visible);
-    if (visible && this.settings) {
-      const devOn = this.settings.get("devMode");
-      this.elements.devWaveControls.classList.toggle("hidden", !devOn);
-      if (devOn && this.game) {
-        this.elements.devSkipToInput.value = this.game.waveSpawner.wave + 1;
-      }
-    }
   }
   showSettings(visible) { this.toggleElement(this.elements.settingsScreen, visible); }
 

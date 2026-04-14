@@ -3,6 +3,7 @@ import { InputManager } from "./input.js";
 import { AudioManager } from "./systems/audio.js";
 import { Settings } from "./systems/settings.js";
 import { UIManager } from "./systems/ui.js";
+import { DevMenu } from "./systems/dev-menu.js";
 import { preloadZombieParts } from "./entities/zombie-renderer.js";
 import { preloadPlayerParts } from "./entities/player-renderer.js";
 
@@ -66,14 +67,6 @@ const bootstrap = async () => {
     setBlood: document.getElementById("set-blood"),
     setShowFps: document.getElementById("set-show-fps"),
     setDevMode: document.getElementById("set-dev-mode"),
-    devSubOptions: document.getElementById("dev-sub-options"),
-    setDevInvincible: document.getElementById("set-dev-invincible"),
-    setDevNoclip: document.getElementById("set-dev-noclip"),
-    setDevObstacles: document.getElementById("set-dev-obstacles"),
-    devWaveControls: document.getElementById("dev-wave-controls"),
-    devSkipWave: document.getElementById("dev-skip-wave"),
-    devSkipToInput: document.getElementById("dev-skip-to-input"),
-    devSkipToGo: document.getElementById("dev-skip-to-go"),
     // Progression screens
     levelupScreen: document.getElementById("levelup-screen"),
     levelupCards: document.getElementById("levelup-cards"),
@@ -103,6 +96,35 @@ const bootstrap = async () => {
 
   ui.bindGame(game);
   ui.bindSettings(settings);
+
+  const devMenu = new DevMenu({
+    root:          document.getElementById("dev-menu"),
+    header:        document.getElementById("dev-menu-header"),
+    closeBtn:      document.getElementById("dev-menu-close"),
+    resize:        document.getElementById("dev-menu-resize"),
+    info:          document.getElementById("dm-info"),
+    skipWave:      document.getElementById("dm-skip-wave"),
+    skip5:         document.getElementById("dm-skip5"),
+    gotoInput:     document.getElementById("dm-goto-input"),
+    gotoGo:        document.getElementById("dm-goto-go"),
+    unlockAll:     document.getElementById("dm-unlock-all"),
+    levelUp:       document.getElementById("dm-level-up"),
+    giveScrap:     document.getElementById("dm-give-scrap"),
+    heal:          document.getElementById("dm-heal"),
+    spawnShambler: document.getElementById("dm-spawn-shambler"),
+    spawnSprinter: document.getElementById("dm-spawn-sprinter"),
+    spawnSpitter:  document.getElementById("dm-spawn-spitter"),
+    spawnBrute:    document.getElementById("dm-spawn-brute"),
+    spawnScreamer: document.getElementById("dm-spawn-screamer"),
+    killAll:       document.getElementById("dm-kill-all"),
+    togInvincible: document.getElementById("dm-tog-invincible"),
+    togNoclip:     document.getElementById("dm-tog-noclip"),
+    togObstacles:  document.getElementById("dm-tog-obstacles"),
+  });
+  devMenu.bindGame(game);
+  devMenu.bindSettings(settings);
+  game.devMenu = devMenu;
+
   game.applySettings();
   game.resize();
   game.render();
