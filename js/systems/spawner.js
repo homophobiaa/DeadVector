@@ -14,7 +14,7 @@ const DEFAULT_WAVE_CONFIG = {
     { type: "brute",    minWave: 4, threshold: 0.82 },
     { type: "screamer", minWave: 4, threshold: 0.80 },
     { type: "spitter",  minWave: 2, threshold: 0.52 },
-    { type: "sprinter", minWave: 2, threshold: 0.28 },
+    { type: "sprinter", minWave: 1, threshold: 0.28 },
   ],
 };
 
@@ -95,6 +95,18 @@ export class WaveSpawner {
         delay: randomRange(c.spawnDelay[0], c.spawnDelay[1]),
         ...this.pickSpawnPoint(bounds),
       });
+    }
+
+    // Early encounter spike — wave 3 gets a fast sprinter rush mid-wave
+    if (wave === 3) {
+      const insertAt = Math.floor(queue.length * 0.4);
+      for (let i = 0; i < 4; i++) {
+        queue.splice(insertAt + i, 0, {
+          type: "sprinter",
+          delay: 0.08,  // rapid burst
+          ...this.pickSpawnPoint(bounds),
+        });
+      }
     }
 
     // Boss spawn on milestone waves — deferred until few enemies remain

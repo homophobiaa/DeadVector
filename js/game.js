@@ -1217,7 +1217,8 @@ export class Game {
       const nextWave = this.waveSpawner.wave + 1;
       const isBossNext = nextWave % this.waveSpawner.config.bossInterval === 0;
       const wasBossWave = this.waveSpawner.wave % this.waveSpawner.config.bossInterval === 0;
-      const delay = isBossNext ? 1400 : wasBossWave ? 1200 : 800;
+      const isEarly = this.waveSpawner.wave <= 3;
+      const delay = isBossNext ? 1400 : wasBossWave ? 1200 : isEarly ? 450 : 800;
       this.queueNextWave(delay);
     }
 
