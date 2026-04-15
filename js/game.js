@@ -196,6 +196,8 @@ export class Game {
     this.ui.showLevelUp(false);
     this.ui.showBossReward(false);
     this.ui.showLoadout(false);
+    this.ui.showConfirmQuit(false);
+    this.ui.showGuide(false);
     this.ui.showHudHint(true);
 
     this.applySettings();
@@ -221,6 +223,26 @@ export class Game {
     this.audio.startMusic();
     this.audio.playConfirm();
     this.syncHud();
+  }
+
+  returnToMenu() {
+    window.clearTimeout(this.nextWaveTimer);
+    if (this.statsInterval) clearInterval(this.statsInterval);
+    this.audio.stopMusic();
+    this.state = "menu";
+
+    this.ui.showPause(false);
+    this.ui.showGameOver(false);
+    this.ui.showSettings(false);
+    this.ui.showLevelUp(false);
+    this.ui.showBossReward(false);
+    this.ui.showLoadout(false);
+    this.ui.showHudHint(false);
+    this.ui.showConfirmQuit(false);
+    this.ui.showGuide(false);
+    this.ui.showMenu(true);
+
+    if (this.devMenu) this.devMenu.hide();
   }
 
   togglePause() {

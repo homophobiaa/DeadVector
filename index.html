@@ -100,6 +100,7 @@
         </div>
 
         <button id="play-button" class="btn-primary" type="button">START GAME</button>
+        <button id="guide-button" class="btn-secondary" type="button">GUIDE</button>
         <button id="settings-button" class="btn-secondary" type="button">SETTINGS</button>
         <p class="menu-hint">or press <kbd>R</kbd></p>
       </div>
@@ -112,6 +113,19 @@
 
         <button id="resume-button" class="btn-primary" type="button">RESUME</button>
         <button id="pause-settings-button" class="btn-secondary" type="button">SETTINGS</button>
+        <button id="quit-to-menu" class="btn-secondary btn-quit" type="button">MAIN MENU</button>
+      </div>
+    </section>
+
+    <!-- Confirm quit dialog -->
+    <section id="confirm-quit-screen" class="overlay hidden">
+      <div class="overlay-inner overlay-compact confirm-dialog">
+        <h2 class="overlay-title confirm-title">RETURN TO MENU?</h2>
+        <p class="overlay-text">All progress in this run will be lost.</p>
+        <div class="confirm-actions">
+          <button id="confirm-quit-yes" class="btn-primary btn-danger" type="button">YES, QUIT</button>
+          <button id="confirm-quit-cancel" class="btn-secondary" type="button">CANCEL</button>
+        </div>
       </div>
     </section>
 
@@ -121,6 +135,22 @@
         <p id="final-summary" class="overlay-text">Score: 0 &bull; Wave: 0 &bull; Kills: 0</p>
         <button id="restart-button" class="btn-primary" type="button">TRY AGAIN</button>
         <p class="menu-hint">or press <kbd>R</kbd></p>
+      </div>
+    </section>
+
+    <!-- Guide / Wiki page -->
+    <section id="guide-screen" class="overlay hidden">
+      <div class="overlay-inner guide-panel">
+        <h2 class="overlay-title guide-title">FIELD GUIDE</h2>
+        <nav class="guide-tabs" id="guide-tabs">
+          <button class="guide-tab active" data-tab="enemies" type="button">ENEMIES</button>
+          <button class="guide-tab" data-tab="bosses" type="button">BOSSES</button>
+          <button class="guide-tab" data-tab="weapons" type="button">WEAPONS</button>
+          <button class="guide-tab" data-tab="items" type="button">ITEMS</button>
+          <button class="guide-tab" data-tab="controls" type="button">CONTROLS</button>
+        </nav>
+        <div class="guide-content" id="guide-content"></div>
+        <button id="guide-back" class="btn-primary" type="button">BACK</button>
       </div>
     </section>
 

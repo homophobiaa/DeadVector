@@ -59,6 +59,33 @@ export class UIManager {
         this.showMenu(true);
       }
     });
+
+    // Quit to menu — show confirmation
+    this.elements.quitToMenu.addEventListener("click", () => {
+      this.showPause(false);
+      this.showConfirmQuit(true);
+    });
+
+    this.elements.confirmQuitYes.addEventListener("click", () => {
+      this.showConfirmQuit(false);
+      this.game.returnToMenu();
+    });
+
+    this.elements.confirmQuitCancel.addEventListener("click", () => {
+      this.showConfirmQuit(false);
+      this.showPause(true);
+    });
+
+    // Guide
+    this.elements.guideButton.addEventListener("click", () => {
+      this.showMenu(false);
+      this.showGuide(true);
+    });
+
+    this.elements.guideBack.addEventListener("click", () => {
+      this.showGuide(false);
+      this.showMenu(true);
+    });
   }
 
   bindSettings(settings) {
@@ -134,6 +161,8 @@ export class UIManager {
     this.toggleElement(this.elements.pauseScreen, visible);
   }
   showSettings(visible) { this.toggleElement(this.elements.settingsScreen, visible); }
+  showConfirmQuit(visible) { this.toggleElement(this.elements.confirmQuitScreen, visible); }
+  showGuide(visible) { this.toggleElement(this.elements.guideScreen, visible); }
 
   showLevelUp(visible) { this.toggleElement(this.elements.levelupScreen, visible); }
   showBossReward(visible) { this.toggleElement(this.elements.bossRewardScreen, visible); }

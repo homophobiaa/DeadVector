@@ -4,6 +4,7 @@ import { AudioManager } from "./systems/audio.js";
 import { Settings } from "./systems/settings.js";
 import { UIManager } from "./systems/ui.js";
 import { DevMenu } from "./systems/dev-menu.js";
+import { Guide } from "./systems/guide.js";
 import { preloadZombieParts } from "./entities/zombie-renderer.js";
 import { preloadPlayerParts } from "./entities/player-renderer.js";
 
@@ -59,6 +60,15 @@ const bootstrap = async () => {
     settingsButton: document.getElementById("settings-button"),
     pauseSettingsButton: document.getElementById("pause-settings-button"),
     settingsBack: document.getElementById("settings-back"),
+    quitToMenu: document.getElementById("quit-to-menu"),
+    confirmQuitScreen: document.getElementById("confirm-quit-screen"),
+    confirmQuitYes: document.getElementById("confirm-quit-yes"),
+    confirmQuitCancel: document.getElementById("confirm-quit-cancel"),
+    guideButton: document.getElementById("guide-button"),
+    guideScreen: document.getElementById("guide-screen"),
+    guideTabs: document.getElementById("guide-tabs"),
+    guideContent: document.getElementById("guide-content"),
+    guideBack: document.getElementById("guide-back"),
     setMasterVol: document.getElementById("set-master-vol"),
     setMusicVol: document.getElementById("set-music-vol"),
     setSfxVol: document.getElementById("set-sfx-vol"),
@@ -124,6 +134,12 @@ const bootstrap = async () => {
   devMenu.bindGame(game);
   devMenu.bindSettings(settings);
   game.devMenu = devMenu;
+
+  // Field Guide
+  new Guide({
+    tabs: document.getElementById("guide-tabs"),
+    content: document.getElementById("guide-content"),
+  });
 
   game.applySettings();
   game.resize();
