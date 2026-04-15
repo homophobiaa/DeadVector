@@ -72,6 +72,7 @@ export class Game {
 
     // Progression system
     this.progression = new Progression();
+    this.devMenu = null;               // set by main.js after construction
     this.gameSpeed = 1;                // 1 = normal, 0 = fully paused
     this.loadoutOpen = false;
     this.levelUpReadyAt = 0;           // misclick prevention timestamp
@@ -195,6 +196,8 @@ export class Game {
     this.ui.showLevelUp(false);
     this.ui.showBossReward(false);
     this.ui.showLoadout(false);
+    this.ui.showConfirmQuit(false);
+    this.ui.showGuide(false);
     this.ui.showHudHint(true);
 
     this.applySettings();
@@ -222,6 +225,26 @@ export class Game {
     this.syncHud();
   }
 
+  returnToMenu() {
+    window.clearTimeout(this.nextWaveTimer);
+    if (this.statsInterval) clearInterval(this.statsInterval);
+    this.audio.stopMusic();
+    this.state = "menu";
+
+    this.ui.showPause(false);
+    this.ui.showGameOver(false);
+    this.ui.showSettings(false);
+    this.ui.showLevelUp(false);
+    this.ui.showBossReward(false);
+    this.ui.showLoadout(false);
+    this.ui.showHudHint(false);
+    this.ui.showConfirmQuit(false);
+    this.ui.showGuide(false);
+    this.ui.showMenu(true);
+
+    if (this.devMenu) this.devMenu.hide();
+  }
+
   togglePause() {
     if (this.state === "playing") {
       this.state = "paused";
@@ -245,6 +268,8 @@ export class Game {
     this.audio.syncLoopVolumes();
     this.player.setDevMode(s.get("devMode"));
     this.player.setDevInvincible(s.get("devMode") && s.get("devInvincible"));
+    // Hide dev menu when devMode is turned off
+    if (!s.get("devMode") && this.devMenu) this.devMenu.hide();
   }
 
   // ---- Dev panel helpers ----
@@ -566,6 +591,11 @@ export class Game {
 
   handleInput() {
     const events = this.input.consumeEvents();
+
+    // F1: toggle dev menu (only when devMode is enabled)
+    if (this.input.wasPressed("f1") && this.settings.get("devMode") && this.devMenu) {
+      this.devMenu.toggle();
+    }
 
     // Escape: close loadout first, then pause
     if (this.input.wasPressed("escape")) {
@@ -1217,7 +1247,8 @@ export class Game {
       const nextWave = this.waveSpawner.wave + 1;
       const isBossNext = nextWave % this.waveSpawner.config.bossInterval === 0;
       const wasBossWave = this.waveSpawner.wave % this.waveSpawner.config.bossInterval === 0;
-      const delay = isBossNext ? 1400 : wasBossWave ? 1200 : 800;
+      const isEarly = this.waveSpawner.wave <= 3;
+      const delay = isBossNext ? 1400 : wasBossWave ? 1200 : isEarly ? 450 : 800;
       this.queueNextWave(delay);
     }
 

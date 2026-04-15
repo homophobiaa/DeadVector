@@ -1,0 +1,306 @@
+/* ============================================================
+   guide.css — Field Guide / Wiki panel
+   ============================================================ */
+
+/* ---- panel override (wider than default) ---- */
+.guide-panel {
+  max-width: 680px;
+  width: 90vw;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  text-align: center;
+}
+
+.guide-title {
+  margin-bottom: 0.5rem;
+}
+
+/* ---- tab navigation ---- */
+.guide-tabs {
+  display: flex;
+  gap: 0.25rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.guide-tab {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.35rem 0.85rem;
+  font-family: 'Orbitron', monospace;
+  font-weight: 600;
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.guide-tab:hover {
+  color: var(--text-soft);
+  border-color: var(--line-strong);
+}
+
+.guide-tab.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(0, 255, 136, 0.08);
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.08);
+}
+
+/* ---- content area ---- */
+.guide-content {
+  text-align: left;
+  min-height: 180px;
+}
+
+/* ---- card grid ---- */
+.guide-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+/* ---- entity card ---- */
+.guide-card {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(0, 255, 136, 0.02);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.guide-card:hover {
+  border-color: var(--line-strong);
+  background: rgba(0, 255, 136, 0.04);
+}
+
+/* ---- canvas preview container ---- */
+.guide-preview {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  min-height: 64px;
+}
+
+.guide-preview.boss-preview {
+  width: 80px;
+  min-height: 80px;
+}
+
+.guide-preview-canvas {
+  display: block;
+}
+
+/* ---- card text ---- */
+.guide-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.guide-card-name {
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-main);
+  margin-bottom: 0.15rem;
+}
+
+.guide-card-role {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-dim);
+  margin-bottom: 0.3rem;
+}
+
+.guide-card-desc {
+  font-size: 0.7rem;
+  color: var(--text-soft);
+  line-height: 1.5;
+  margin-bottom: 0.35rem;
+}
+
+/* ---- stat pills ---- */
+.guide-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.guide-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.12rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  background: rgba(0, 255, 136, 0.02);
+}
+
+.guide-stat-val {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.guide-tag {
+  border-color: rgba(0, 255, 136, 0.12);
+  color: var(--accent-dim);
+}
+
+/* ---- boss card (full-width, gold accent) ---- */
+.guide-grid.bosses {
+  grid-template-columns: 1fr;
+}
+
+.guide-card.boss-card {
+  border-color: rgba(255, 200, 80, 0.2);
+  background: rgba(255, 200, 80, 0.02);
+}
+
+.guide-card.boss-card:hover {
+  border-color: rgba(255, 200, 80, 0.35);
+  background: rgba(255, 200, 80, 0.04);
+}
+
+.guide-card.boss-card .guide-card-role {
+  color: rgba(255, 200, 80, 0.7);
+}
+
+.guide-boss-wave {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.58rem;
+  color: rgba(255, 200, 80, 0.55);
+}
+
+/* ---- weapons ---- */
+.guide-grid.weapons {
+  grid-template-columns: 1fr;
+}
+
+.guide-weapon-icon {
+  flex-shrink: 0;
+  width: 64px;
+  height: 36px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 6px var(--avatar-glow, rgba(0,0,0,0)));
+}
+
+/* ---- items section ---- */
+.guide-grid.items {
+  grid-template-columns: 1fr 1fr;
+}
+
+.guide-item-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 6px rgba(0, 255, 136, 0.2));
+}
+
+/* ============================================================
+   Controls — structured grouped layout
+   ============================================================ */
+
+.guide-controls-structured {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.guide-ctrl-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.guide-ctrl-group-label {
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent-dim);
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.1rem;
+}
+
+.guide-ctrl-row {
+  display: grid;
+  grid-template-columns: 140px 20px 1fr;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0;
+}
+
+.guide-ctrl-keys {
+  display: flex;
+  gap: 0.3rem;
+  justify-content: flex-end;
+}
+
+.guide-ctrl-keys kbd {
+  min-width: 28px;
+  text-align: center;
+}
+
+.guide-ctrl-arrow {
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+.guide-ctrl-action {
+  font-size: 0.78rem;
+  color: var(--text-soft);
+  letter-spacing: 0.02em;
+}
+
+/* ---- back button centering ---- */
+.guide-panel .btn-primary {
+  display: block;
+  margin: 1rem auto 0;
+}
+
+/* ---- responsive ---- */
+@media (max-width: 520px) {
+  .guide-panel {
+    max-width: 98vw;
+  }
+
+  .guide-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guide-tab {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.55rem;
+  }
+
+  .guide-ctrl-row {
+    grid-template-columns: 110px 20px 1fr;
+  }
+}

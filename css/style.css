@@ -7,6 +7,7 @@
 @import url("overlays.css");     /* overlay backdrop & panels      */
 @import url("components.css");   /* buttons, kbd, stats, controls */
 @import url("settings.css");     /* settings panel UI             */
+@import url("guide.css");        /* field guide / wiki panel      */
 
 /* ---- overlay responsive (cross-module) ---- */
 @media (max-width: 520px) {

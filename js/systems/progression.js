@@ -69,6 +69,7 @@ const BOSS_UPGRADES = [
 ];
 
 export function getUpgradePool() { return UPGRADES; }
+export function getBossUpgradePool() { return BOSS_UPGRADES; }
 
 // ── Progression System ────────────────────────────────────────────
 
@@ -113,14 +114,19 @@ export class Progression {
     this.predatorTimer = 0;        // remaining seconds of Predator Instinct buff
     this.arcDischargeTimer = 0;    // seconds until next Arc Discharge
     this.shotCounter = 0;          // tracks shots for Overcharged Rounds
+
+    // Early-game Combat Rush: temporary buff that fades
+    this.combatRushTimer = 45;     // seconds remaining (active at run start)
   }
 
   // ── XP & Leveling ────────────────────────────────────────────
 
   /** XP required for the current level. Scales with level for pacing. */
   xpToNextLevel() {
-    // Levels 0-2: 80, 3-7: ramps moderately, 8+: ramps steeply
-    if (this.level <= 2) return 80 + this.level * 10;
+    // Levels 0-1: fast early hook, 2-3: moderate ramp, 4-7: mid-game, 8+: steep
+    if (this.level === 0) return 40;
+    if (this.level === 1) return 50;
+    if (this.level === 2) return 65;
     if (this.level <= 7) return 80 + this.level * 25;
     return 80 + this.level * 40;
   }
@@ -284,25 +290,26 @@ export class Progression {
   // Mid (5-9): stronger mechanics and weapon specializations
   // Late (10+): full pool including all rare
   static UPGRADE_MIN_LEVEL = {
+    // Early unlocks (level 2-3): fun-feeling, controlled power
+    knockback_core: 2,     // pushback is satisfying, not raw DPS
+    double_tap:     3,     // 2 bullets feels exciting, moderate power
+    ricochet:       3,     // bouncing bullets are visually fun
     // Mid-game (level 5+): stronger mechanics
-    double_tap:     5,     // was early — 2 bullets is a big power spike
-    ricochet:       5,     // was early — bouncing bullets is strong
-    piercing_shot:  5,     // was early — pass-through is powerful
-    fast_hands:     5,     // was early — +30% fire rate is huge
-    high_caliber:   5,     // was early — +25% damage is a big flat boost
-    dense_shells:   5,     // was early — +2 pellets is significant
-    knockback_core: 5,     // was early — free CC is strong early
+    piercing_shot:  5,     // pass-through is powerful
+    fast_hands:     5,     // +20% fire rate stacks hard
+    high_caliber:   5,     // +20% damage is a big flat boost
+    dense_shells:   5,     // +2 pellets is significant
     wide_blast:     5,
+    spray_boost:    5,
     blast_core:     6,
     heavy_shells:   6,
     bullet_storm:   6,
-    shockwave:      7,
-    mark_target:    7,
     efficiency:     6,
-    deadeye:        7,
     heat_buildup:   6,
     adrenaline:     6,
-    spray_boost:    5,
+    shockwave:      7,
+    mark_target:    7,
+    deadeye:        7,
     // Late-game (level 10+): high-impact / rare
     chain_reaction: 10,
     lightning_chain: 10,
@@ -382,6 +389,11 @@ export class Progression {
 
     const lowerName = weaponName.toLowerCase();
 
+    // Combat Rush: early-game temporary fire rate boost
+    if (this.combatRushTimer > 0) {
+      mods.cooldownMultiplier *= 0.75; // +25% fire rate
+    }
+
     // Global upgrades (apply to all weapons)
     if (this.has("efficiency")) {
       mods.damageMultiplier += 0.08;
@@ -445,6 +457,7 @@ export class Progression {
   getSpeedMultiplier() {
     let mult = 1;
     if (this.has("speed_boost")) mult += 0.12;
+    if (this.combatRushTimer > 0) mult += 0.10; // early-game rush
     return mult;
   }
 
@@ -584,6 +597,7 @@ export class Progression {
   tickBossUpgrades(delta) {
     if (this.bloodSurgeTimer > 0) this.bloodSurgeTimer = Math.max(0, this.bloodSurgeTimer - delta);
     if (this.predatorTimer > 0) this.predatorTimer = Math.max(0, this.predatorTimer - delta);
+    if (this.combatRushTimer > 0) this.combatRushTimer = Math.max(0, this.combatRushTimer - delta);
   }
 
   // ── Grouped upgrades for display ─────────────────────────────
