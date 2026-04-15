@@ -518,4 +518,15 @@ export class Guide {
       this._animFrame = null;
     }
   }
+
+  onShow() {
+    // Re-render current tab's previews and start animation
+    if ((this.currentTab === "enemies" || this.currentTab === "bosses") && this.previews.length > 0) {
+      this._startAnimation();
+    }
+  }
+
+  onHide() {
+    this._stopAnimation();
+  }
 }

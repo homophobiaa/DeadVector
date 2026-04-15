@@ -136,10 +136,11 @@ const bootstrap = async () => {
   game.devMenu = devMenu;
 
   // Field Guide
-  new Guide({
+  const guide = new Guide({
     tabs: document.getElementById("guide-tabs"),
     content: document.getElementById("guide-content"),
   });
+  ui._guide = guide;
 
   game.applySettings();
   game.resize();

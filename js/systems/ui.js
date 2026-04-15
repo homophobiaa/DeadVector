@@ -162,7 +162,13 @@ export class UIManager {
   }
   showSettings(visible) { this.toggleElement(this.elements.settingsScreen, visible); }
   showConfirmQuit(visible) { this.toggleElement(this.elements.confirmQuitScreen, visible); }
-  showGuide(visible) { this.toggleElement(this.elements.guideScreen, visible); }
+  showGuide(visible) {
+    this.toggleElement(this.elements.guideScreen, visible);
+    if (this._guide) {
+      if (visible) this._guide.onShow();
+      else this._guide.onHide();
+    }
+  }
 
   showLevelUp(visible) { this.toggleElement(this.elements.levelupScreen, visible); }
   showBossReward(visible) { this.toggleElement(this.elements.bossRewardScreen, visible); }
