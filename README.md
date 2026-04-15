@@ -44,6 +44,7 @@ DeadVector is a browser-based top-down zombie survival arena built with HTML5 Ca
   - `Sprinter`: fast glass-cannon melee attacker.
   - `Spitter`: ranged zombie that kites and fires acid shots.
   - `Brute`: slow heavy unit with large health and damage.
+  - `Screamer`: ranged support caster that buffs nearby allies with a speed aura.
 
 ## Documentation
 - FSM diagram: [docs/fsm-diagram.md](./docs/fsm-diagram.md)
